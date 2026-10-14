@@ -1,4 +1,4 @@
-import { rota, corpo, ip, limitar, um, redis, conferirSenha, abrirSessao, normEmail, publico, semear, CHAVES, ErroApi } from './_lib.js';
+import { rota, corpo, ip, limitar, um, banco, conferirSenha, abrirSessao, normEmail, publico, semear, CHAVES, ErroApi } from './_lib.js';
 
 // POST {email, senha}. No primeiro acesso, o administrador vem das variáveis ADMIN_EMAIL e ADMIN_SENHA_HASH.
 export default rota(['POST'], async (req, res) => {
@@ -17,7 +17,7 @@ export default rota(['POST'], async (req, res) => {
     if (!adm || !hash) throw new ErroApi(500, 'O primeiro acesso ainda não foi configurado. No Vercel, preencha ADMIN_EMAIL e ADMIN_SENHA_HASH e publique de novo.');
     if (email === adm && (await conferirSenha(senha, hash))) {
       usuario = { email, nome: process.env.ADMIN_NOME || 'Administrador', papel: 'admin', hash, versao: 1, criadoEm: new Date().toISOString() };
-      await redis([['HSET', CHAVES.usuarios, email, JSON.stringify(usuario)]]);
+      await banco([['HSET', CHAVES.usuarios, email, JSON.stringify(usuario)]]);
       await semear();
     }
   } else if (usuario && !(await conferirSenha(senha, usuario.hash))) {

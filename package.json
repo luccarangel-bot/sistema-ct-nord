@@ -10,5 +10,8 @@
   "scripts": {
     "senha": "node scripts/gerar-senha.js",
     "local": "node scripts/servidor-local.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "1.1.0"
   }
 }

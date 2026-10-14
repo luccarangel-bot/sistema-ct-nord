@@ -13,7 +13,7 @@ Site com login para a equipe do CT NORD: alunos e graduações, planos e contrat
    - `ADMIN_EMAIL`: e-mail do primeiro administrador
    - `ADMIN_NOME`: nome que aparece no sistema
    - `ADMIN_SENHA_HASH`: senha criptografada (veja abaixo)
-4. **Banco de dados:** no projeto, abra *Storage → Create Database*, escolha *Upstash for Redis*, plano gratuito, e conecte ao projeto. Isso cria `KV_REST_API_URL` e `KV_REST_API_TOKEN`.
+4. **Banco de dados:** no projeto, abra *Storage → Create Database*, escolha *Neon* (Postgres), plano gratuito, e conecte ao projeto. Isso cria `DATABASE_URL`. As tabelas `ct_hash` e `ct_str` são criadas sozinhas no primeiro acesso.
 5. **Publicar de novo:** em *Deployments*, abra o menu (⋯) da última publicação e clique em *Redeploy*.
 6. Abra o endereço do site e entre com o e-mail e a senha do administrador.
 
@@ -41,5 +41,6 @@ Abre em http://localhost:3000 com um banco em memória. Nada é gravado.
 
 - `public/` — páginas (sistema e ficha)
 - `api/` — rotas do servidor: login, dados, equipe e ficha
+- `api/_lib.js` — banco (Postgres do Neon), senhas e sessão
 - `api/_seed.js` — planos, turmas e dados do CT carregados no primeiro acesso
 - `scripts/` — gerar senha e servidor de teste local

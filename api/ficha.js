@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { rota, corpo, ip, limitar, redis, um, chaveCol, parHash, bumpRev, semear, ErroApi } from './_lib.js';
+import { rota, corpo, ip, limitar, banco, um, chaveCol, parHash, bumpRev, semear, ErroApi } from './_lib.js';
 
 // Rota pública da ficha de matrícula.
 // GET  → nome do CT e planos à venda (para montar a ficha)
@@ -10,7 +10,7 @@ const MAX_FILA = 300;
 export default rota(['GET', 'POST'], async (req, res) => {
   if (req.method === 'GET') {
     await semear();
-    const [cfg, planos] = await redis([['HGET', chaveCol('config'), 'geral'], ['HGETALL', chaveCol('planos')]]);
+    const [cfg, planos] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGETALL', chaveCol('planos')]]);
     const ct = (cfg && JSON.parse(cfg).ct) || {};
     const lista = Object.values(parHash(planos)).map((v) => JSON.parse(v)).filter((p) => p.ativo !== false)
       .sort((a, b) => a.meses - b.meses || b.valor - a.valor)
@@ -34,7 +34,7 @@ export default rota(['GET', 'POST'], async (req, res) => {
 
   const id = 'fi_' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
   const ficha = { ...d, id, recebidaEm: new Date().toISOString() };
-  await redis([['HSET', chaveCol('fichas'), id, JSON.stringify(ficha)]]);
+  await banco([['HSET', chaveCol('fichas'), id, JSON.stringify(ficha)]]);
   await bumpRev();
   res.status(200).json({ ok: true });
 });

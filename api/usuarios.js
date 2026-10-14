@@ -1,4 +1,4 @@
-import { rota, exigirLogin, redis, um, corpo, gerarHash, conferirSenha, validarSenhaNova, normEmail, publico, abrirSessao, CHAVES, ErroApi } from './_lib.js';
+import { rota, exigirLogin, banco, um, corpo, gerarHash, conferirSenha, validarSenhaNova, normEmail, publico, abrirSessao, CHAVES, ErroApi } from './_lib.js';
 
 // GET                      → lista da equipe (administradores)
 // POST {acao:'criar', nome, email, senha, papel}     → novo usuário (administradores)
@@ -19,7 +19,7 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
     const eu = await exigirLogin(req, { admin: true });
     const email = normEmail(req.query.email);
     if (email === eu.email) throw new ErroApi(400, 'Você não pode remover o seu próprio acesso.');
-    await redis([['HDEL', CHAVES.usuarios, email]]);
+    await banco([['HDEL', CHAVES.usuarios, email]]);
     return res.status(200).json({ ok: true });
   }
 
@@ -29,7 +29,7 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
     if (!(await conferirSenha(String(b.atual || ''), eu.hash))) throw new ErroApi(400, 'A senha atual não confere.');
     validarSenhaNova(b.nova);
     const novo = { ...eu, hash: await gerarHash(b.nova), versao: (eu.versao || 1) + 1 };
-    await redis([['HSET', CHAVES.usuarios, eu.email, JSON.stringify(novo)]]);
+    await banco([['HSET', CHAVES.usuarios, eu.email, JSON.stringify(novo)]]);
     await abrirSessao(req, res, novo);
     return res.status(200).json({ ok: true });
   }
@@ -43,7 +43,7 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
     if (await um('HGET', CHAVES.usuarios, email)) throw new ErroApi(409, 'Já existe um acesso com este e-mail.');
     validarSenhaNova(b.senha);
     const u = { email, nome, papel: b.papel === 'admin' ? 'admin' : 'equipe', hash: await gerarHash(b.senha), versao: 1, criadoEm: new Date().toISOString() };
-    await redis([['HSET', CHAVES.usuarios, email, JSON.stringify(u)]]);
+    await banco([['HSET', CHAVES.usuarios, email, JSON.stringify(u)]]);
     return res.status(200).json({ usuario: publico(u) });
   }
   if (b.acao === 'redefinir') {
@@ -52,7 +52,7 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
     validarSenhaNova(b.senha);
     const u = JSON.parse(bruto);
     const novo = { ...u, hash: await gerarHash(b.senha), versao: (u.versao || 1) + 1 };
-    await redis([['HSET', CHAVES.usuarios, email, JSON.stringify(novo)]]);
+    await banco([['HSET', CHAVES.usuarios, email, JSON.stringify(novo)]]);
     return res.status(200).json({ ok: true });
   }
   throw new ErroApi(400, 'Ação desconhecida.');

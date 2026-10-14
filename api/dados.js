@@ -1,4 +1,4 @@
-import { rota, exigirLogin, redis, um, chaveCol, parHash, corpo, bumpRev, COLECOES, CHAVES, publico, ErroApi } from './_lib.js';
+import { rota, exigirLogin, banco, um, chaveCol, parHash, corpo, bumpRev, COLECOES, CHAVES, publico, ErroApi } from './_lib.js';
 
 const ID_OK = /^[A-Za-z0-9_.:-]{1,80}$/;
 const MAX_DOC = 200 * 1024;
@@ -16,7 +16,7 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
   const usuario = await exigirLogin(req);
 
   if (req.method === 'GET') {
-    const out = await redis([...COLECOES.map((c) => ['HGETALL', chaveCol(c)]), ['GET', CHAVES.rev]]);
+    const out = await banco([...COLECOES.map((c) => ['HGETALL', chaveCol(c)]), ['GET', CHAVES.rev]]);
     const dados = {};
     COLECOES.forEach((c, i) => { dados[c] = Object.values(parHash(out[i])).map((v) => JSON.parse(v)); });
     return res.status(200).json({ dados, rev: Number(out[COLECOES.length] || 0), usuario: publico(usuario) });
@@ -31,11 +31,11 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
     if (!doc || typeof doc !== 'object' || Array.isArray(doc)) throw new ErroApi(400, 'Registro inválido.');
     const txt = JSON.stringify({ ...doc, id });
     if (txt.length > MAX_DOC) throw new ErroApi(413, 'Este registro ficou grande demais para salvar.');
-    await redis([['HSET', chaveCol(col), id, txt]]);
+    await banco([['HSET', chaveCol(col), id, txt]]);
   } else {
     const id = String(req.query.id || '');
     if (!ID_OK.test(id)) throw new ErroApi(400, 'Identificador inválido.');
-    await redis([['HDEL', chaveCol(col), id]]);
+    await banco([['HDEL', chaveCol(col), id]]);
   }
   const rev = await bumpRev();
   res.status(200).json({ ok: true, rev: Number(rev) });

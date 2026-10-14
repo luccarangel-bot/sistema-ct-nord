@@ -1,6 +1,7 @@
 // Funções compartilhadas pelas rotas da API (arquivos com "_" não viram rotas no Vercel).
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
+import { neon } from '@neondatabase/serverless';
 import { SEED } from './_seed.js';
 
 const scrypt = promisify(crypto.scrypt);
@@ -10,16 +11,76 @@ const P = 'ct:';
 const COOKIE = 'ct_sessao';
 const DIAS_SESSAO = 30;
 
-/* ---------- Banco (Upstash Redis via REST) ---------- */
-function credenciais() {
-  const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) throw new ErroApi(500, 'O banco de dados não está conectado. No Vercel, conecte o Upstash Redis ao projeto e publique de novo.');
-  return { url: url.replace(/\/$/, ''), token };
+/* ---------- Banco (Postgres do Neon via HTTP) ----------
+   O resto do código fala em comandos no estilo Redis (GET, SET, INCR, HSET...).
+   Aqui cada comando vira SQL sobre duas tabelas: ct_hash (chave, campo → valor) e
+   ct_str (chave → valor, com expiração opcional). Vários comandos juntos rodam numa transação. */
+let conexao = null;
+function sqlNeon() {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) throw new ErroApi(500, 'O banco de dados não está conectado. No Vercel, conecte o Neon ao projeto e publique de novo.');
+  return (conexao = conexao || neon(url));
 }
-// Para testes locais: um Redis em memória com os mesmos comandos usados aqui.
+const TABELAS = [
+  'CREATE TABLE IF NOT EXISTS ct_hash (chave text NOT NULL, campo text NOT NULL, valor text NOT NULL, PRIMARY KEY (chave, campo))',
+  'CREATE TABLE IF NOT EXISTS ct_str (chave text PRIMARY KEY, valor text NOT NULL, expira timestamptz)',
+];
+let tabelasProntas = null;
+function criarTabelas(sql) {
+  tabelasProntas = tabelasProntas || sql.transaction(TABELAS.map((t) => sql.query(t))).catch((e) => { tabelasProntas = null; throw e; });
+  return tabelasProntas;
+}
+const VIVO = '(expira IS NULL OR expira > now())';
+const VENCIDO = '(ct_str.expira IS NOT NULL AND ct_str.expira <= now())';
+const primeiro = (rows) => (rows[0] ? rows[0].v : null);
+const numero = (rows) => Number(rows[0] ? rows[0].v : 0);
+// Traduz um comando em { text, params, ler(rows) }, com o mesmo retorno que o Redis daria.
+export function traduzir([c, k, ...a]) {
+  switch (String(c).toUpperCase()) {
+    case 'GET': return { text: 'SELECT valor AS v FROM ct_str WHERE chave = $1 AND ' + VIVO, params: [k], ler: primeiro };
+    case 'SET': {
+      const nx = a.slice(1).some((x) => String(x).toUpperCase() === 'NX');
+      const text = 'INSERT INTO ct_str (chave, valor) VALUES ($1, $2) ON CONFLICT (chave) DO UPDATE SET valor = EXCLUDED.valor, expira = NULL' +
+        (nx ? ' WHERE ' + VENCIDO : '') + ' RETURNING 1 AS v';
+      return { text, params: [k, String(a[0])], ler: (rows) => (rows.length ? 'OK' : null) };
+    }
+    case 'INCR': return {
+      text: "INSERT INTO ct_str (chave, valor) VALUES ($1, '1') ON CONFLICT (chave) DO UPDATE SET " +
+        'valor = CASE WHEN ' + VENCIDO + " THEN '1' ELSE (ct_str.valor::bigint + 1)::text END, " +
+        'expira = CASE WHEN ' + VENCIDO + ' THEN NULL ELSE ct_str.expira END RETURNING valor AS v',
+      params: [k], ler: numero,
+    };
+    case 'EXPIRE': return {
+      // Aproveita para apagar chaves vencidas (limites de tentativas antigos).
+      text: 'WITH limpa AS (DELETE FROM ct_str WHERE expira <= now() AND chave <> $1) ' +
+        'UPDATE ct_str SET expira = now() + make_interval(secs => $2::int) WHERE chave = $1 RETURNING 1 AS v',
+      params: [k, Number(a[0])], ler: (rows) => rows.length,
+    };
+    case 'HGET': return { text: 'SELECT valor AS v FROM ct_hash WHERE chave = $1 AND campo = $2', params: [k, String(a[0])], ler: primeiro };
+    case 'HSET': {
+      const campos = [], valores = [];
+      for (let i = 0; i < a.length; i += 2) { campos.push(String(a[i])); valores.push(String(a[i + 1])); }
+      return {
+        text: 'INSERT INTO ct_hash (chave, campo, valor) SELECT $1, c, v FROM unnest($2::text[], $3::text[]) AS t(c, v) ' +
+          'ON CONFLICT (chave, campo) DO UPDATE SET valor = EXCLUDED.valor',
+        params: [k, campos, valores], ler: () => 1,
+      };
+    }
+    case 'HDEL': return {
+      text: 'WITH d AS (DELETE FROM ct_hash WHERE chave = $1 AND campo = ANY($2::text[]) RETURNING 1) SELECT count(*)::int AS v FROM d',
+      params: [k, a.map(String)], ler: numero,
+    };
+    case 'HLEN': return { text: 'SELECT count(*)::int AS v FROM ct_hash WHERE chave = $1', params: [k], ler: numero };
+    case 'HGETALL': return {
+      text: 'SELECT campo, valor FROM ct_hash WHERE chave = $1', params: [k],
+      ler: (rows) => rows.flatMap((r) => [r.campo, r.valor]),
+    };
+    default: throw new Error('Comando de banco não suportado: ' + c);
+  }
+}
+// Para testes locais: um banco em memória com os mesmos comandos usados aqui.
 let memoria = null;
-function redisMemoria(cmds) {
+function bancoMemoria(cmds) {
   memoria = memoria || new Map();
   const m = memoria;
   const h = (k) => { if (!m.has(k)) m.set(k, new Map()); return m.get(k); };
@@ -38,15 +99,22 @@ function redisMemoria(cmds) {
     }
   });
 }
-export async function redis(cmds) {
-  if (process.env.CT_BANCO_MEMORIA === '1') return redisMemoria(cmds);
-  const { url, token } = credenciais();
-  const r = await fetch(url + '/pipeline', { method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify(cmds) });
-  if (!r.ok) throw new ErroApi(502, 'O banco de dados não respondeu (' + r.status + '). Tente de novo em instantes.');
-  const out = await r.json();
-  return out.map((x) => { if (x.error) throw new ErroApi(502, 'Erro no banco de dados: ' + x.error); return x.result; });
+export async function banco(cmds) {
+  if (process.env.CT_BANCO_MEMORIA === '1') return bancoMemoria(cmds);
+  const sql = sqlNeon();
+  const qs = cmds.map(traduzir);
+  try {
+    await criarTabelas(sql);
+    const res = qs.length === 1
+      ? [await sql.query(qs[0].text, qs[0].params)]
+      : await sql.transaction(qs.map((q) => sql.query(q.text, q.params)));
+    return res.map((rows, i) => qs[i].ler(rows));
+  } catch (e) {
+    console.error('Erro no banco de dados:', e);
+    throw new ErroApi(502, 'O banco de dados não respondeu. Tente de novo em instantes.');
+  }
 }
-export const um = async (...cmd) => (await redis([cmd]))[0];
+export const um = async (...cmd) => (await banco([cmd]))[0];
 export const chaveCol = (c) => P + 'c:' + c;
 export const parHash = (arr) => { const o = {}; for (let i = 0; i < (arr || []).length; i += 2) o[arr[i]] = arr[i + 1]; return o; };
 
@@ -76,7 +144,7 @@ export function ip(req) {
   return f || req.headers['x-real-ip'] || 'local';
 }
 export async function limitar(chave, max, segundos) {
-  const [n] = await redis([['INCR', P + 'rl:' + chave], ['EXPIRE', P + 'rl:' + chave, String(segundos)]]);
+  const [n] = await banco([['INCR', P + 'rl:' + chave], ['EXPIRE', P + 'rl:' + chave, String(segundos)]]);
   if (n > max) throw new ErroApi(429, 'Muitas tentativas. Aguarde alguns minutos e tente de novo.');
 }
 
@@ -156,7 +224,7 @@ export async function semear() {
     if (args.length) cmds.push(['HSET', chaveCol(col), ...args]);
   }
   cmds.push(['INCR', P + 'rev']);
-  await redis(cmds);
+  await banco(cmds);
 }
 export async function bumpRev() { return um('INCR', P + 'rev'); }
 export const CHAVES = { usuarios: P + 'usuarios', rev: P + 'rev' };
