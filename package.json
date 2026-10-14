@@ -1,0 +1,14 @@
+{
+  "name": "ct-nord-sistema",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sistema de gestão do CT NORD: alunos, contratos, financeiro, agenda e captação.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "senha": "node scripts/gerar-senha.js",
+    "local": "node scripts/servidor-local.js"
+  }
+}

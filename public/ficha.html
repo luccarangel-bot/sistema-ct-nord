@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="description" content="Ficha de matrícula do CT NORD.">
+<meta name="theme-color" content="#0B0B0B">
+<link rel="icon" href="/icone.png" type="image/png">
+<link rel="apple-touch-icon" href="/icone-apple.png">
+<style>html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Ficha de Matrícula</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<style>
+/* Layout: coluna única para o celular do aluno. Faixa preta no topo com o logo branco, título expandido, blocos separados por filetes de 1px, cantos retos, sem cor de destaque. */
+:root {
+  --bg: #F3F3F1; --surface: #FFFFFF; --surface-2: #EAEAE7; --line: #D6D6D2; --line-strong: #0B0B0B;
+  --fg: #0B0B0B; --muted: #5C5C59; --cinza: #9A9A96; --inv-bg: #0B0B0B; --inv-fg: #F3F3F1;
+  --bad: #0B0B0B;
+  --f-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0B0B0B; --surface: #131313; --surface-2: #1C1C1C; --line: #2C2C2A; --line-strong: #F3F3F1;
+  --fg: #F3F3F1; --muted: #A3A3A0; --cinza: #6E6E6A; --inv-bg: #F3F3F1; --inv-fg: #0B0B0B; --bad: #F3F3F1; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0B0B0B; --surface: #131313; --surface-2: #1C1C1C; --line: #2C2C2A; --line-strong: #F3F3F1;
+  --fg: #F3F3F1; --muted: #A3A3A0; --cinza: #6E6E6A; --inv-bg: #F3F3F1; --inv-fg: #0B0B0B; --bad: #F3F3F1; color-scheme: dark; }
+* { box-sizing: border-box; border-radius: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-stretch: 100%; font-size: 16px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.marca-topo { background: #0B0B0B; padding-block: 18px; padding-inline: 16px; border-bottom: 1px solid #262624; }
+.marca-topo div { max-width: 640px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.marca-topo img { height: 40px; width: auto; display: block; }
+.marca-topo span { color: #A3A3A0; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; text-align: right; }
+.pagina { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: 32px 64px; display: flex; flex-direction: column; gap: 20px; }
+.cab { display: flex; flex-direction: column; gap: 14px; padding-bottom: 22px; border-bottom: 1px solid var(--line-strong); }
+.cab .ct { font-stretch: 112.5%; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: .7rem; }
+h1, h2, h3 { font-stretch: 125%; font-weight: 800; margin: 0; text-transform: uppercase; text-wrap: balance; }
+h1 { font-size: clamp(2.4rem, 11vw, 3.6rem); line-height: .86; letter-spacing: -.035em; }
+h2 { font-size: 1.3rem; line-height: 1; letter-spacing: -.02em; }
+.cab p { margin: 0; color: var(--muted); max-width: 56ch; }
+.faixa-verde { display: none; }
+fieldset { border: 1px solid var(--line); background: var(--surface); padding: 20px 18px; margin: 0; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+legend { padding: 0 8px; margin-left: -8px; font-stretch: 125%; font-weight: 800; font-size: 1.05rem; text-transform: uppercase; letter-spacing: -.01em; background: var(--surface); }
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.campo > span { font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; }
+.campo > span em { font-style: normal; }
+.campo > small { color: var(--muted); font-size: .84rem; }
+input, select, textarea { background: var(--surface); border: 1px solid var(--line-strong); padding: 12px; width: 100%; min-width: 0; }
+input::placeholder, textarea::placeholder { color: var(--cinza); }
+textarea { min-height: 80px; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible, .regimento:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.linha2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.opcoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.opcoes label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--fg); padding: 10px 14px; cursor: pointer; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .7rem; }
+.opcoes input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.opcoes label:has(input:checked) { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.opcoes label:has(input:focus-visible) { outline: 2px solid var(--fg); outline-offset: 2px; }
+.planos { display: flex; flex-direction: column; border-top: 1px solid var(--line-strong); }
+.plano { display: flex; gap: 12px; align-items: center; padding: 14px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.plano input { width: 18px; height: 18px; margin: 0; flex: none; accent-color: var(--fg); }
+.plano > div { flex: 1; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: baseline; }
+.plano b { font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: .82rem; }
+.plano .preco { font-stretch: 125%; font-weight: 800; font-size: 1.05rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; text-align: right; grid-row: span 2; align-self: center; }
+.plano small { color: var(--muted); font-size: .82rem; }
+.plano:has(input:checked) { background: var(--inv-bg); color: var(--inv-fg); border-bottom-color: var(--inv-bg); padding-inline: 12px; }
+.plano:has(input:checked) small { color: var(--inv-fg); opacity: .75; }
+.plano:has(input:checked) input { accent-color: var(--inv-fg); }
+.resumo { border-left: 1px solid var(--line-strong); background: var(--surface-2); padding: 12px 14px; font-size: .94rem; }
+.resumo b { font-variant-numeric: tabular-nums; }
+.regimento { border: 1px solid var(--line); background: var(--bg); padding: 4px 16px 14px; max-height: 360px; overflow: auto; font-size: .88rem; }
+.regimento h3 { font-size: .82rem; margin: 20px 0 8px; letter-spacing: -.01em; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.regimento p { margin: 0 0 8px; max-width: 65ch; color: var(--muted); }
+.regimento .cabreg { padding: 14px 0 6px; border-bottom: 1px solid var(--line-strong); }
+.regimento .cabreg b { font-stretch: 125%; font-weight: 800; font-size: .95rem; display: block; letter-spacing: -.01em; }
+.regimento .cabreg small { color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .6rem; }
+.termo { display: flex; gap: 12px; align-items: flex-start; font-size: .92rem; cursor: pointer; }
+.termo input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--fg); }
+.termo.forte { border: 1px solid var(--fg); padding: 14px; }
+.termo.forte:has(input:checked) { background: var(--surface-2); }
+.erro { font-weight: 700; font-size: .9rem; border-left: 1px solid var(--fg); padding-left: 12px; }
+input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { outline: 2px solid var(--fg); outline-offset: 1px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--fg); background: transparent; padding: 16px 20px; cursor: pointer; text-decoration: none; color: var(--fg); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .74rem; }
+.btn.pri, .btn.wa { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.btn.pri::after, .btn.wa::after { content: "→"; letter-spacing: 0; font-size: 1rem; font-stretch: 100%; }
+.btn.pri:disabled { opacity: .35; cursor: not-allowed; }
+.btn.largo { width: 100%; }
+.ok { background: var(--surface); border: 1px solid var(--line); padding: 24px 18px; display: flex; flex-direction: column; gap: 16px; }
+.ok .selo { width: 48px; height: 48px; background: var(--inv-bg); color: var(--inv-fg); display: grid; place-items: center; }
+.ok p { margin: 0; color: var(--muted); }
+.msg { background: var(--surface-2); padding: 12px; font-size: .8rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 200px; overflow: auto; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.rodape { color: var(--muted); font-size: .82rem; text-align: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="marca-topo"><div><img src="/logo-branco.png" alt="CT NORD"><span>Jiu-Jitsu · Muay Thai<br>Feminino · Kids</span></div></div>
+<div class="pagina">
+  <header class="cab">
+    <div class="ct" id="nome-ct">CT NORD — Matrícula</div>
+    <h1>Ficha de matrícula</h1>
+    <div class="faixa-verde" aria-hidden="true"></div>
+    <p>Preencha seus dados, escolha o plano e leia o regimento. A ficha chega direto no CT. Leva poucos minutos.</p>
+  </header>
+
+  <form id="ficha" novalidate>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <fieldset>
+        <legend>Seus dados</legend>
+        <label class="campo"><span>Nome completo <em>*</em></span><input id="n" name="n" autocomplete="name" required></label>
+        <div class="linha2">
+          <label class="campo"><span>Data de nascimento <em>*</em></span><input id="nas" name="nas" type="date" required></label>
+          <label class="campo"><span>CPF <em id="cpf-obr">*</em></span><input id="cpf" name="cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14"></label>
+        </div>
+        <div class="linha2">
+          <label class="campo"><span>Celular / WhatsApp <em>*</em></span><input id="tel" name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="(21) 99999-9999" required></label>
+          <label class="campo"><span>E-mail</span><input id="em" name="em" type="email" autocomplete="email"></label>
+        </div>
+        <label class="campo"><span>Endereço</span><input id="end" name="end" autocomplete="street-address" placeholder="Rua, número, bairro, cidade"></label>
+      </fieldset>
+
+      <fieldset id="bloco-resp" hidden>
+        <legend>Responsável</legend>
+        <p style="margin:0;color:var(--muted)">Para alunos com menos de 18 anos, o responsável preenche os dados abaixo e aceita os termos.</p>
+        <label class="campo"><span>Nome do responsável <em>*</em></span><input id="rn" name="rn"></label>
+        <div class="linha2">
+          <label class="campo"><span>CPF do responsável <em>*</em></span><input id="rcpf" name="rcpf" inputmode="numeric" maxlength="14"></label>
+          <label class="campo"><span>Celular do responsável <em>*</em></span><input id="rtel" name="rtel" type="tel" inputmode="tel"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Treino</legend>
+        <div class="campo"><span>Modalidade <em>*</em></span>
+          <div class="opcoes" role="radiogroup" aria-label="Modalidade">
+            <label><input type="radio" name="mod" value="Jiu-jitsu" checked>Jiu-Jitsu</label>
+            <label><input type="radio" name="mod" value="Jiu-jitsu Kids">Jiu-Jitsu Kids</label>
+            <label><input type="radio" name="mod" value="Muay Thai">Muay Thai</label>
+          </div>
+        </div>
+        <div class="campo"><span>Já treinou antes?</span>
+          <div class="opcoes">
+            <label><input type="radio" name="exp" value="Nunca treinei" checked>Nunca treinei</label>
+            <label><input type="radio" name="exp" value="Já treinei">Já treinei</label>
+          </div>
+        </div>
+        <div class="linha2" id="bloco-faixa" hidden>
+          <label class="campo"><span>Faixa atual</span><select id="fx" name="fx"></select></label>
+          <label class="campo" id="campo-grau"><span>Grau</span><select id="gr" name="gr"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+        </div>
+      </fieldset>
+
+      <fieldset id="bloco-plano" hidden>
+        <legend>Plano e pagamento</legend>
+        <div class="planos" id="lista-planos" role="radiogroup" aria-label="Plano"></div>
+        <div class="linha2">
+          <label class="campo"><span>Forma de pagamento <em>*</em></span><select id="fp" name="fp"></select></label>
+          <label class="campo" id="campo-dv"><span>Melhor dia para pagar</span><select id="dv" name="dv"><option value="5">Dia 5</option><option value="10" selected>Dia 10</option><option value="15">Dia 15</option><option value="20">Dia 20</option><option value="25">Dia 25</option></select></label>
+        </div>
+        <label class="campo" id="campo-fam" hidden><span>Quem mais da família vai treinar? <em>*</em></span><textarea id="fam" name="fam" placeholder="Nome de cada pessoa, um por linha"></textarea><small>Cada pessoa da família também preenche a própria ficha.</small></label>
+        <div class="resumo" id="resumo-plano"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Saúde e emergência</legend>
+        <label class="campo"><span>Problemas de saúde, lesões, alergias ou medicamentos</span><textarea id="sau" name="sau" placeholder="Se não tiver nada, deixe em branco."></textarea></label>
+        <div class="linha2">
+          <label class="campo"><span>Contato de emergência</span><input id="ctn" name="ctn" placeholder="Nome"></label>
+          <label class="campo"><span>Telefone de emergência</span><input id="ctt" name="ctt" type="tel" inputmode="tel"></label>
+        </div>
+        <label class="campo"><span>Como conheceu o CT?</span>
+          <select id="ori" name="ori"><option value="">Escolha</option><option>Instagram</option><option>Indicação</option><option>Google</option><option>WhatsApp</option><option>Passou na frente</option><option>Wellhub / TotalPass</option><option>Outro</option></select>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Termos e condições</legend>
+        <p style="margin:0">Leia o Regimento Interno e Código de Conduta do CT NORD. Para concluir a matrícula, é preciso aceitar os termos.</p>
+        <div class="regimento" id="regimento" tabindex="0" role="region" aria-label="Regimento Interno e Código de Conduta">
+          <div class="cabreg"><b>REGIMENTO INTERNO E CÓDIGO DE CONDUTA</b><small>CT NORD · Versão 1.0</small></div>
+<h3>1. FINALIDADE, ABRANGÊNCIA E APLICAÇÃO</h3>
+<p>Este documento reúne, em um único instrumento, o Regimento Interno e o Código de Conduta do CT NORD, estabelecendo regras de convivência, segurança, profissionalismo, prevenção de abusos e tratamento de ocorrências.</p>
+<p>Aplica-se a alunos, professores, coordenadores, colaboradores, prestadores de serviço, atletas, convidados e demais pessoas que participem das atividades ou representem o CT NORD.</p>
+<p>As regras devem ser interpretadas em conjunto, com respeito à legislação aplicável e aos princípios de segurança, respeito, proporcionalidade, imparcialidade, confidencialidade possível e direito de defesa.</p>
+<h3>2. PRINCÍPIOS FUNDAMENTAIS</h3>
+<p>Todos devem respeitar a integridade física, moral, emocional e psicológica das pessoas e contribuir para um ambiente seguro, profissional, inclusivo e livre de abuso, assédio, intimidação e discriminação.</p>
+<p>O CT NORD adota tolerância zero para assédio, importunação sexual, ameaças, coerção e violência. Cada pessoa é responsável por sua própria conduta e por respeitar os limites dos demais.</p>
+<p>Relatos e apurações devem ser tratados de boa-fé e com imparcialidade. É proibida a retaliação contra quem denuncia, testemunha ou participa de uma apuração de boa-fé.</p>
+<h3>3. CONDUTA DOS PROFESSORES E COLABORADORES</h3>
+<p>Professores e colaboradores devem manter postura profissional e limites adequados na relação com alunos. O contato físico deve ser compatível com o ensino, a correção técnica, a segurança e a prática esportiva.</p>
+<p>São vedados comentários sexualizados, insinuantes, constrangedores, ofensivos ou depreciativos, bem como mensagens de teor íntimo incompatíveis com a relação profissional.</p>
+<p>É proibido usar posição de autoridade, graduação, escala, competição, bolsa, desconto, indicação ou benefício profissional para obter aproximação ou vantagem pessoal. Também é proibido favorecer ou perseguir alguém por relações pessoais.</p>
+<p>Devem ser evitados encontros privados com alunos sem justificativa pedagógica, administrativa ou de segurança. A comunicação deve ocorrer preferencialmente por canais oficiais ou profissionais do CT NORD.</p>
+<p>Professores e colaboradores devem comunicar conflitos de interesse e não podem solicitar ou aceitar vantagens que influenciem decisões profissionais. Presentes de baixo valor e caráter institucional ou comemorativo podem ser aceitos quando não houver expectativa de favorecimento. Relações comerciais com alunos devem ser transparentes e nunca coercitivas.</p>
+<h3>4. CONDUTA DOS ALUNOS E ATLETAS</h3>
+<p>Alunos e atletas devem respeitar professores, colegas, adversários, visitantes e funcionários, abstendo-se de comentários ofensivos, sexualizados, discriminatórios ou humilhantes, bem como de atitudes invasivas, desrespeitosas ou intimidatórias.</p>
+<p>Os limites físicos e verbais devem ser respeitados durante treinos e interações. Quando alguém solicitar que uma interação seja interrompida, a solicitação deve ser respeitada imediatamente.</p>
+<p>Treinos, sparrings e competições internas não podem ser usados como meio de vingança, punição pessoal ou demonstração de superioridade alheia aos objetivos esportivos. Conflitos pessoais ou afetivos não devem ser levados para o tatame.</p>
+<p>Atletas que representem oficialmente o CT NORD devem preservar conduta compatível com os valores da academia. Discussões com árbitros, adversários ou outras equipes não devem evoluir para ameaças, agressões ou exposição ofensiva em redes sociais. Resultados esportivos não justificam desrespeito ou favorecimento.</p>
+<h3>5. RELACIONAMENTOS E CONFLITOS DE INTERESSE</h3>
+<p>É proibido relacionamento íntimo, romântico ou sexual entre professor e aluno enquanto existir vínculo do aluno com o CT NORD. Se surgir interesse ou relacionamento nessa situação, o professor deverá comunicar imediatamente a Direção e afastar-se da responsabilidade direta de ensinar, avaliar, graduar, escalar ou supervisionar o aluno enquanto a situação for analisada.</p>
+<p>A vida afetiva entre alunos adultos, quando consensual, não constitui por si só infração disciplinar. A intervenção da academia deverá se basear em conduta concreta, como assédio, coerção, ameaça, favorecimento, conflito de interesse, perturbação relevante do ambiente ou violação destas regras. A quantidade de relacionamentos, parceiros ou términos de uma pessoa não será, por si só, critério disciplinar.</p>
+<p>Quando necessário para prevenir riscos ou administrar conflitos, a Direção poderá reorganizar turmas, horários, duplas ou responsabilidades, sem que isso represente, por si só, declaração de culpa.</p>
+<p>Relacionamentos, amizades ou conflitos pessoais não podem determinar graduação, escala, oportunidade de competição, bolsa, desconto, acesso privilegiado, contratação ou tratamento diferenciado.</p>
+<h3>6. ASSÉDIO, IMPORTUNAÇÃO SEXUAL E ABUSO DE AUTORIDADE</h3>
+<p>Qualquer ato de natureza sexual sem consentimento constitui falta gravíssima. Isso inclui, entre outros, contato físico inadequado ou sem consentimento, insinuações e brincadeiras sexuais, comentários sexualizados, convites insistentes após recusa, mensagens íntimas não solicitadas, exposição de conteúdo sexual, perseguição, chantagem, ameaça ou constrangimento.</p>
+<p>O consentimento deve ser livre e não pode ser obtido mediante ameaça, pressão, chantagem, manipulação ou abuso de autoridade. Uma relação aparentemente consensual não impede apuração quando houver alegação concreta de ameaça, coerção, retaliação ou abuso de posição.</p>
+<h3>7. AMEAÇAS, VIOLÊNCIA, INTIMIDAÇÃO E RETALIAÇÃO</h3>
+<p>Constituem faltas graves ou gravíssimas, conforme as circunstâncias: ameaçar, intimidar, perseguir, constranger, retaliar contra quem denunciou ou colaborou com apuração, divulgar informações para humilhar ou intimidar, ou iniciar ou incentivar agressões físicas fora da prática esportiva.</p>
+<p>Ameaças relacionadas à exposição de relacionamento, denúncia, término, dívida, graduação, competição ou permanência no CT NORD devem ser comunicadas imediatamente à Direção.</p>
+<p>Em caso de risco imediato, a prioridade será separar as pessoas envolvidas, preservar a segurança e, quando necessário, acionar os serviços públicos competentes.</p>
+<h3>8. CRIANÇAS, ADOLESCENTES E PESSOAS VULNERÁVEIS</h3>
+<p>Professores e colaboradores devem adotar cuidado redobrado com crianças e adolescentes, mantendo contato e comunicação dentro de finalidades pedagógicas, esportivas e de segurança.</p>
+<p>Devem ser evitadas situações isoladas e desnecessárias com menores, especialmente em locais sem visibilidade de terceiros. Comunicações relevantes devem, sempre que possível, ocorrer pelos canais institucionais e com conhecimento ou participação dos responsáveis legais.</p>
+<p>Suspeitas concretas de abuso, violência, exploração ou risco envolvendo menor devem ser comunicadas imediatamente à Direção, que avaliará as medidas cabíveis e o acionamento das autoridades competentes quando necessário.</p>
+<h3>9. COMUNICAÇÃO, REDES SOCIAIS E PRIVACIDADE</h3>
+<p>Mensagens entre professores, colaboradores e alunos devem manter linguagem profissional e finalidade compatível com as atividades do CT NORD. É vedado utilizar grupos oficiais para exposição, humilhação, flerte insistente, conteúdo sexual, ameaças ou conflitos pessoais.</p>
+<p>Não se deve divulgar fotos, vídeos, áudios, conversas ou informações privadas de alunos, professores ou colaboradores sem autorização, ressalvadas situações de segurança, obrigação legal ou apuração interna. Também é vedado expor ocorrências internas como forma de vingança, constrangimento ou intimidação.</p>
+<p>Críticas e reclamações devem ser encaminhadas pelos canais adequados, sem campanhas de exposição ou perseguição dentro da comunidade do CT NORD.</p>
+<p>Informações recebidas em denúncias e apurações serão tratadas com confidencialidade na medida do possível e dentro dos limites legais. Não há promessa de sigilo absoluto quando a divulgação for necessária para proteger pessoas, cumprir obrigação legal ou comunicar fatos às autoridades. Registros pertinentes e lícitos poderão ser preservados para apuração.</p>
+<h3>10. SEGURANÇA, HIGIENE E USO DO ESPAÇO</h3>
+<p>Todos devem seguir as orientações de segurança e higiene e utilizar adequadamente o tatame, vestiários, equipamentos e demais áreas da academia.</p>
+<p>É proibido participar de atividades sob efeito de álcool ou de substâncias que comprometam a segurança. Lesões, riscos estruturais, equipamentos danificados e situações potencialmente perigosas devem ser comunicados imediatamente.</p>
+<p>Não é permitido levar ao ambiente da academia objeto ou substância que possa colocar outras pessoas em risco ou cuja posse seja proibida pela legislação.</p>
+<h3>11. CANAL DE DENÚNCIA E DEVER DE COMUNICAR</h3>
+<p>Denúncias podem ser feitas pela pessoa diretamente afetada ou por testemunha, de forma identificada ou anônima, à Direção do CT NORD.</p>
+<p>Quem presenciar ou tomar conhecimento de situação que possa representar ameaça, assédio, importunação sexual, violência ou grave violação destas regras deve comunicar a Direção.</p>
+<p>Denúncias feitas de boa-fé não gerarão punição apenas porque a apuração foi inconclusiva. Poderá haver responsabilização disciplinar por denúncia deliberadamente falsa, fabricada ou utilizada para causar dano.</p>
+<p>A omissão deliberada diante de situação grave poderá ser apurada como conivência.</p>
+<h3>12. PROCEDIMENTO DE APURAÇÃO E MEDIDAS DE PROTEÇÃO</h3>
+<p>A Direção receberá a ocorrência e registrará, na medida do possível, data, local, pessoas envolvidas, descrição dos fatos e materiais apresentados. Quando necessário, buscará informações de diferentes fontes para preservar a imparcialidade.</p>
+<p>Podem ser considerados relatos, mensagens, registros, imagens, testemunhos e outros elementos pertinentes e obtidos licitamente. A pessoa acusada terá oportunidade razoável de apresentar sua versão antes da decisão disciplinar definitiva, salvo quando medidas preventivas urgentes forem necessárias.</p>
+<p>Medidas preventivas não significam declaração de culpa. Podem incluir afastamento temporário, restrição de contato, reorganização de turmas ou horários e outras medidas necessárias à proteção das pessoas e à continuidade segura das atividades. Quando cabível, a Direção poderá orientar o envolvido a buscar apoio e poderá comunicar ou recomendar comunicação às autoridades competentes.</p>
+<h3>13. MEDIDAS DISCIPLINARES</h3>
+<p>Conforme a gravidade, reincidência, risco, impacto e circunstâncias do caso, poderão ser aplicadas orientação formal, advertência formal, mudança de turma ou função, suspensão temporária, afastamento preventivo, desligamento do aluno ou colaborador e comunicação às autoridades competentes.</p>
+<p>As medidas não precisam seguir obrigatoriamente uma sequência quando a gravidade da conduta justificar providência imediata. A Direção buscará proporcionalidade entre a conduta e a medida, sem prejuízo de ações urgentes de proteção.</p>
+<p>Professores e colaboradores também poderão estar sujeitos às consequências previstas em seus contratos e na legislação aplicável.</p>
+<h3>14. RESPONSABILIDADE DA DIREÇÃO</h3>
+<p>A Direção deverá buscar aplicação coerente das regras, evitando decisões baseadas apenas em boatos, preferências pessoais ou julgamentos sobre a vida privada. As decisões disciplinares devem considerar fatos concretos, gravidade, contexto e proporcionalidade.</p>
+<p>Quando a ocorrência envolver pessoa próxima à Direção, a apuração deverá, sempre que possível, contar com outro responsável da gestão para reduzir conflitos de interesse.</p>
+<p>A Direção poderá atualizar este documento conforme a experiência prática da academia, as necessidades de segurança e alterações legais, comunicando as mudanças aos públicos aplicáveis.</p>
+<h3>15. DISPOSIÇÕES FINAIS</h3>
+<p>Este documento estabelece normas internas de convivência e gestão e não substitui a legislação brasileira nem impede o exercício de direitos perante autoridades ou órgãos competentes.</p>
+<p>O desconhecimento das regras não isenta o participante da responsabilidade de respeitá-las após sua disponibilização. Alunos, professores e colaboradores deverão declarar ciência das regras que lhes sejam aplicáveis.</p>
+<p>Recomenda-se revisão jurídica antes da adoção deste documento como instrumento contratual ou disciplinar, especialmente para adequação à legislação trabalhista, civil, de proteção de crianças e adolescentes e de proteção de dados.</p>
+<h3>TERMO DE CIÊNCIA</h3>
+<p>Declaro que recebi, li e compreendi o Regimento Interno e Código de Conduta do CT NORD e comprometo-me a respeitar as regras de convivência, segurança, profissionalismo e integridade aqui estabelecidas.</p>
+<p>Declaro estar ciente de que o descumprimento das regras poderá resultar em medidas disciplinares proporcionais à gravidade da conduta, sem prejuízo de eventual comunicação às autoridades competentes quando cabível.</p>
+        </div>
+        <label class="termo forte"><input type="checkbox" id="rc" name="rc"><span id="rc-txt"><b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.</span></label>
+        <label class="termo forte"><input type="checkbox" id="ok" name="ok"><span id="ok-txt">Declaro que as informações desta ficha são verdadeiras e que estou apto(a) a praticar atividade física. Autorizo o CT NORD a guardar estes dados para matrícula, contato e cobrança.</span></label>
+        <div class="erro" id="erro" role="alert" hidden></div>
+        <button type="submit" class="btn pri largo" id="btn-concluir" disabled>Concluir matrícula</button>
+        <small style="color:var(--muted);text-align:center" id="dica-concluir">Marque as duas caixas acima para concluir.</small>
+      </fieldset>
+    </div>
+  </form>
+
+  <section class="ok" id="pronto" hidden>
+    <div class="selo" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+    <h2>Ficha enviada.</h2>
+    <p>Recebemos seus dados. A equipe do CT vai conferir e entrar em contato pelo WhatsApp para confirmar a matrícula e o pagamento.</p>
+    <div class="resumo" id="pronto-resumo"></div>
+    <a class="btn largo" id="btn-wa" href="#" target="_blank" rel="noopener" hidden>Falar com o CT no WhatsApp</a>
+  </section>
+
+  <p class="rodape">Seus dados ficam guardados com segurança e são usados só pelo CT NORD para matrícula, contato e cobrança.</p>
+</div>
+
+<script>
+"use strict";
+const REGIMENTO_VERSAO = '1.0';
+const FAIXAS = {
+  'Jiu-jitsu': ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'],
+  'Jiu-jitsu Kids': ['Branca', 'Cinza e branca', 'Cinza', 'Cinza e preta', 'Amarela e branca', 'Amarela', 'Amarela e preta', 'Laranja e branca', 'Laranja', 'Laranja e preta', 'Verde e branca', 'Verde', 'Verde e preta'],
+  'Muay Thai': ['Branco', 'Amarelo', 'Laranja', 'Verde', 'Azul', 'Roxo', 'Marrom', 'Preto'],
+};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const fR = (v) => BRL.format(Number(v) || 0);
+
+// Nome do CT e planos à venda vêm do servidor
+let CT = { n: 'CT NORD', w: '', p: [] };
+let PLANOS = [];
+const ehFamilia = (p) => /fam[ií]lia/i.test(p.nome);
+function linhaPreco(p) {
+  if (p.forma === 'avista') return { preco: fR(p.valor) + '/mês', det: p.meses + ' meses · pagamento único de ' + fR(p.valor * p.meses) };
+  return { preco: fR(p.valor) + '/mês', det: ehFamilia(p) ? 'valor por pessoa' : p.meses > 1 ? p.meses + ' mensalidades' : 'renovação mensal' };
+}
+function montarPlanos() {
+  if (CT.n) { $('nome-ct').textContent = CT.n + ' — Matrícula'; document.title = 'Ficha de Matrícula · ' + CT.n; }
+  PLANOS = (Array.isArray(CT.p) ? CT.p : []).map((p) => ({ id: p.i, nome: p.n, valor: Number(p.v) || 0, meses: Number(p.m) || 1, forma: p.f || 'mensal', aceitas: Array.isArray(p.a) && p.a.length ? p.a : ['Pix', 'Cartão de débito', 'Dinheiro'] }));
+  $('bloco-plano').hidden = !PLANOS.length;
+  $('lista-planos').innerHTML = PLANOS.map((p) => { const l = linhaPreco(p); return '<label class="plano"><input type="radio" name="pl" value="' + esc(p.id) + '"><div><b>' + esc(p.nome) + '</b><span class="preco">' + esc(l.preco) + '</span><small>' + esc(l.det) + '</small></div></label>'; }).join('');
+  atualizar();
+}
+fetch('/api/ficha').then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) CT = Object.assign(CT, j); montarPlanos(); }).catch(() => montarPlanos());
+const planoSel = () => { const r = document.querySelector('[name="pl"]:checked'); return r ? PLANOS.find((p) => p.id === r.value) : null; };
+
+const soDig = (s) => String(s || '').replace(/\D/g, '');
+function mascaraCpf(el) { const d = soDig(el.value).slice(0, 11); el.value = d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4'); }
+function mascaraTel(el) { let d = soDig(el.value); if (d.length > 11 && d.startsWith('55')) d = d.slice(2); d = d.slice(0, 11); el.value = d.length <= 2 ? d : d.length <= 6 ? '(' + d.slice(0, 2) + ') ' + d.slice(2) : d.length <= 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7); }
+['cpf', 'rcpf'].forEach((id) => $(id).addEventListener('input', (e) => mascaraCpf(e.target)));
+['tel', 'rtel', 'ctt'].forEach((id) => $(id).addEventListener('input', (e) => mascaraTel(e.target)));
+function cpfValido(c) {
+  const d = soDig(c); if (d.length !== 11 || /^(\d)\1+$/.test(d)) return false;
+  const dv = (n) => { let s = 0; for (let i = 0; i < n; i++) s += Number(d[i]) * (n + 1 - i); const r = (s * 10) % 11; return r === 10 ? 0 : r; };
+  return dv(9) === Number(d[9]) && dv(10) === Number(d[10]);
+}
+function idade(nas) {
+  if (!nas) return null; const h = new Date(); const [y, m, d] = nas.split('-').map(Number);
+  let i = h.getFullYear() - y; if (h.getMonth() + 1 < m || (h.getMonth() + 1 === m && h.getDate() < d)) i--; return i;
+}
+const ehMenor = () => !$('bloco-resp').hidden;
+
+function atualizar() {
+  const f = $('ficha');
+  const mod = f.querySelector('[name="mod"]:checked').value;
+  const exp = f.querySelector('[name="exp"]:checked').value;
+  const id = idade($('nas').value);
+  $('bloco-resp').hidden = !(id != null && id < 18) && mod !== 'Jiu-jitsu Kids';
+  $('cpf-obr').hidden = ehMenor();
+  $('rc-txt').innerHTML = ehMenor()
+    ? '<b>Como responsável, li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a fazer o aluno respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.'
+    : '<b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.';
+  $('bloco-faixa').hidden = exp !== 'Já treinei';
+  const atual = $('fx').value;
+  if ($('fx').dataset.mod !== mod) {
+    $('fx').innerHTML = FAIXAS[mod].map((x) => '<option>' + x + '</option>').join('');
+    $('fx').dataset.mod = mod;
+    if (FAIXAS[mod].includes(atual)) $('fx').value = atual;
+  }
+  $('campo-grau').hidden = mod === 'Muay Thai';
+  // Plano
+  const p = planoSel();
+  if (p) {
+    if ($('fp').dataset.pl !== p.id) {
+      const prev = $('fp').value;
+      $('fp').innerHTML = p.aceitas.map((x) => '<option>' + esc(x) + '</option>').join('');
+      if (p.aceitas.includes(prev)) $('fp').value = prev;
+      $('fp').dataset.pl = p.id;
+    }
+    $('campo-dv').hidden = p.forma === 'avista';
+    $('campo-fam').hidden = !ehFamilia(p);
+    const l = linhaPreco(p);
+    $('resumo-plano').innerHTML = p.forma === 'avista'
+      ? 'Você paga <b>' + fR(p.valor * p.meses) + '</b> de uma vez, em ' + esc($('fp').value) + ', e treina por ' + p.meses + ' meses.'
+      : 'Você paga <b>' + fR(p.valor) + '</b> por mês' + (ehFamilia(p) ? ' (valor por pessoa)' : '') + ', em ' + esc($('fp').value) + ', com vencimento no dia ' + $('dv').value + '.';
+    $('resumo-plano').hidden = false;
+  } else {
+    $('fp').innerHTML = '<option value="">Escolha o plano primeiro</option>'; $('fp').dataset.pl = '';
+    $('campo-fam').hidden = true;
+    $('resumo-plano').hidden = true;
+  }
+  const pode = $('rc').checked && $('ok').checked;
+  $('btn-concluir').disabled = !pode;
+  $('dica-concluir').hidden = pode;
+}
+$('ficha').addEventListener('change', atualizar);
+$('nas').addEventListener('input', atualizar);
+atualizar();
+
+function erro(msg, el) {
+  document.querySelectorAll('[aria-invalid]').forEach((x) => x.removeAttribute('aria-invalid'));
+  $('erro').textContent = msg; $('erro').hidden = false;
+  if (el) { el.setAttribute('aria-invalid', 'true'); el.focus(); }
+}
+
+let mensagem = '';
+$('ficha').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const f = $('ficha'); const v = (id) => $(id).value.trim();
+  const menor = ehMenor();
+  if (v('n').split(/\s+/).length < 2) return erro('Escreva o nome completo do aluno.', $('n'));
+  if (!v('nas')) return erro('Informe a data de nascimento.', $('nas'));
+  const id = idade(v('nas')); if (id == null || id < 2 || id > 100) return erro('Confira a data de nascimento.', $('nas'));
+  if (!menor && !v('cpf')) return erro('Informe seu CPF. Ele é usado no termo de ciência do regimento.', $('cpf'));
+  if (v('cpf') && !cpfValido(v('cpf'))) return erro('O CPF parece estar incorreto. Confira os números.', $('cpf'));
+  if (soDig(v('tel')).length < 10) return erro('Informe um celular com DDD.', $('tel'));
+  if (menor && !v('rn')) return erro('Informe o nome do responsável.', $('rn'));
+  if (menor && !cpfValido(v('rcpf'))) return erro('Informe um CPF válido do responsável.', $('rcpf'));
+  if (menor && soDig(v('rtel')).length < 10) return erro('Informe o celular do responsável com DDD.', $('rtel'));
+  const p = planoSel();
+  if (PLANOS.length && !p) return erro('Escolha um plano.', document.querySelector('[name="pl"]'));
+  if (p && ehFamilia(p) && !v('fam')) return erro('Informe quem mais da família vai treinar.', $('fam'));
+  if (!$('rc').checked) return erro('Para concluir, aceite o Regimento Interno e Código de Conduta.', $('rc'));
+  if (!$('ok').checked) return erro('Para concluir, marque a declaração dos dados.', $('ok'));
+  $('erro').hidden = true;
+
+  const mod = f.querySelector('[name="mod"]:checked').value;
+  const exp = f.querySelector('[name="exp"]:checked').value;
+  const agora = new Date().toISOString();
+  const d = {
+    v: 2, n: v('n'), nas: v('nas'), cpf: v('cpf'), tel: v('tel'), em: v('em'), end: v('end'),
+    mod, exp, fx: exp === 'Já treinei' ? $('fx').value : '', gr: exp === 'Já treinei' && mod !== 'Muay Thai' ? Number($('gr').value) : 0,
+    sau: v('sau'), ctn: v('ctn'), ctt: v('ctt'), ori: v('ori'), ok: agora, rc: agora, rcv: REGIMENTO_VERSAO,
+  };
+  if (menor) Object.assign(d, { rn: v('rn'), rcpf: v('rcpf'), rtel: v('rtel') });
+  if (p) Object.assign(d, { pl: p.id, pln: p.nome, fp: $('fp').value, dv: p.forma === 'avista' ? 0 : Number($('dv').value), fam: ehFamilia(p) ? v('fam') : '' });
+  const btn = $('btn-concluir'); btn.disabled = true; btn.textContent = 'Enviando…';
+  fetch('/api/ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
+    .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erro || 'Não foi possível enviar agora.'); })
+    .then(() => {
+      $('pronto-resumo').innerHTML = '<b>' + esc(d.n) + '</b> · ' + esc(d.mod) + (p ? '<br>' + esc(p.nome) + ' · ' + esc(d.fp) + ' · ' + (p.forma === 'avista' ? 'pagamento único de <b>' + fR(p.valor * p.meses) + '</b>' : '<b>' + fR(p.valor) + '</b> por mês') : '');
+      const w = soDig(CT.w);
+      $('btn-wa').hidden = !w;
+      if (w) $('btn-wa').href = 'https://wa.me/' + (w.length <= 11 ? '55' + w : w) + '?text=' + encodeURIComponent('Olá! Acabei de enviar minha ficha de matrícula pelo site. Meu nome é ' + d.n + '.');
+      $('ficha').hidden = true; $('pronto').hidden = false; window.scrollTo(0, 0);
+    })
+    .catch((e2) => erro(e2.message === 'Failed to fetch' ? 'Sem conexão. Confira a internet e toque em Concluir de novo.' : e2.message))
+    .finally(() => { btn.textContent = 'Concluir matrícula'; atualizar(); });
+});
+</script>
+</body>
+</html>

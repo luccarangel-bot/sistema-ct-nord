@@ -1,0 +1,1767 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="description" content="Sistema de gestão do CT NORD.">
+<meta name="theme-color" content="#0B0B0B">
+<link rel="icon" href="/icone.png" type="image/png">
+<link rel="apple-touch-icon" href="/icone-apple.png">
+<style>html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
+<title>Gestão do CT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<style>
+/* Layout: barra lateral preta (Preto Tatame) com o logo branco + área de trabalho em Branco Kimono; tudo em linhas de 1px, cantos retos, sem cor de destaque. Ênfase por peso, tamanho e inversão preto/branco. */
+:root {
+  --bg: #F3F3F1; --surface: #FFFFFF; --surface-2: #EAEAE7; --line: #D6D6D2; --line-strong: #0B0B0B;
+  --fg: #0B0B0B; --muted: #5C5C59; --cinza: #9A9A96; --inv-bg: #0B0B0B; --inv-fg: #F3F3F1;
+  --side-bg: #0B0B0B; --side-fg: #F3F3F1; --side-muted: #A3A3A0; --side-line: #262624;
+  --veu: rgba(11, 11, 11, .72);
+  /* tokens antigos, mapeados para o preto e branco da marca */
+  --accent: var(--fg); --accent-fg: var(--inv-fg); --accent-soft: var(--surface-2);
+  --ok: var(--fg); --bad: var(--fg); --warn: var(--fg); --ok-soft: var(--surface-2); --bad-soft: var(--surface-2); --warn-soft: var(--surface-2);
+  --f-marca: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0B0B0B; --surface: #131313; --surface-2: #1C1C1C; --line: #2C2C2A; --line-strong: #F3F3F1;
+  --fg: #F3F3F1; --muted: #A3A3A0; --cinza: #6E6E6A; --inv-bg: #F3F3F1; --inv-fg: #0B0B0B;
+  --side-line: #2C2C2A; --veu: rgba(0, 0, 0, .8); color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0B0B0B; --surface: #131313; --surface-2: #1C1C1C; --line: #2C2C2A; --line-strong: #F3F3F1;
+  --fg: #F3F3F1; --muted: #A3A3A0; --cinza: #6E6E6A; --inv-bg: #F3F3F1; --inv-fg: #0B0B0B;
+  --side-line: #2C2C2A; --veu: rgba(0, 0, 0, .8); color-scheme: dark; }
+
+* { box-sizing: border-box; border-radius: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-stretch: 100%; font-size: 15px; line-height: 1.5; }
+button, input, select, textarea { font: inherit; color: inherit; }
+.num { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { font-family: var(--f-display); font-stretch: 125%; font-weight: 800; text-transform: uppercase; letter-spacing: -.02em; margin: 0; text-wrap: balance; line-height: 1; }
+h1 { font-size: 2.1rem; }
+h2 { font-size: 1.05rem; letter-spacing: -.01em; }
+h3 { font-size: .9rem; }
+a { color: var(--fg); }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.rotulo, .sobre { font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .7rem; }
+
+/* Estrutura */
+.app { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100%; }
+.side { background: var(--side-bg); color: var(--side-fg); border-right: 1px solid var(--side-line); padding: 24px 0 16px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+.marca { padding: 0 22px 26px; border-bottom: 1px solid var(--side-line); margin-bottom: 10px; }
+.marca img { width: 128px; height: auto; display: block; }
+.marca small { display: block; margin-top: 14px; color: var(--side-muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: .62rem; }
+.nav-btn { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; border: 0; padding: 12px 22px; cursor: pointer; color: var(--side-muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .72rem; }
+.nav-btn svg { width: 18px; height: 18px; flex: none; stroke-width: 1.6; }
+.nav-btn:hover { color: var(--side-fg); }
+.nav-btn[aria-current="page"] { background: var(--side-fg); color: var(--side-bg); }
+.side .espaco { flex: 1; }
+.modo { font-size: .72rem; color: var(--side-muted); padding: 12px 22px 0; border-top: 1px solid var(--side-line); }
+.barra-celular { display: none; }
+
+main { padding-inline: 36px; padding-block: 32px 56px; min-width: 0; }
+.topo { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line-strong); }
+.topo > div:first-child { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.topo .sobre { color: var(--fg); }
+.topo p { margin: 0; color: var(--muted); max-width: 62ch; }
+.acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Botões */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--fg); background: transparent; color: var(--fg); padding: 11px 18px; cursor: pointer; white-space: nowrap; text-decoration: none; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; font-size: .7rem; line-height: 1.2; }
+.btn:hover { background: var(--surface-2); }
+.btn.pri { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.btn.pri:hover { background: var(--inv-bg); opacity: .86; }
+.topo .btn.pri::after, .rodape .btn.pri::after { content: "→"; font-stretch: 100%; letter-spacing: 0; font-size: .9rem; }
+.btn.peq { padding: 7px 11px; font-size: .64rem; gap: 6px; }
+.btn.link { border: 0; border-bottom: 1px solid var(--fg); padding: 2px 0; background: none; }
+.btn.link:hover { background: none; opacity: .7; }
+.btn.perigo { border-style: dashed; }
+.btn.link.perigo { border-bottom-style: dashed; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+.aviso { border: 1px solid var(--line-strong); background: var(--surface); padding: 12px 16px; margin-bottom: 20px; color: var(--fg); font-size: .9rem; }
+.aviso.demo, .aviso.forte { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+
+/* Números de resumo: células separadas por filete */
+.kpis { display: flex; flex-wrap: wrap; border-top: 1px solid var(--line); border-left: 1px solid var(--line); margin-bottom: 28px; }
+.kpi { flex: 1 1 190px; background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.kpi span { color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; }
+.kpi b { font-stretch: 125%; font-size: 1.75rem; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kpi small { color: var(--muted); font-size: .8rem; }
+.kpi.bad { background: var(--inv-bg); }
+.kpi.bad span, .kpi.bad small { color: var(--inv-fg); opacity: .75; }
+.kpi.bad b { color: var(--inv-fg); }
+
+/* Painéis */
+.grade2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
+.painel { background: var(--surface); border: 1px solid var(--line); padding: 18px 20px; min-width: 0; }
+.painel > header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--line-strong); }
+.painel > header small { color: var(--muted); font-size: .8rem; }
+.vazio { color: var(--muted); padding: 12px 0; font-size: .9rem; }
+
+.lista { list-style: none; margin: 0; padding: 0; }
+.lista li { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.lista li:first-child { border-top: 0; }
+.lista .cresce { flex: 1; min-width: 160px; }
+.lista .cresce b { display: block; font-weight: 700; }
+.lista .cresce small { color: var(--muted); }
+
+/* Abas, filtros e seleção */
+.tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--line); margin-bottom: 20px; overflow-x: auto; }
+.tab { background: none; border: 0; padding: 12px 0; color: var(--muted); cursor: pointer; border-bottom: 1px solid transparent; margin-bottom: -1px; white-space: nowrap; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .7rem; }
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--fg); }
+
+.filtros { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.filtros input[type="search"] { flex: 1 1 240px; }
+.chip { border: 1px solid var(--fg); background: transparent; padding: 8px 12px; cursor: pointer; color: var(--fg); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; font-size: .64rem; }
+.chip[aria-pressed="true"] { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.chip .cont { opacity: .6; margin-left: 6px; }
+
+input, select, textarea { background: var(--surface); border: 1px solid var(--line-strong); padding: 10px 12px; width: 100%; min-width: 0; font-size: .92rem; }
+input::placeholder, textarea::placeholder { color: var(--cinza); }
+textarea { min-height: 76px; resize: vertical; }
+.filtros select, .filtros input { width: auto; }
+
+/* Tabelas */
+.tabela-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th { text-align: left; color: var(--muted); padding: 12px 14px; border-bottom: 1px solid var(--line-strong); background: var(--surface); white-space: nowrap; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .62rem; }
+td { padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tr:last-child td { border-bottom: 0; }
+td.dir, th.dir { text-align: right; }
+tr.clicavel { cursor: pointer; }
+tr.clicavel:hover td { background: var(--surface-2); }
+td small { color: var(--muted); display: block; font-size: .8rem; }
+
+/* Etiquetas de situação: sem cor, por forma e inversão */
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; white-space: nowrap; border: 1px solid var(--line); color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .6rem; line-height: 1.2; }
+.pill.ok { border-color: var(--line); color: var(--muted); }
+.pill.ok::before { content: "✓"; letter-spacing: 0; }
+.pill.warn { border-color: var(--fg); color: var(--fg); }
+.pill.bad { background: var(--inv-bg); border-color: var(--inv-bg); color: var(--inv-fg); }
+.pill.info { border: 1px dashed var(--fg); color: var(--fg); }
+
+.faixa { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.faixa svg { flex: none; }
+.faixa-cinto { stroke: var(--line-strong); }
+
+/* Perfil */
+.perfil-topo { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line-strong); }
+.avatar { width: 64px; height: 64px; background: var(--inv-bg); color: var(--inv-fg); display: grid; place-items: center; font-stretch: 125%; font-size: 1.4rem; font-weight: 800; flex: none; letter-spacing: -.02em; }
+.perfil-topo .cresce { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 10px; }
+.perfil-topo p { margin: 0; display: flex; gap: 6px; flex-wrap: wrap; }
+.dados { display: grid; grid-template-columns: max-content 1fr; gap: 0; font-size: .9rem; margin: 10px 0 0; }
+.dados dt, .dados dd { padding: 9px 0; border-top: 1px solid var(--line); }
+.dados dt { color: var(--muted); padding-right: 18px; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .62rem; padding-top: 12px; }
+.dados dt:first-of-type, .dados dt:first-of-type + dd { border-top: 0; }
+.dados dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.voltar { margin-bottom: 18px; }
+
+/* Funil */
+.funil-wrap { overflow-x: auto; padding-bottom: 6px; }
+.funil { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(248px, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); min-width: min-content; }
+.coluna { background: var(--surface-2); padding: 12px; display: flex; flex-direction: column; gap: 8px; min-height: 140px; }
+.coluna > header { display: flex; justify-content: space-between; align-items: center; padding: 2px 2px 10px; border-bottom: 1px solid var(--line-strong); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; font-size: .68rem; }
+.coluna > header span { font-variant-numeric: tabular-nums; }
+.card-lead { background: var(--surface); border: 1px solid var(--line); padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: .88rem; }
+.card-lead b { font-weight: 700; }
+.card-lead small { color: var(--muted); }
+.card-lead .linha { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding-top: 4px; }
+.card-lead select { padding: 6px 8px; font-size: .82rem; }
+
+/* Agenda */
+.semana-wrap { overflow-x: auto; padding-bottom: 6px; }
+.semana { display: grid; grid-template-columns: repeat(7, minmax(158px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); min-width: min-content; }
+.dia { display: flex; flex-direction: column; gap: 8px; min-width: 0; background: var(--bg); padding: 0 8px 10px; }
+.dia > header { display: flex; justify-content: space-between; align-items: baseline; padding: 10px 2px; margin: 0 -8px; padding-inline: 10px; border-bottom: 1px solid var(--line-strong); }
+.dia > header b { font-stretch: 125%; font-weight: 800; text-transform: uppercase; font-size: .82rem; letter-spacing: -.01em; }
+.dia > header span { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
+.dia.hoje > header { background: var(--inv-bg); border-bottom-color: var(--inv-bg); }
+.dia.hoje > header b, .dia.hoje > header span { color: var(--inv-fg); }
+.aula { background: var(--surface); border: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: .84rem; }
+.aula .hora { font-stretch: 125%; font-weight: 800; font-size: .95rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.aula small { color: var(--muted); }
+.aula .mod { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .6rem; }
+.aula .mod i { width: 8px; height: 8px; flex: none; border: 1px solid var(--fg); }
+.aula .mod i.m-jj { background: var(--fg); }
+.aula .mod i.m-kids { background: transparent; }
+.aula .mod i.m-mt { background: linear-gradient(135deg, var(--fg) 50%, transparent 50%); }
+.aula.feita { background: var(--surface-2); }
+.semana-nav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.semana-nav b { font-stretch: 125%; font-weight: 800; text-transform: uppercase; letter-spacing: -.01em; font-size: .95rem; min-width: 220px; text-align: center; }
+.chamada-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border: 1px solid var(--line); max-height: 46vh; overflow: auto; }
+.chamada-lista li label { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--line); cursor: pointer; flex-wrap: wrap; }
+.chamada-lista li:first-child label { border-top: 0; }
+.chamada-lista li label:has(input:checked) { background: var(--surface-2); }
+.chamada-lista input[type="checkbox"] { width: 20px; height: 20px; flex: none; accent-color: var(--fg); }
+.chamada-lista .cresce { flex: 1; min-width: 140px; }
+.dias-sel { display: flex; gap: 6px; flex-wrap: wrap; }
+.dias-sel label { display: flex; align-items: center; gap: 6px; border: 1px solid var(--fg); padding: 7px 10px; cursor: pointer; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .64rem; }
+.dias-sel input { width: auto; margin: 0; accent-color: var(--inv-fg); }
+.dias-sel label:has(input:checked) { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.copiavel { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.copiavel input { flex: 1 1 260px; font-size: .8rem; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+
+/* Gráfico */
+.grafico { width: 100%; height: auto; display: block; }
+.grafico text { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
+.grafico .eixo { stroke: var(--line); }
+.legenda { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); margin-top: 8px; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .6rem; }
+.legenda i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+
+/* DRE */
+.dre td { padding: 9px 14px; }
+.dre tr.grupo td { font-weight: 700; background: var(--surface-2); font-stretch: 112.5%; text-transform: uppercase; letter-spacing: .06em; font-size: .72rem; }
+.dre tr.res td { font-stretch: 125%; font-weight: 800; text-transform: uppercase; letter-spacing: -.01em; font-size: .92rem; border-bottom: 1px solid var(--line-strong); }
+.dre td.sub { padding-left: 30px; color: var(--muted); }
+
+/* Modal */
+.fundo { position: fixed; inset: 0; background: var(--veu); display: grid; place-items: center; padding: 16px; z-index: 50; }
+.modal { background: var(--surface); border: 1px solid var(--line-strong); width: min(580px, 100%); max-height: calc(100% - 32px); overflow: auto; }
+.modal > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line-strong); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.modal form, .modal .corpo { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
+.campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.campo > span { font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .62rem; }
+.campo > small { color: var(--muted); font-size: .8rem; }
+.linha2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; }
+.check input { width: auto; margin-top: 4px; accent-color: var(--fg); }
+.rodape { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; padding-top: 6px; }
+.resumo { background: var(--surface-2); border-left: 1px solid var(--line-strong); padding: 12px 14px; font-size: .9rem; display: flex; flex-direction: column; gap: 4px; }
+.resumo b { font-variant-numeric: tabular-nums; }
+.fechar { background: none; border: 1px solid transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--fg); padding: 2px 8px; }
+.fechar:hover { border-color: var(--fg); }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--inv-bg); color: var(--inv-fg); padding: 12px 18px; font-weight: 600; z-index: 60; max-width: calc(100% - 32px); font-size: .9rem; }
+
+.boas-vindas { background: var(--surface); border: 1px solid var(--line); padding: 28px; max-width: 720px; }
+.boas-vindas ol { padding-left: 20px; margin: 14px 0 22px; display: flex; flex-direction: column; gap: 8px; }
+.carregando { padding: 40px 0; color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .7rem; }
+.wa { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--fg); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .09em; font-size: .64rem; padding-bottom: 1px; white-space: nowrap; }
+.wa::after { content: " →"; letter-spacing: 0; }
+.wa:hover { opacity: .7; }
+.so-celular { display: none; }
+.neg { font-weight: 800; }
+.saida { color: var(--muted); }
+
+
+/* Login */
+.login { position: fixed; inset: 0; overflow: auto; background: #0B0B0B; color: #F3F3F1; display: grid; place-items: center; padding-block: 32px; padding-inline: 16px; z-index: 30; }
+.login::after { content: "CT NORD"; position: fixed; left: -1vw; right: 0; bottom: -4vw; font-family: var(--f-display); font-stretch: 125%; font-weight: 900; font-size: 21vw; line-height: .8; letter-spacing: -.04em; color: #1C1C1C; white-space: nowrap; pointer-events: none; z-index: 0; }
+.login-caixa { position: relative; z-index: 1; width: min(420px, 100%); display: flex; flex-direction: column; gap: 28px; }
+.login-logo { width: 150px; height: auto; display: block; }
+.login form { background: var(--surface); color: var(--fg); border: 1px solid var(--line-strong); padding: 28px 24px; display: flex; flex-direction: column; gap: 16px; }
+.login h1 { font-size: 2.4rem; line-height: .9; letter-spacing: -.035em; }
+.login .btn.pri { width: 100%; padding-block: 15px; }
+.login .btn.pri::after { content: "→"; font-stretch: 100%; letter-spacing: 0; font-size: .9rem; }
+.login-erro { border-left: 1px solid var(--fg); padding-left: 12px; font-weight: 600; font-size: .9rem; }
+.login-dica { margin: 0; color: var(--muted); font-size: .82rem; }
+.modo b { color: var(--side-fg); font-weight: 700; }
+.sair { margin-top: 10px; background: none; border: 1px solid var(--side-muted); color: var(--side-fg); padding: 6px 10px; cursor: pointer; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .6rem; }
+.sair:hover { border-color: var(--side-fg); }
+.equipe-lista li { align-items: center; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .barra-celular { display: flex; align-items: center; justify-content: space-between; background: var(--side-bg); padding: 12px 16px; border-bottom: 1px solid var(--side-line); }
+  .barra-celular img { height: 30px; width: auto; }
+  .barra-celular button { background: none; border: 1px solid var(--side-muted); color: var(--side-fg); padding: 7px 10px; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .6rem; cursor: pointer; }
+  .side { position: fixed; top: auto; bottom: 0; left: 0; right: 0; height: auto; flex-direction: row; padding: 0 0 env(safe-area-inset-bottom, 0px); border-right: 0; border-top: 1px solid var(--side-line); z-index: 40; }
+  .marca, .side .espaco, .modo, .nav-ajustes { display: none; }
+  .nav-btn { flex-direction: column; gap: 4px; font-size: .52rem; letter-spacing: .06em; padding: 9px 2px; align-items: center; justify-content: center; text-align: center; }
+  main { padding-inline: 16px; padding-block: 20px 100px; }
+  h1 { font-size: 1.55rem; }
+  .so-celular { display: inline-flex; }
+  .esconde-celular { display: none; }
+  .topo { padding-bottom: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="barra-celular"><img src="/logo-branco.png" alt="CT NORD"><button data-act="nav" data-v="config">Ajustes</button></header>
+  <nav class="side" id="nav" aria-label="Seções">
+    <div class="marca"><img src="/logo-branco.png" alt="CT NORD"><small>Sistema de gestão · v1.0</small></div>
+    <button class="nav-btn" data-act="nav" data-v="inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Painel</button>
+    <button class="nav-btn" data-act="nav" data-v="alunos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18.5 14.8c1.6.8 2.7 2.6 3 5.2"/></svg>Alunos</button>
+    <button class="nav-btn" data-act="nav" data-v="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M8 14l2.5 2.5L16 12"/></svg>Agenda</button>
+    <button class="nav-btn" data-act="nav" data-v="contratos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h4"/></svg>Planos</button>
+    <button class="nav-btn" data-act="nav" data-v="financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10.5h19M6.5 15h3"/></svg>Financeiro</button>
+    <button class="nav-btn" data-act="nav" data-v="crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>Captação</button>
+    <button class="nav-btn nav-ajustes" data-act="nav" data-v="config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
+    <div class="espaco"></div>
+    <div class="modo" id="modo"></div>
+  </nav>
+  <main id="main"><div class="carregando">Carregando dados…</div></main>
+</div>
+<div id="login" class="login" hidden>
+  <div class="login-caixa">
+    <img src="/logo-branco.png" alt="CT NORD" class="login-logo">
+    <form id="login-form" novalidate>
+      <span class="sobre">CT NORD — Sistema de gestão</span>
+      <h1>Entrar</h1>
+      <label class="campo"><span>E-mail</span><input id="login-email" type="email" autocomplete="username" inputmode="email"></label>
+      <label class="campo"><span>Senha</span><input id="login-senha" type="password" autocomplete="current-password"></label>
+      <div id="login-erro" class="login-erro" role="alert" hidden></div>
+      <button id="login-btn" class="btn pri" type="submit">Entrar</button>
+      <p class="login-dica">Esqueceu a senha? Peça a um administrador do CT para definir uma nova.</p>
+    </form>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+"use strict";
+/* ================= Constantes ================= */
+const MODALIDADES = ['Jiu-jitsu', 'Jiu-jitsu Kids', 'Muay Thai'];
+const GRAD_PADRAO = {
+  'Jiu-jitsu': { faixas: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'], graus: 4 },
+  'Jiu-jitsu Kids': { faixas: ['Branca', 'Cinza e branca', 'Cinza', 'Cinza e preta', 'Amarela e branca', 'Amarela', 'Amarela e preta', 'Laranja e branca', 'Laranja', 'Laranja e preta', 'Verde e branca', 'Verde', 'Verde e preta'], graus: 4 },
+  'Muay Thai': { faixas: ['Branco', 'Amarelo', 'Laranja', 'Verde', 'Azul', 'Roxo', 'Marrom', 'Preto'], graus: 0 },
+};
+const FORMAS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Débito automático', 'Boleto', 'Transferência'];
+const CAT_RECEITA = ['Mensalidades', 'Matrículas', 'Produtos', 'Aulas avulsas', 'Wellhub / TotalPass', 'Outras receitas'];
+const CAT_DESPESA = {
+  'Custos diretos': ['Professores', 'Materiais e equipamentos', 'Produtos para revenda'],
+  'Despesas operacionais': ['Aluguel', 'Água, luz e internet', 'Marketing', 'Sistemas e taxas', 'Manutenção e limpeza', 'Salários e encargos', 'Outras despesas'],
+  'Impostos': ['Impostos'],
+};
+const ETAPAS = [
+  ['novo', 'Novo contato'], ['contato', 'Em conversa'], ['experimental', 'Aula experimental'],
+  ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
+];
+const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas'];
+const FICHA_URL = location.origin + '/ficha';
+const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DIAS_L = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const COR_MOD = { 'Jiu-jitsu': 'var(--accent)', 'Jiu-jitsu Kids': 'var(--warn)', 'Muay Thai': 'var(--bad)' };
+function b64e(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj)); let bin = '';
+  bytes.forEach((b) => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64d(t) {
+  let b = t.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
+  const bin = atob(b); const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return JSON.parse(new TextDecoder().decode(u));
+}
+
+/* ================= Datas e formatação ================= */
+const pad = (n) => String(n).padStart(2, '0');
+const isoDe = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const parseD = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d, 12); };
+const HOJE = isoDe(new Date());
+const addDias = (s, n) => { const d = parseD(s); d.setDate(d.getDate() + n); return isoDe(d); };
+const addMeses = (s, n) => {
+  const [y, m, dd] = s.split('-').map(Number);
+  const t = new Date(y, m - 1 + n, 1, 12);
+  const ult = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+  t.setDate(Math.min(dd, ult)); return isoDe(t);
+};
+const comDia = (s, dia) => { const [y, m] = s.split('-').map(Number); const ult = new Date(y, m, 0).getDate(); return s.slice(0, 8) + pad(Math.min(dia, ult)); };
+const difDias = (a, b) => Math.round((parseD(b) - parseD(a)) / 86400000);
+const mesDe = (s) => (s || '').slice(0, 7);
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+const MESES_L = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+const nomeMes = (k, longo) => { const [y, m] = k.split('-').map(Number); return (longo ? MESES_L : MESES)[m - 1] + (longo ? ' de ' : '/') + (longo ? y : String(y).slice(2)); };
+const fData = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(0, 4) : '—';
+const fDataC = (s) => s ? s.slice(8, 10) + '/' + s.slice(5, 7) : '—';
+const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+const fR = (v) => BRL.format(Number(v) || 0);
+const num = (v) => { if (v === '' || v == null) return 0; const n = Number(String(v).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
+const numCampo = (v) => { const s = String(v ?? '').trim(); if (!s) return 0; if (s.includes(',')) return num(s); const n = Number(s); return isFinite(n) ? n : 0; };
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const novoId = (p) => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const iniciais = (n) => (n || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase();
+const idade = (nasc) => { if (!nasc) return null; const h = parseD(HOJE), n = parseD(nasc); let i = h.getFullYear() - n.getFullYear(); if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) i--; return i; };
+const linkWa = (tel, msg) => {
+  let d = String(tel || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.length <= 11) d = '55' + d;
+  return 'https://wa.me/' + d + (msg ? '?text=' + encodeURIComponent(msg) : '');
+};
+
+/* ================= Estado ================= */
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], fichas: [], config: null };
+const UI = {
+  view: 'inicio', alunoId: null,
+  busca: '', filtroAluno: 'ativos',
+  tabContratos: 'contratos', filtroContrato: 'ativos',
+  tabFin: 'lancamentos', finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
+  tabCrm: 'funil', tabAgenda: 'semana', semana: 0,
+};
+let DB = null, MODO = 'carregando', somenteLeitura = false, USUARIO = null, EQUIPE = null, revLocal = 0;
+const carregadas = new Set();
+
+/* ================= Regras de negócio ================= */
+function grads() {
+  const c = (S.config && S.config.graduacoes) || {};
+  const r = {};
+  for (const m of MODALIDADES) r[m] = c[m] && c[m].faixas && c[m].faixas.length ? c[m] : GRAD_PADRAO[m];
+  return r;
+}
+const pagoDe = (l) => (l.pagamentos || []).reduce((s, p) => s + (Number(p.valor) || 0), 0);
+const devidoDe = (l) => Math.max(0, (Number(l.valor) || 0) - (Number(l.desconto) || 0));
+const saldoDe = (l) => Math.max(0, Math.round((devidoDe(l) - pagoDe(l)) * 100) / 100);
+function statusLanc(l) {
+  if (l.cancelado) return 'cancelado';
+  if (saldoDe(l) <= 0.004) return 'pago';
+  if (l.vencimento < HOJE) return 'atrasado';
+  if (pagoDe(l) > 0) return 'parcial';
+  return 'aberto';
+}
+function statusContrato(c) {
+  if (c.cancelado) return 'cancelado';
+  if (c.fim < HOJE) return 'vencido';
+  if (c.inicio > HOJE) return 'futuro';
+  if (difDias(HOJE, c.fim) <= 30) return 'avencer';
+  return 'ativo';
+}
+const contratosDo = (alunoId) => S.contratos.filter((c) => c.alunoId === alunoId).sort((a, b) => b.inicio.localeCompare(a.inicio));
+const contratoVigente = (alunoId) => contratosDo(alunoId).find((c) => ['ativo', 'avencer', 'futuro'].includes(statusContrato(c)));
+const alunoAtivo = (a) => !!contratoVigente(a.id);
+const lancsDo = (alunoId) => S.lancamentos.filter((l) => l.alunoId === alunoId && !l.cancelado);
+const dividaDo = (alunoId) => lancsDo(alunoId).filter((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado').reduce((s, l) => s + saldoDe(l), 0);
+const alunoPorId = (id) => S.alunos.find((a) => a.id === id);
+const planoPorId = (id) => S.planos.find((p) => p.id === id);
+const leadPorId = (id) => S.leads.find((l) => l.id === id);
+const nomeAluno = (id) => (alunoPorId(id) || {}).nome || 'Aluno removido';
+/* Frequência */
+const turmaPorId = (id) => S.turmas.find((t) => t.id === id);
+const aulaId = (turmaId, data) => 'au_' + turmaId + '_' + data;
+const diaSemana = (iso) => parseD(iso).getDay();
+const turmasDoDia = (iso) => S.turmas.filter((t) => t.ativa !== false && (t.dias || []).includes(diaSemana(iso))).sort((a, b) => a.inicio.localeCompare(b.inicio));
+function presencasDo(alunoId) {
+  return S.aulas.filter((a) => (a.presentes || []).includes(alunoId)).sort((x, y) => y.data.localeCompare(x.data));
+}
+const ultimoTreino = (alunoId) => { const p = presencasDo(alunoId)[0]; return p ? p.data : ''; };
+function aulasDesdeGrad(a, mod) {
+  const datas = (a.historicoGrad || []).filter((g) => g.mod === mod).map((g) => g.data).sort();
+  const m = (a.modalidades || []).find((x) => x.mod === mod);
+  const desde = datas.length ? datas[datas.length - 1] : (m ? m.desde : '');
+  return presencasDo(a.id).filter((p) => p.data >= (desde || '') && (p.modalidade || (turmaPorId(p.turmaId) || {}).modalidade) === mod).length;
+}
+function situacaoAcesso(alunoId) {
+  const vig = contratoVigente(alunoId);
+  if (!vig) { const ult = contratosDo(alunoId)[0]; return ult ? ['bad', 'Contrato vencido'] : ['bad', 'Sem contrato']; }
+  if (statusContrato(vig) === 'futuro') return ['warn', 'Contrato ainda não começou'];
+  if (dividaDo(alunoId) > 0) return ['bad', 'Em atraso'];
+  return null;
+}
+function grupoDespesa(cat) { for (const g in CAT_DESPESA) if (CAT_DESPESA[g].includes(cat)) return g; return 'Despesas operacionais'; }
+
+function pagamentosNoMes(mes, tipo) {
+  const r = [];
+  for (const l of S.lancamentos) {
+    if (l.cancelado || (tipo && l.tipo !== tipo)) continue;
+    for (const p of l.pagamentos || []) if (mesDe(p.data) === mes) r.push({ l, p });
+  }
+  return r;
+}
+
+/* Gera as cobranças de um contrato */
+function gerarCobrancas(c, opts) {
+  const n = c.forma === 'avista' ? 1 : c.meses;
+  const r = [];
+  for (let i = 0; i < n; i++) {
+    let venc;
+    if (c.forma === 'avista') venc = c.inicio;
+    else if (c.forma === 'cartao') venc = addMeses(c.inicio, i);
+    else venc = i === 0 && opts.primeiraNoInicio ? c.inicio : comDia(addMeses(c.inicio, i), c.diaVenc);
+    const valor = c.forma === 'avista' ? c.valorMensal * c.meses : c.valorMensal;
+    const desconto = c.forma === 'avista' ? c.desconto * c.meses : c.desconto;
+    const l = {
+      id: novoId('lc'), tipo: 'receita', categoria: 'Mensalidades',
+      descricao: c.planoNome + (n > 1 ? ' · parcela ' + (i + 1) + '/' + n : ' · pagamento à vista'),
+      valor, desconto, vencimento: venc, pagamentos: [], alunoId: c.alunoId, contratoId: c.id, cancelado: false,
+      formaPrevista: c.forma === 'cartao' ? 'Cartão de crédito' : (opts.forma || 'Pix'), criadoEm: new Date().toISOString(),
+    };
+    if (opts.retroativo && venc < HOJE) l.pagamentos.push({ data: venc, valor: Math.max(0, valor - desconto), forma: l.formaPrevista });
+    r.push(l);
+  }
+  if (opts.matricula > 0) {
+    r.push({
+      id: novoId('lc'), tipo: 'receita', categoria: 'Matrículas', descricao: 'Taxa de matrícula', valor: opts.matricula, desconto: 0,
+      vencimento: c.inicio, pagamentos: opts.retroativo && c.inicio < HOJE ? [{ data: c.inicio, valor: opts.matricula, forma: opts.forma || 'Pix' }] : [],
+      alunoId: c.alunoId, contratoId: c.id, cancelado: false, formaPrevista: opts.forma || 'Pix', criadoEm: new Date().toISOString(),
+    });
+  }
+  return r;
+}
+
+/* ================= Persistência (API do site) ================= */
+const API = {
+  async req(metodo, url, dados) {
+    let r;
+    try {
+      r = await fetch(url, { method: metodo, credentials: 'same-origin', headers: dados ? { 'Content-Type': 'application/json' } : {}, body: dados ? JSON.stringify(dados) : undefined });
+    } catch (_) { throw { code: 'rede', message: 'Sem conexão com o servidor. Confira a internet e tente de novo.' }; }
+    let j = {};
+    try { j = await r.json(); } catch (_) {}
+    if (r.status === 401 && url !== '/api/login' && !(dados && dados.acao === 'senha')) { sessaoExpirada(j.erro); throw { code: 401, message: j.erro || 'Faça login para continuar.' }; }
+    if (!r.ok) throw { code: r.status, message: j.erro || 'Não foi possível concluir agora (erro ' + r.status + ').' };
+    return j;
+  },
+};
+function upsertLocal(col, obj) { const i = S[col].findIndex((x) => x.id === obj.id); if (i >= 0) S[col][i] = obj; else S[col].push(obj); }
+function tratarErro(e) {
+  if (e && e.code === 401) return;
+  toast((e && e.message) || 'Não foi possível salvar agora. Tente de novo em instantes.');
+  console.error(e);
+}
+function acompanharRev(rev) { if (rev > revLocal + 1) agendarRecarga(); revLocal = Math.max(revLocal, rev || 0); }
+async function salvar(col, obj) {
+  const limpo = JSON.parse(JSON.stringify(obj));
+  upsertLocal(col, limpo); render();
+  try { const r = await API.req('POST', '/api/dados', { col, id: limpo.id, doc: limpo }); acompanharRev(r.rev); }
+  catch (e) { tratarErro(e); agendarRecarga(); return false; }
+  return true;
+}
+async function salvarVarios(col, lista) { for (const o of lista) { const ok = await salvar(col, o); if (!ok) return false; } return true; }
+async function remover(col, id) {
+  S[col] = S[col].filter((x) => x.id !== id); render();
+  try { const r = await API.req('DELETE', '/api/dados?col=' + encodeURIComponent(col) + '&id=' + encodeURIComponent(id)); acompanharRev(r.rev); }
+  catch (e) { tratarErro(e); agendarRecarga(); }
+}
+async function salvarConfig(cfg) {
+  S.config = JSON.parse(JSON.stringify(cfg)); render();
+  try { const r = await API.req('POST', '/api/dados', { col: 'config', id: 'geral', doc: S.config }); acompanharRev(r.rev); }
+  catch (e) { tratarErro(e); agendarRecarga(); }
+}
+async function carregarTudo() {
+  const j = await API.req('GET', '/api/dados');
+  for (const c of COLS) S[c] = j.dados[c] || [];
+  S.fichas = (j.dados.fichas || []).sort((a, b) => String(b.recebidaEm).localeCompare(String(a.recebidaEm)));
+  const cfg = (j.dados.config || []).find((x) => x.id === 'geral');
+  S.config = cfg || null;
+  USUARIO = j.usuario; revLocal = j.rev || 0;
+  COLS.forEach((c) => carregadas.add(c));
+  MODO = 'db'; mostrarApp(); render();
+}
+let recargaT = 0;
+function agendarRecarga() { clearTimeout(recargaT); recargaT = setTimeout(() => { if (MODO === 'db') carregarTudo().catch(() => {}); }, 400); }
+async function verificarMudancas() {
+  if (MODO !== 'db' || document.visibilityState !== 'visible') return;
+  try { const j = await API.req('GET', '/api/dados?rev=1'); if (j.rev !== revLocal) await carregarTudo(); } catch (_) {}
+}
+setInterval(verificarMudancas, 25000);
+document.addEventListener('visibilitychange', verificarMudancas);
+
+/* ---------- Login ---------- */
+function mostrarApp() { document.getElementById('login').hidden = true; document.querySelector('.app').hidden = false; }
+function mostrarLogin(msg) {
+  MODO = 'login'; USUARIO = null; EQUIPE = null;
+  fecharModal();
+  document.querySelector('.app').hidden = true;
+  const l = document.getElementById('login'); l.hidden = false;
+  const e = document.getElementById('login-erro'); e.textContent = msg || ''; e.hidden = !msg;
+  const f = document.getElementById('login-email'); if (f && !f.value) f.focus(); else { const s2 = document.getElementById('login-senha'); if (s2) s2.focus(); }
+}
+function sessaoExpirada(msg) { if (MODO === 'db') mostrarLogin(msg || 'Sua sessão terminou. Entre de novo.'); else if (MODO !== 'login') mostrarLogin(); }
+async function entrar(ev) {
+  ev.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('login-btn'); const e = document.getElementById('login-erro');
+  if (!email || !senha) { e.textContent = 'Informe e-mail e senha.'; e.hidden = false; return; }
+  btn.disabled = true; btn.textContent = 'Entrando…'; e.hidden = true;
+  try {
+    await API.req('POST', '/api/login', { email, senha });
+    document.getElementById('login-senha').value = '';
+    MODO = 'carregando'; render();
+    await carregarTudo();
+  } catch (err) { e.textContent = err.message; e.hidden = false; }
+  finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+}
+async function sair() {
+  try { await API.req('POST', '/api/logout'); } catch (_) {}
+  for (const c of COLS) S[c] = []; S.fichas = []; S.config = null; carregadas.clear();
+  mostrarLogin();
+}
+
+/* ================= UI utilitários ================= */
+let toastT;
+function toast(msg) {
+  const r = document.getElementById('toast-root');
+  r.innerHTML = '<div class="toast" role="status">' + esc(msg) + '</div>';
+  clearTimeout(toastT); toastT = setTimeout(() => { r.innerHTML = ''; }, 3200);
+}
+let rafPend = 0;
+function render() { if (rafPend) return; rafPend = requestAnimationFrame(() => { rafPend = 0; desenhar(); }); }
+function desenhar() {
+  const ativo = document.activeElement;
+  const foco = ativo && ativo.id && document.getElementById('main').contains(ativo) ? { id: ativo.id, ini: ativo.selectionStart, fim: ativo.selectionEnd } : null;
+  document.querySelectorAll('.nav-btn').forEach((b) => {
+    const v = UI.view === 'aluno' ? 'alunos' : UI.view;
+    if (b.dataset.v === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
+  document.getElementById('modo').innerHTML = USUARIO ? '<b>' + esc(USUARIO.nome) + '</b><br>' + esc(USUARIO.email) + '<br><button class="sair" data-act="sair">Sair</button>' : '';
+  const main = document.getElementById('main');
+  if (MODO === 'login') return;
+  if (MODO === 'carregando' || (MODO === 'db' && carregadas.size < COLS.length)) { main.innerHTML = '<div class="carregando">Carregando dados…</div>'; return; }
+  main.innerHTML = (MODO === 'demo' ? '<div class="aviso demo">Modo demonstração: você está vendo dados de exemplo e nada do que mudar aqui será salvo.</div>' : '') + (VIEWS[UI.view] || VIEWS.inicio)();
+  const sobre = { inicio: 'Painel', alunos: 'Alunos', aluno: 'Perfil do aluno', agenda: 'Agenda', contratos: 'Planos e contratos', financeiro: 'Financeiro', crm: 'Captação', config: 'Ajustes' }[UI.view] || 'Painel';
+  const h1 = main.querySelector('.topo h1, .perfil-topo h1');
+  if (h1) h1.insertAdjacentHTML('beforebegin', '<span class="sobre">CT NORD — ' + sobre + '</span>');
+  if (foco) { const el = document.getElementById(foco.id); if (el) { el.focus(); try { el.setSelectionRange(foco.ini, foco.fim); } catch (_) {} } }
+  if (!modalAberto) verificarHash();
+}
+window.addEventListener('hashchange', () => render());
+function pill(cls, txt) { return '<span class="pill ' + cls + '">' + esc(txt) + '</span>'; }
+const PILL_LANC = { pago: ['ok', 'Pago'], atrasado: ['bad', 'Atrasado'], parcial: ['warn', 'Parcial'], aberto: ['', 'Em aberto'], cancelado: ['', 'Cancelado'] };
+const PILL_CONTR = { ativo: ['ok', 'Ativo'], avencer: ['warn', 'A vencer'], vencido: ['bad', 'Vencido'], cancelado: ['', 'Cancelado'], futuro: ['info', 'Começa em breve'] };
+const pillLanc = (l) => { const s = statusLanc(l); const [c, t] = PILL_LANC[s]; return pill(c, s === 'atrasado' && pagoDe(l) > 0 ? 'Atrasado (parcial)' : t); };
+const pillContr = (c) => { const [k, t] = PILL_CONTR[statusContrato(c)]; return pill(k, t); };
+const opt = (v, txt, sel) => '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(txt ?? v) + '</option>';
+const chip = (key, val, txt, cont) => '<button class="chip" data-act="ui" data-k="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + (UI[key] === val) + '">' + esc(txt) + (cont != null ? '<span class="cont">' + cont + '</span>' : '') + '</button>';
+const tab = (key, val, txt) => '<button class="tab" role="tab" data-act="ui" data-k="' + key + '" data-val="' + val + '" aria-selected="' + (UI[key] === val) + '">' + esc(txt) + '</button>';
+const waA = (tel, msg, txt) => { const u = linkWa(tel, msg); return u ? '<a class="wa" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(txt || 'WhatsApp') + '</a>' : ''; };
+
+/* Desenho da faixa: cor(es) do cinto, ponteira e graus */
+const CORES = [['bran', '#f3f3ef'], ['azul', '#1f4fa8'], ['rox', '#6a3a90'], ['marr', '#6b4226'], ['pret', '#18181b'], ['cinz', '#8b9097'], ['amar', '#e5c018'], ['lara', '#e5781c'], ['verd', '#2d8a3d'], ['verm', '#c62828'], ['rosa', '#e66aa0'], ['dour', '#c9a227'], ['prat', '#b8bcc4']];
+function corDe(p) { const w = p.trim().toLowerCase(); for (const [k, c] of CORES) if (w.startsWith(k)) return c; return '#b8bcc4'; }
+function faixaSvg(nome, grau, temGraus) {
+  const partes = String(nome || '').split(/\s+e\s+|\s*\/\s*|\s*-\s*/).filter(Boolean);
+  const c1 = corDe(partes[0] || ''), c2 = partes[1] ? corDe(partes[1]) : c1;
+  const preta = /^pret/i.test(nome || '');
+  let s = '<svg width="58" height="14" viewBox="0 0 58 14" aria-hidden="true">';
+  s += '<rect x="0.5" y="0.5" width="57" height="6.5" fill="' + c1 + '"/><rect x="0.5" y="7" width="57" height="6.5" fill="' + c2 + '"/>';
+  if (temGraus) {
+    s += '<rect x="38" y="0.5" width="14" height="13" fill="' + (preta ? '#c62828' : '#18181b') + '"/>';
+    for (let i = 0; i < Math.min(grau || 0, 6); i++) s += '<rect x="' + (39.5 + i * 2.6) + '" y="0.5" width="1.4" height="13" fill="#ffffff"/>';
+  }
+  s += '<rect class="faixa-cinto" x="0.5" y="0.5" width="57" height="13" fill="none" stroke-width="1"/></svg>';
+  return s;
+}
+function faixaHtml(m) {
+  if (!m) return '<span class="vazio">—</span>';
+  const g = grads()[m.mod]; const temGraus = g && g.graus > 0;
+  return '<span class="faixa">' + faixaSvg(m.faixa, m.grau, temGraus) + '<span>' + esc(m.faixa) + (temGraus && m.grau ? ' · ' + m.grau + 'º grau' : '') + '</span></span>';
+}
+
+/* ================= Telas ================= */
+const VIEWS = {};
+
+VIEWS.inicio = function () {
+  if (!S.alunos.length && !S.planos.length && !S.leads.length && !S.fichas.length) {
+    return '<div class="topo"><div><h1>Comece por aqui</h1><p>Alunos, contratos, financeiro e captação no mesmo lugar.</p></div></div>' +
+      '<div class="boas-vindas"><h2>Por onde começar</h2><ol>' +
+      '<li><b>Planos:</b> cadastre os planos que você vende (mensal, trimestral, anual…).</li>' +
+      '<li><b>Alunos:</b> cadastre cada aluno com a faixa atual.</li>' +
+      '<li><b>Venda:</b> registre o contrato de cada aluno. As mensalidades são criadas sozinhas.</li>' +
+      '<li><b>Financeiro:</b> registre as contas a pagar e dê baixa no que for recebido.</li></ol>' +
+      '<div class="acoes"><button class="btn pri" data-act="novo-plano">Cadastrar primeiro plano</button></div></div>';
+  }
+  const mes = mesDe(HOJE);
+  const ativos = S.alunos.filter(alunoAtivo);
+  const recebidos = pagamentosNoMes(mes, 'receita');
+  const recebido = recebidos.reduce((s, x) => s + x.p.valor, 0);
+  const pagoMes = pagamentosNoMes(mes, 'despesa').reduce((s, x) => s + x.p.valor, 0);
+  const aReceber = S.lancamentos.filter((l) => l.tipo === 'receita' && mesDe(l.vencimento) === mes && ['aberto', 'parcial'].includes(statusLanc(l))).reduce((s, l) => s + saldoDe(l), 0);
+  const atrasadas = S.lancamentos.filter((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado');
+  const inad = atrasadas.reduce((s, l) => s + saldoDe(l), 0);
+  const inadAlunos = new Set(atrasadas.map((l) => l.alunoId).filter(Boolean));
+  const mensal = recebidos.filter((x) => x.l.categoria === 'Mensalidades');
+  const pagantes = new Set(mensal.map((x) => x.l.alunoId));
+  const ticket = pagantes.size ? mensal.reduce((s, x) => s + x.p.valor, 0) / pagantes.size : 0;
+  const renov = S.contratos.filter((c) => c.renovacaoDe && mesDe(c.criadoEm) === mes).length;
+
+  const vencendo = S.contratos.filter((c) => statusContrato(c) === 'avencer').sort((a, b) => a.fim.localeCompare(b.fim));
+  const vencidosRecentes = S.contratos.filter((c) => statusContrato(c) === 'vencido' && difDias(c.fim, HOJE) <= 45 && !contratoVigente(c.alunoId));
+  const tarefas = S.tarefas.filter((t) => !t.feita && t.data <= HOJE).sort((a, b) => a.data.localeCompare(b.data));
+  const experimentais = S.leads.filter((l) => l.etapa === 'experimental' && l.dataExperimental >= HOJE).sort((a, b) => a.dataExperimental.localeCompare(b.dataExperimental));
+  const devedores = [...inadAlunos].map((id) => ({ id, v: dividaDo(id) })).sort((a, b) => b.v - a.v);
+
+  let h = '<div class="topo"><div><h1>Painel</h1><p>Resumo de ' + nomeMes(mes, true) + '. Hoje é ' + fData(HOJE) + '.</p></div>' +
+    '<div class="acoes"><button class="btn" data-act="checkin">Check-in</button><button class="btn" data-act="novo-aluno">Novo aluno</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
+  h += painelFichas();
+  h += '<div class="kpis">' +
+    '<div class="kpi"><span>Alunos ativos</span><b>' + ativos.length + '</b><small>com contrato em vigor</small></div>' +
+    '<div class="kpi"><span>Recebido no mês</span><b>' + fR(recebido) + '</b><small>saídas pagas: ' + fR(pagoMes) + '</small></div>' +
+    '<div class="kpi"><span>Falta receber no mês</span><b>' + fR(aReceber) + '</b><small>cobranças ainda no prazo</small></div>' +
+    '<div class="kpi ' + (inad > 0 ? 'bad' : '') + '"><span>Em atraso</span><b>' + fR(inad) + '</b><small>' + inadAlunos.size + ' aluno(s) devendo</small></div>' +
+    '<div class="kpi"><span>Ticket médio</span><b>' + fR(ticket) + '</b><small>por aluno que pagou mensalidade</small></div>' +
+    '<div class="kpi"><span>Renovações no mês</span><b>' + renov + '</b><small>' + vencendo.length + ' contrato(s) vencem em 30 dias</small></div></div>';
+
+  const aulasHoje = turmasDoDia(HOJE);
+  const temFreq = S.aulas.length > 0;
+  const sumidos = temFreq ? ativos.map((a) => ({ a, u: ultimoTreino(a.id) })).filter((x) => !x.u ? difDias((contratoVigente(x.a.id) || {}).inicio || HOJE, HOJE) > 14 : difDias(x.u, HOJE) > 14).sort((x, y) => (x.u || '').localeCompare(y.u || '')) : [];
+  h += '<div class="grade2">';
+  h += '<section class="painel"><header><h2>Aulas de hoje</h2><button class="btn link" data-act="nav" data-v="agenda">Ver agenda</button></header>' +
+    (aulasHoje.length ? '<ul class="lista">' + aulasHoje.map((t) => {
+      const au = S.aulas.find((x) => x.id === aulaId(t.id, HOJE)); const n = au ? (au.presentes || []).length : 0;
+      return '<li><div class="cresce"><b class="num">' + esc(t.inicio) + ' · ' + esc(t.nome) + '</b><small>' + esc(t.modalidade) + (t.professor ? ' · ' + esc(t.professor) : '') + (au ? ' · ' + n + ' presente(s)' : '') + '</small></div><button class="btn peq' + (au ? '' : ' pri') + '" data-act="chamada" data-t="' + t.id + '" data-d="' + HOJE + '">' + (au ? 'Ver chamada' : 'Fazer chamada') + '</button></li>';
+    }).join('') + '</ul>' : '<p class="vazio">' + (S.turmas.length ? 'Nenhuma turma hoje.' : 'Cadastre as turmas na Agenda para fazer a chamada.') + '</p>') + '</section>';
+  if (temFreq) h += '<section class="painel"><header><h2>Alunos sumidos</h2><small>ativos sem treinar há mais de 14 dias</small></header>' +
+    (sumidos.length ? '<ul class="lista">' + sumidos.slice(0, 6).map(({ a, u }) => '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b><small>' + (u ? 'último treino em ' + fData(u) + ' (' + difDias(u, HOJE) + ' dias)' : 'nenhum treino registrado') + '</small></div>' +
+      waA(a.telefone, 'Oi, ' + a.nome.split(' ')[0] + '! Sentimos sua falta no tatame. Está tudo bem? Te esperamos no próximo treino!', 'Chamar') + '</li>').join('') + '</ul>' : '<p class="vazio">Todos os alunos ativos treinaram nas últimas duas semanas.</p>') + '</section>';
+  h += '<section class="painel"><header><h2>Tarefas para hoje</h2><button class="btn link" data-act="nav" data-v="crm" data-tab="tarefas">Ver todas</button></header>' +
+    (tarefas.length ? '<ul class="lista">' + tarefas.slice(0, 6).map(itemTarefa).join('') + '</ul>' : '<p class="vazio">Nenhuma tarefa pendente para hoje.</p>') + '</section>';
+  h += '<section class="painel"><header><h2>Cobranças em atraso</h2><button class="btn link" data-act="nav" data-v="financeiro" data-tab="inadimplencia">Ver todas</button></header>' +
+    (devedores.length ? '<ul class="lista">' + devedores.slice(0, 6).map((d) => {
+      const a = alunoPorId(d.id); if (!a) return '';
+      return '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b><small>deve ' + fR(d.v) + '</small></div>' +
+        waA(a.telefone, msgCobranca(a, d.v), 'Cobrar') + '</li>';
+    }).join('') + '</ul>' : '<p class="vazio">Ninguém em atraso.</p>') + '</section>';
+  h += '<section class="painel"><header><h2>Renovações</h2><small>vencem em até 30 dias ou venceram há pouco</small></header>' +
+    ((vencendo.length + vencidosRecentes.length) ? '<ul class="lista">' + [...vencendo, ...vencidosRecentes].slice(0, 8).map((c) =>
+      '<li><div class="cresce"><b>' + esc(nomeAluno(c.alunoId)) + '</b><small>' + esc(c.planoNome) + ' · termina ' + fData(c.fim) + '</small></div>' + pillContr(c) +
+      '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">Renovar</button></li>').join('') + '</ul>' : '<p class="vazio">Nenhum contrato perto do fim.</p>') + '</section>';
+  h += '<section class="painel"><header><h2>Aulas experimentais</h2><button class="btn link" data-act="nav" data-v="crm">Abrir funil</button></header>' +
+    (experimentais.length ? '<ul class="lista">' + experimentais.slice(0, 6).map((l) =>
+      '<li><div class="cresce"><b>' + esc(l.nome) + '</b><small>' + esc(l.interesse) + ' · ' + fData(l.dataExperimental) + (l.dataExperimental === HOJE ? ' (hoje)' : '') + '</small></div>' + waA(l.telefone, 'Olá, ' + l.nome.split(' ')[0] + '! Confirmando sua aula experimental de ' + l.interesse + ' no dia ' + fData(l.dataExperimental) + '. Te esperamos!', 'Confirmar') + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhuma aula experimental agendada.</p>') + '</section>';
+  h += '</div>';
+  return h;
+};
+
+function msgCobranca(a, v) {
+  const nome = (a.responsavel ? a.responsavel.split(/[ (]/)[0] : a.nome.split(' ')[0]);
+  return 'Olá, ' + nome + '! Tudo bem? Passando para lembrar que há ' + fR(v) + ' em aberto referente às mensalidades' + (a.responsavel ? ' do(a) ' + a.nome.split(' ')[0] : '') + '. Se já pagou, desconsidere. Qualquer dúvida, estamos à disposição.';
+}
+function itemTarefa(t) {
+  const rel = t.leadId ? (leadPorId(t.leadId) || {}).nome : t.alunoId ? nomeAluno(t.alunoId) : '';
+  const atras = !t.feita && t.data < HOJE;
+  return '<li><input type="checkbox" style="width:auto" aria-label="Concluir tarefa" data-act="toggle-tarefa" data-id="' + t.id + '"' + (t.feita ? ' checked' : '') + '>' +
+    '<div class="cresce"><b' + (t.feita ? ' style="text-decoration:line-through;opacity:.6"' : '') + '>' + esc(t.titulo) + '</b><small>' + (atras ? '<b class="neg">Atrasada · </b>' : '') + fData(t.data) + (rel ? ' · ' + esc(rel) : '') + '</small></div>' +
+    '<button class="btn link peq" data-act="editar-tarefa" data-id="' + t.id + '">Editar</button></li>';
+}
+
+/* ---------- Alunos ---------- */
+VIEWS.alunos = function () {
+  const base = S.alunos.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const filtros = {
+    ativos: (a) => alunoAtivo(a),
+    inativos: (a) => !alunoAtivo(a),
+    devendo: (a) => dividaDo(a.id) > 0,
+    avencer: (a) => { const c = contratoVigente(a.id); return c && statusContrato(c) === 'avencer'; },
+    todos: () => true,
+  };
+  const q = UI.busca.trim().toLowerCase();
+  const lista = base.filter(filtros[UI.filtroAluno]).filter((a) => !q || a.nome.toLowerCase().includes(q) || (a.telefone || '').replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§'));
+  const cnt = (k) => base.filter(filtros[k]).length;
+  let h = '<div class="topo"><div><h1>Alunos</h1><p>' + base.filter(alunoAtivo).length + ' ativos de ' + base.length + ' cadastrados.</p></div><div class="acoes"><button class="btn" data-act="enviar-ficha">Enviar ficha de matrícula</button>' + (S.fichas.length ? '<button class="btn" data-act="fichas-recebidas">Fichas recebidas · ' + S.fichas.length + '</button>' : '') + '<button class="btn pri" data-act="novo-aluno">Novo aluno</button></div></div>';
+  h += '<div class="filtros"><input type="search" id="busca-aluno" data-ui="busca" placeholder="Buscar por nome ou telefone" value="' + esc(UI.busca) + '" aria-label="Buscar aluno">' +
+    chip('filtroAluno', 'ativos', 'Ativos', cnt('ativos')) + chip('filtroAluno', 'avencer', 'Contrato a vencer', cnt('avencer')) + chip('filtroAluno', 'devendo', 'Em atraso', cnt('devendo')) + chip('filtroAluno', 'inativos', 'Inativos', cnt('inativos')) + chip('filtroAluno', 'todos', 'Todos', base.length) + '</div>';
+  if (!lista.length) return h + '<div class="painel"><p class="vazio">Nenhum aluno encontrado com esse filtro.</p></div>';
+  h += '<div class="tabela-wrap"><table><thead><tr><th>Aluno</th><th>Graduação</th><th>Plano</th><th>Contrato</th><th>Financeiro</th><th class="esconde-celular">Último treino</th></tr></thead><tbody>';
+  for (const a of lista) {
+    const ut = ultimoTreino(a.id);
+    const c = contratoVigente(a.id) || contratosDo(a.id)[0];
+    const div = dividaDo(a.id);
+    h += '<tr class="clicavel" data-act="abrir-aluno" data-id="' + a.id + '"><td><b>' + esc(a.nome) + '</b><small>' + esc(a.telefone || '') + '</small></td>' +
+      '<td>' + (a.modalidades || []).map((m) => '<div><small>' + esc(m.mod) + '</small>' + faixaHtml(m) + '</div>').join('') + '</td>' +
+      '<td>' + (c ? esc(c.planoNome) + '<small>até ' + fData(c.fim) + '</small>' : '<small>sem contrato</small>') + '</td>' +
+      '<td>' + (c ? pillContr(c) : pill('', 'Sem contrato')) + '</td>' +
+      '<td>' + (div > 0 ? pill('bad', 'Deve ' + fR(div)) : pill('ok', 'Em dia')) + '</td>' +
+      '<td class="esconde-celular num">' + (ut ? fData(ut) + '<small>há ' + difDias(ut, HOJE) + ' dia(s)</small>' : '<small>—</small>') + '</td></tr>';
+  }
+  return h + '</tbody></table></div>';
+};
+
+VIEWS.aluno = function () {
+  const a = alunoPorId(UI.alunoId);
+  if (!a) { UI.view = 'alunos'; return VIEWS.alunos(); }
+  const contratos = contratosDo(a.id);
+  const vig = contratoVigente(a.id);
+  const lancs = lancsDo(a.id).filter((l) => l.tipo === 'receita').sort((x, y) => y.vencimento.localeCompare(x.vencimento));
+  const div = dividaDo(a.id);
+  const pendentes = lancs.filter((l) => ['atrasado', 'aberto', 'parcial'].includes(statusLanc(l)));
+  const totalPago = lancs.reduce((s, l) => s + pagoDe(l), 0);
+  const produtos = lancs.filter((l) => l.categoria === 'Produtos');
+  const id = idade(a.nascimento);
+  let h = '<button class="btn link voltar" data-act="nav" data-v="alunos">← Voltar para alunos</button>';
+  h += '<div class="perfil-topo"><div class="avatar">' + esc(iniciais(a.nome)) + '</div><div class="cresce"><h1>' + esc(a.nome) + '</h1><p>' +
+    (vig ? pillContr(vig) + ' ' : pill('', 'Sem contrato em vigor') + ' ') + (div > 0 ? pill('bad', 'Deve ' + fR(div)) : pill('ok', 'Financeiro em dia')) + '</p></div>' +
+    '<div class="acoes"><button class="btn" data-act="editar-aluno" data-id="' + a.id + '">Editar dados</button><button class="btn" data-act="venda-produto" data-id="' + a.id + '">Vender produto</button><button class="btn pri" data-act="nova-venda" data-aluno="' + a.id + '">' + (vig ? 'Vender novo plano' : 'Vender plano') + '</button></div></div>';
+
+  h += '<div class="grade2">';
+  h += '<section class="painel"><header><h2>Dados</h2></header><dl class="dados">' +
+    '<dt>Telefone</dt><dd>' + esc(a.telefone || '—') + (a.telefone ? ' · ' + waA(a.telefone, 'Olá, ' + a.nome.split(' ')[0] + '!') : '') + '</dd>' +
+    '<dt>E-mail</dt><dd>' + esc(a.email || '—') + '</dd>' +
+    '<dt>Nascimento</dt><dd>' + fData(a.nascimento) + (id != null ? ' (' + id + ' anos)' : '') + '</dd>' +
+    (a.cpf ? '<dt>CPF</dt><dd>' + esc(a.cpf) + '</dd>' : '') +
+    (a.endereco ? '<dt>Endereço</dt><dd>' + esc(a.endereco) + '</dd>' : '') +
+    (a.responsavel ? '<dt>Responsável</dt><dd>' + esc(a.responsavel) + (a.respTelefone ? ' · ' + esc(a.respTelefone) : '') + (a.respCpf ? '<br><small>CPF ' + esc(a.respCpf) + '</small>' : '') + '</dd>' : '') +
+    (a.emergencia ? '<dt>Emergência</dt><dd>' + esc(a.emergencia) + '</dd>' : '') +
+    (a.saude ? '<dt>Saúde</dt><dd><b>' + esc(a.saude) + '</b></dd>' : '') +
+    '<dt>Aluno desde</dt><dd>' + fData((a.criadoEm || '').slice(0, 10)) + '</dd>' +
+    (a.origem ? '<dt>Conheceu por</dt><dd>' + esc(a.origem) + '</dd>' : '') +
+    (a.termoAceitoEm ? '<dt>Ficha online</dt><dd>declaração aceita em ' + fData(a.termoAceitoEm.slice(0, 10)) + '</dd>' : '') +
+    '<dt>Regimento</dt><dd>' + (a.regimento ? pill('ok', 'Aceito') + ' v' + esc(a.regimento.versao) + ' em ' + fData(String(a.regimento.aceitoEm).slice(0, 10)) + (a.regimento.porResponsavel ? ' pelo responsável' : '') : pill('warn', 'Não aceito') + ' <small style="display:inline">envie a ficha online para o aluno aceitar</small>') + '</dd>' +
+    (a.obs ? '<dt>Observações</dt><dd>' + esc(a.obs) + '</dd>' : '') + '</dl></section>';
+
+  h += '<section class="painel"><header><h2>Graduação</h2><button class="btn link" data-act="add-modalidade" data-id="' + a.id + '">+ Modalidade</button></header>';
+  if (!(a.modalidades || []).length) h += '<p class="vazio">Nenhuma modalidade cadastrada.</p>';
+  else h += '<ul class="lista">' + a.modalidades.map((m, i) => { const n = aulasDesdeGrad(a, m.mod); return '<li><div class="cresce"><small>' + esc(m.mod) + ' · desde ' + fData(m.desde) + '</small>' + faixaHtml(m) + '<small>' + n + ' aula(s) desde a última graduação</small></div><button class="btn peq" data-act="promover" data-id="' + a.id + '" data-i="' + i + '">Graduar</button></li>'; }).join('') + '</ul>';
+  const hist = (a.historicoGrad || []).slice().sort((x, y) => y.data.localeCompare(x.data));
+  if (hist.length) h += '<h3 style="margin-top:12px">Histórico</h3><ul class="lista">' + hist.map((g) => '<li><div class="cresce"><small>' + fData(g.data) + ' · ' + esc(g.mod) + '</small>' + faixaHtml(g) + '</div></li>').join('') + '</ul>';
+  h += '</section></div>';
+
+  const pres = presencasDo(a.id);
+  const p30 = pres.filter((p) => p.data >= addDias(HOJE, -30)).length;
+  h += '<section class="painel" style="margin-top:16px"><header><h2>Frequência</h2><button class="btn link" data-act="checkin" data-aluno="' + a.id + '">+ Registrar check-in</button></header>' +
+    '<div class="kpis" style="margin-bottom:12px"><div class="kpi"><span>Últimos 30 dias</span><b>' + p30 + '</b><small>aulas (' + (p30 / 4.3).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' por semana)</small></div>' +
+    '<div class="kpi"><span>Último treino</span><b>' + (pres[0] ? fDataC(pres[0].data) : '—') + '</b><small>' + (pres[0] ? 'há ' + difDias(pres[0].data, HOJE) + ' dia(s)' : 'nenhum registro') + '</small></div>' +
+    '<div class="kpi"><span>Total registrado</span><b>' + pres.length + '</b><small>aulas</small></div></div>' +
+    (pres.length ? '<ul class="lista">' + pres.slice(0, 8).map((p) => { const t = turmaPorId(p.turmaId) || {}; return '<li><div class="cresce"><b>' + fData(p.data) + ' · ' + DIAS_L[diaSemana(p.data)] + '</b><small>' + esc(t.nome || p.turmaNome || 'Turma removida') + (t.inicio ? ' · ' + esc(t.inicio) : '') + '</small></div></li>'; }).join('') + '</ul>' : '<p class="vazio">Nenhuma presença registrada ainda.</p>') + '</section>';
+
+  h += '<section class="painel" style="margin-top:16px"><header><h2>Contratos</h2><small>' + contratos.length + ' no histórico</small></header>';
+  if (!contratos.length) h += '<p class="vazio">Nenhum contrato vendido ainda.</p>';
+  else h += '<div class="tabela-wrap" style="border:0"><table><thead><tr><th>Plano</th><th>Vigência</th><th class="dir">Valor/mês</th><th>Situação</th><th></th></tr></thead><tbody>' + contratos.map((c) =>
+    '<tr><td>' + esc(c.planoNome) + '<small>' + FORMA_TXT[c.forma] + (c.renovacaoDe ? ' · renovação' : '') + '</small></td><td class="num">' + fData(c.inicio) + ' a ' + fData(c.fim) + '</td><td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + pillContr(c) + '</td>' +
+    '<td class="dir">' + (statusContrato(c) !== 'cancelado' ? '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">Renovar</button> <button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Cancelar</button>' : '') + '</td></tr>').join('') + '</tbody></table></div>';
+  h += '</section>';
+
+  h += '<section class="painel" style="margin-top:16px"><header><h2>Financeiro do aluno</h2><small>já pagou ' + fR(totalPago) + ' · em aberto ' + fR(pendentes.reduce((s, l) => s + saldoDe(l), 0)) + '</small></header>';
+  if (div > 0) h += '<p style="margin:0 0 10px">' + waA(a.telefone, msgCobranca(a, div), 'Enviar lembrete de cobrança no WhatsApp') + '</p>';
+  h += tabelaLancamentos(lancs, { semAluno: true, vazio: 'Nenhuma cobrança para este aluno.' }) + '</section>';
+
+  h += '<section class="painel" style="margin-top:16px"><header><h2>Produtos consumidos</h2><button class="btn link" data-act="venda-produto" data-id="' + a.id + '">+ Registrar venda</button></header>' +
+    (produtos.length ? '<ul class="lista">' + produtos.map((l) => '<li><div class="cresce"><b>' + esc(l.descricao) + '</b><small>' + fData(l.vencimento) + '</small></div><span class="num">' + fR(devidoDe(l)) + '</span>' + pillLanc(l) + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhum produto registrado.</p>') + '</section>';
+  return h;
+};
+const FORMA_TXT = { mensal: 'Mensalidades', avista: 'À vista', cartao: 'Cartão de crédito' };
+
+function tabelaLancamentos(lista, o) {
+  o = o || {};
+  if (!lista.length) return '<p class="vazio">' + esc(o.vazio || 'Nada por aqui.') + '</p>';
+  let h = '<div class="tabela-wrap"' + (o.semAluno ? ' style="border:0"' : '') + '><table><thead><tr><th>Vencimento</th><th>Descrição</th>' + (o.semAluno ? '' : '<th class="esconde-celular">Categoria</th>') + '<th class="dir">Valor</th><th class="dir">Pago</th><th>Situação</th><th></th></tr></thead><tbody>';
+  for (const l of lista) {
+    const st = statusLanc(l);
+    const quem = !o.semAluno && l.alunoId ? '<small>' + esc(nomeAluno(l.alunoId)) + '</small>' : '';
+    h += '<tr><td class="num">' + fData(l.vencimento) + '</td><td>' + esc(l.descricao) + quem + '</td>' + (o.semAluno ? '' : '<td class="esconde-celular"><small style="display:inline">' + esc(l.categoria) + '</small></td>') +
+      '<td class="dir num">' + fR(devidoDe(l)) + (l.desconto ? '<small>desc. ' + fR(l.desconto) + '</small>' : '') + '</td><td class="dir num">' + fR(pagoDe(l)) + '</td><td>' + pillLanc(l) + '</td><td class="dir" style="white-space:nowrap">' +
+      (st !== 'pago' && st !== 'cancelado' ? '<button class="btn peq pri" data-act="baixar" data-id="' + l.id + '">' + (l.tipo === 'receita' ? 'Receber' : 'Pagar') + '</button> ' : '') +
+      '<button class="btn peq" data-act="ver-lanc" data-id="' + l.id + '">Detalhes</button></td></tr>';
+  }
+  return h + '</tbody></table></div>';
+}
+
+/* ---------- Planos e contratos ---------- */
+VIEWS.contratos = function () {
+  let h = '<div class="topo"><div><h1>Planos e contratos</h1><p>Venda planos, acompanhe vencimentos e renove contratos.</p></div><div class="acoes"><button class="btn" data-act="novo-plano">Novo plano</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
+  h += '<div class="tabs" role="tablist">' + tab('tabContratos', 'contratos', 'Contratos') + tab('tabContratos', 'planos', 'Planos à venda') + '</div>';
+  if (UI.tabContratos === 'planos') {
+    const pl = S.planos.slice().sort((a, b) => (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'));
+    if (!pl.length) return h + '<div class="painel"><p class="vazio">Nenhum plano cadastrado. Comece criando o seu plano mais vendido.</p><button class="btn pri" data-act="novo-plano">Novo plano</button></div>';
+    h += '<div class="tabela-wrap"><table><thead><tr><th>Plano</th><th>Modalidade</th><th class="dir">Valor/mês</th><th class="dir">Duração</th><th class="dir">Total</th><th>Contratos ativos</th><th></th></tr></thead><tbody>';
+    for (const p of pl) {
+      const ativos = S.contratos.filter((c) => c.planoId === p.id && ['ativo', 'avencer'].includes(statusContrato(c))).length;
+      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + fR(p.valor) + '</td><td class="dir num">' + p.meses + (p.meses > 1 ? ' meses' : ' mês') + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + fR(p.valor * p.meses) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
+    }
+    return h + '</tbody></table></div>';
+  }
+  const fs = {
+    ativos: (c) => ['ativo', 'avencer', 'futuro'].includes(statusContrato(c)),
+    avencer: (c) => statusContrato(c) === 'avencer',
+    vencidos: (c) => statusContrato(c) === 'vencido',
+    cancelados: (c) => statusContrato(c) === 'cancelado',
+    todos: () => true,
+  };
+  const n = (k) => S.contratos.filter(fs[k]).length;
+  h += '<div class="filtros">' + chip('filtroContrato', 'ativos', 'Em vigor', n('ativos')) + chip('filtroContrato', 'avencer', 'Vencem em 30 dias', n('avencer')) + chip('filtroContrato', 'vencidos', 'Vencidos', n('vencidos')) + chip('filtroContrato', 'cancelados', 'Cancelados', n('cancelados')) + chip('filtroContrato', 'todos', 'Histórico completo', S.contratos.length) + '</div>';
+  const lista = S.contratos.filter(fs[UI.filtroContrato]).sort((a, b) => UI.filtroContrato === 'todos' ? b.criadoEm.localeCompare(a.criadoEm) : a.fim.localeCompare(b.fim));
+  if (!lista.length) return h + '<div class="painel"><p class="vazio">Nenhum contrato neste filtro.</p></div>';
+  h += '<div class="tabela-wrap"><table><thead><tr><th>Aluno</th><th>Plano</th><th>Vigência</th><th class="dir">Valor/mês</th><th>Cobrança</th><th>Situação</th><th></th></tr></thead><tbody>';
+  for (const c of lista) {
+    const st = statusContrato(c);
+    const dias = difDias(HOJE, c.fim);
+    h += '<tr><td><button class="btn link" style="padding:0;text-align:left" data-act="abrir-aluno" data-id="' + c.alunoId + '">' + esc(nomeAluno(c.alunoId)) + '</button><small>vendido em ' + fData((c.criadoEm || '').slice(0, 10)) + '</small></td><td>' + esc(c.planoNome) + (c.renovacaoDe ? '<small>renovação</small>' : '') + '</td>' +
+      '<td class="num">' + fData(c.inicio) + ' a ' + fData(c.fim) + '<small>' + (st === 'vencido' ? 'venceu há ' + (-dias) + ' dias' : st === 'cancelado' ? 'cancelado' : 'faltam ' + dias + ' dias') + '</small></td>' +
+      '<td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + FORMA_TXT[c.forma] + '<small>' + (c.forma === 'mensal' ? 'vence dia ' + c.diaVenc : c.forma === 'cartao' ? c.meses + 'x no cartão' : '1 pagamento') + '</small></td><td>' + pillContr(c) + '</td>' +
+      '<td class="dir" style="white-space:nowrap">' + (st !== 'cancelado' ? '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">Renovar</button>' : '') + '</td></tr>';
+  }
+  return h + '</tbody></table></div>';
+};
+
+/* ---------- Financeiro ---------- */
+VIEWS.financeiro = function () {
+  let h = '<div class="topo"><div><h1>Financeiro</h1><p>Contas a receber e a pagar, caixa, previsão e resultado do mês.</p></div><div class="acoes"><button class="btn" data-act="novo-lanc" data-tipo="despesa">Nova conta a pagar</button><button class="btn pri" data-act="novo-lanc" data-tipo="receita">Nova receita</button></div></div>';
+  h += '<div class="tabs" role="tablist">' + tab('tabFin', 'lancamentos', 'Contas') + tab('tabFin', 'caixa', 'Caixa e fluxo') + tab('tabFin', 'inadimplencia', 'Inadimplência') + tab('tabFin', 'dre', 'DRE do mês') + '</div>';
+  return h + ({ lancamentos: finContas, caixa: finCaixa, inadimplencia: finInad, dre: finDre }[UI.tabFin] || finContas)();
+};
+function mesesDisponiveis() {
+  const set = new Set([mesDe(HOJE)]);
+  S.lancamentos.forEach((l) => { set.add(mesDe(l.vencimento)); (l.pagamentos || []).forEach((p) => set.add(mesDe(p.data))); });
+  return [...set].filter(Boolean).sort().reverse();
+}
+function finContas() {
+  const meses = mesesDisponiveis();
+  let lista = S.lancamentos.filter((l) => l.tipo === UI.finTipo && !l.cancelado);
+  if (UI.finStatus === 'atrasado') lista = lista.filter((l) => statusLanc(l) === 'atrasado');
+  else {
+    lista = lista.filter((l) => mesDe(l.vencimento) === UI.finMes);
+    if (UI.finStatus === 'pendente') lista = lista.filter((l) => ['aberto', 'parcial', 'atrasado'].includes(statusLanc(l)));
+    if (UI.finStatus === 'pago') lista = lista.filter((l) => statusLanc(l) === 'pago');
+  }
+  lista.sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  const tot = lista.reduce((s, l) => s + devidoDe(l), 0), pg = lista.reduce((s, l) => s + pagoDe(l), 0);
+  let h = '<div class="filtros">' + chip('finTipo', 'receita', 'A receber') + chip('finTipo', 'despesa', 'A pagar') +
+    '<select id="fin-mes" data-ui="finMes" aria-label="Mês"' + (UI.finStatus === 'atrasado' ? ' disabled' : '') + '>' + meses.map((m) => opt(m, nomeMes(m, true), m === UI.finMes)).join('') + '</select>' +
+    chip('finStatus', 'todos', 'Todas') + chip('finStatus', 'pendente', 'Pendentes') + chip('finStatus', 'pago', 'Pagas') + chip('finStatus', 'atrasado', 'Todas as atrasadas') + '</div>';
+  h += '<div class="kpis"><div class="kpi"><span>Total ' + (UI.finTipo === 'receita' ? 'a receber' : 'a pagar') + '</span><b>' + fR(tot) + '</b><small>' + lista.length + ' conta(s)</small></div>' +
+    '<div class="kpi"><span>Já ' + (UI.finTipo === 'receita' ? 'recebido' : 'pago') + '</span><b>' + fR(pg) + '</b></div>' +
+    '<div class="kpi"><span>Falta</span><b>' + fR(Math.max(0, tot - pg)) + '</b></div></div>';
+  return h + tabelaLancamentos(lista, { vazio: 'Nenhuma conta neste filtro.' });
+}
+function finCaixa() {
+  const meses = []; for (let k = -3; k <= 2; k++) meses.push(mesDe(addMeses(HOJE.slice(0, 8) + '01', k)));
+  const dados = meses.map((m) => {
+    const entR = pagamentosNoMes(m, 'receita').reduce((s, x) => s + x.p.valor, 0);
+    const saiR = pagamentosNoMes(m, 'despesa').reduce((s, x) => s + x.p.valor, 0);
+    const prev = (t) => S.lancamentos.filter((l) => l.tipo === t && !l.cancelado && mesDe(l.vencimento) === m && ['aberto', 'parcial'].includes(statusLanc(l))).reduce((s, l) => s + saldoDe(l), 0);
+    return { m, entR, saiR, entP: prev('receita'), saiP: prev('despesa') };
+  });
+  const atrasoRec = S.lancamentos.filter((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado').reduce((s, l) => s + saldoDe(l), 0);
+  const atrasoPag = S.lancamentos.filter((l) => l.tipo === 'despesa' && statusLanc(l) === 'atrasado').reduce((s, l) => s + saldoDe(l), 0);
+  // Gráfico
+  const W = 640, H = 230, L = 58, B = 26, T = 10;
+  const maxV = Math.max(1, ...dados.map((d) => Math.max(d.entR + d.entP, d.saiR + d.saiP)));
+  const passo = niceStep(maxV / 4); const topo = Math.ceil(maxV / passo) * passo;
+  const y = (v) => T + (H - T - B) * (1 - v / topo);
+  const gw = (W - L - 10) / dados.length, bw = Math.min(26, gw / 3.2);
+  let svg = '<svg class="grafico" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Entradas e saídas por mês">';
+  for (let v = 0; v <= topo + 0.01; v += passo) svg += '<line class="eixo" x1="' + L + '" x2="' + (W - 6) + '" y1="' + y(v) + '" y2="' + y(v) + '"/><text x="' + (L - 6) + '" y="' + (y(v) + 4) + '" text-anchor="end">' + fCurto(v) + '</text>';
+  dados.forEach((d, i) => {
+    const cx = L + gw * i + gw / 2;
+    const barra = (x, real, prev, cor) => {
+      let s = '';
+      if (real > 0) s += '<rect x="' + x + '" y="' + y(real) + '" width="' + bw + '" height="' + (y(0) - y(real)) + '" fill="' + cor + '"/>';
+      if (prev > 0) s += '<rect x="' + x + '" y="' + y(real + prev) + '" width="' + bw + '" height="' + (y(real) - y(real + prev)) + '" fill="none" stroke="' + cor + '" stroke-dasharray="3 2"/>';
+      return s;
+    };
+    svg += barra(cx - bw - 2, d.entR, d.entP, 'var(--fg)') + barra(cx + 2, d.saiR, d.saiP, 'var(--cinza)');
+    svg += '<text x="' + cx + '" y="' + (H - 8) + '" text-anchor="middle"' + (d.m === mesDe(HOJE) ? ' style="font-weight:700;fill:var(--fg)"' : '') + '>' + nomeMes(d.m) + '</text>';
+  });
+  svg += '</svg>';
+  let h = '<div class="grade2"><section class="painel" style="grid-column:1/-1"><header><h2>Fluxo de caixa</h2><small>3 meses anteriores e previsão para os próximos 2</small></header>' + svg +
+    '<div class="legenda"><span><i style="background:var(--fg)"></i>Entradas realizadas</span><span><i style="border:1px dashed var(--fg)"></i>Entradas previstas</span><span><i style="background:var(--cinza)"></i>Saídas realizadas</span><span><i style="border:1px dashed var(--cinza)"></i>Saídas previstas</span></div>';
+  let acum = 0;
+  h += '<div class="tabela-wrap" style="margin-top:12px"><table><thead><tr><th>Mês</th><th class="dir">Entrou</th><th class="dir">Saiu</th><th class="dir">Saldo realizado</th><th class="dir">Ainda vai entrar</th><th class="dir">Ainda vai sair</th><th class="dir">Saldo previsto</th></tr></thead><tbody>' +
+    dados.map((d) => { const sr = d.entR - d.saiR, sp = sr + d.entP - d.saiP; acum += sp; return '<tr><td>' + nomeMes(d.m, true) + '</td><td class="dir num">' + fR(d.entR) + '</td><td class="dir num">' + fR(d.saiR) + '</td><td class="dir num' + (sr < 0 ? ' neg' : '') + '">' + (sr < 0 ? '−' : '') + fR(Math.abs(sr)) + '</td><td class="dir num">' + fR(d.entP) + '</td><td class="dir num">' + fR(d.saiP) + '</td><td class="dir num"><b>' + (sp < 0 ? '−' : '') + fR(Math.abs(sp)) + '</b></td></tr>'; }).join('') +
+    '</tbody></table></div><p class="vazio">Fora da previsão: ' + fR(atrasoRec) + ' em mensalidades atrasadas a receber e ' + fR(atrasoPag) + ' em contas atrasadas a pagar.</p></section>';
+
+  // Caixa do dia
+  const movs = [];
+  S.lancamentos.forEach((l) => !l.cancelado && (l.pagamentos || []).forEach((p) => { if (p.data === HOJE) movs.push({ l, p }); }));
+  const porForma = {};
+  movs.forEach(({ l, p }) => { porForma[p.forma] = (porForma[p.forma] || 0) + (l.tipo === 'receita' ? p.valor : -p.valor); });
+  h += '<section class="painel"><header><h2>Caixa de hoje</h2><small>' + fData(HOJE) + '</small></header>' +
+    (movs.length ? '<ul class="lista">' + movs.map(({ l, p }) => '<li><div class="cresce"><b>' + esc(l.descricao) + '</b><small>' + esc(p.forma) + (l.alunoId ? ' · ' + esc(nomeAluno(l.alunoId)) : '') + '</small></div><span class="num' + (l.tipo === 'receita' ? ' neg' : ' saida') + '">' + (l.tipo === 'receita' ? '+' : '−') + fR(p.valor) + '</span></li>').join('') + '</ul>' : '<p class="vazio">Nenhum recebimento ou pagamento registrado hoje.</p>') + '</section>';
+  h += '<section class="painel"><header><h2>Fechamento por forma de pagamento</h2></header>' +
+    (Object.keys(porForma).length ? '<ul class="lista">' + Object.entries(porForma).map(([f, v]) => '<li><div class="cresce"><b>' + esc(f) + '</b></div><span class="num">' + fR(v) + '</span></li>').join('') +
+      '<li><div class="cresce"><b>Total do dia</b></div><b class="num">' + fR(Object.values(porForma).reduce((s, v) => s + v, 0)) + '</b></li></ul>' : '<p class="vazio">O fechamento aparece aqui conforme os pagamentos do dia forem registrados.</p>') +
+    '<p class="vazio">Antecipação de recebíveis do cartão depende da sua maquininha ou banco e não é feita por aqui.</p></section></div>';
+  return h;
+}
+function niceStep(v) { const p = Math.pow(10, Math.floor(Math.log10(Math.max(v, 1)))); const n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
+function fCurto(v) { return v >= 1000 ? 'R$ ' + (v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil' : 'R$ ' + Math.round(v); }
+function finInad() {
+  const porAluno = {};
+  for (const l of S.lancamentos) {
+    if (l.tipo !== 'receita' || statusLanc(l) !== 'atrasado') continue;
+    const k = l.alunoId || '_';
+    (porAluno[k] = porAluno[k] || []).push(l);
+  }
+  const linhas = Object.entries(porAluno).map(([id, ls]) => ({ id, ls, total: ls.reduce((s, l) => s + saldoDe(l), 0), dias: Math.max(...ls.map((l) => difDias(l.vencimento, HOJE))) })).sort((a, b) => b.dias - a.dias);
+  const total = linhas.reduce((s, x) => s + x.total, 0);
+  const receitaMes = S.lancamentos.filter((l) => l.tipo === 'receita' && !l.cancelado && l.vencimento < HOJE && l.vencimento >= addDias(HOJE, -90)).reduce((s, l) => s + devidoDe(l), 0);
+  const taxa = receitaMes ? (linhas.reduce((s, x) => s + x.ls.filter((l) => l.vencimento >= addDias(HOJE, -90)).reduce((a, l) => a + saldoDe(l), 0), 0) / receitaMes) : 0;
+  let h = '<div class="kpis"><div class="kpi bad"><span>Total em atraso</span><b>' + fR(total) + '</b><small>' + linhas.length + ' aluno(s)</small></div>' +
+    '<div class="kpi"><span>Taxa de inadimplência</span><b>' + (taxa * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%</b><small>do que venceu nos últimos 90 dias</small></div></div>';
+  if (!linhas.length) return h + '<div class="painel"><p class="vazio">Nenhuma cobrança em atraso.</p></div>';
+  h += '<div class="tabela-wrap"><table><thead><tr><th>Aluno</th><th>Cobranças</th><th class="dir">Em atraso</th><th class="dir">Maior atraso</th><th></th></tr></thead><tbody>';
+  for (const x of linhas) {
+    const a = alunoPorId(x.id);
+    h += '<tr><td>' + (a ? '<button class="btn link" style="padding:0;text-align:left" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button><small>' + esc(a.responsavel ? 'Resp.: ' + a.responsavel : a.telefone || '') + '</small>' : 'Sem aluno vinculado') + '</td>' +
+      '<td>' + x.ls.map((l) => esc(l.descricao) + ' <small style="display:inline">(' + fDataC(l.vencimento) + ')</small>').join('<br>') + '</td><td class="dir num"><b>' + fR(x.total) + '</b></td><td class="dir num">' + x.dias + ' dias</td>' +
+      '<td class="dir" style="white-space:nowrap">' + (a ? waA(a.telefone, msgCobranca(a, x.total), 'Cobrar') + ' ' : '') + '<button class="btn peq pri" data-act="baixar" data-id="' + x.ls[0].id + '">Receber</button></td></tr>';
+  }
+  return h + '</tbody></table></div>';
+}
+function finDre() {
+  const m = UI.dreMes;
+  const rec = {}, desp = {};
+  pagamentosNoMes(m).forEach(({ l, p }) => { const alvo = l.tipo === 'receita' ? rec : desp; alvo[l.categoria] = (alvo[l.categoria] || 0) + p.valor; });
+  const totRec = Object.values(rec).reduce((s, v) => s + v, 0);
+  const grupos = { 'Custos diretos': {}, 'Despesas operacionais': {}, 'Impostos': {} };
+  for (const [c, v] of Object.entries(desp)) grupos[grupoDespesa(c)][c] = v;
+  const tg = (g) => Object.values(grupos[g]).reduce((s, v) => s + v, 0);
+  const margem = totRec - tg('Custos diretos');
+  const operacional = margem - tg('Despesas operacionais');
+  const resultado = operacional - tg('Impostos');
+  const pct = (v) => totRec ? ' <small style="display:inline">(' + (v / totRec * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%)</small>' : '';
+  const linhasG = (g) => Object.entries(grupos[g]).sort((a, b) => b[1] - a[1]).map(([c, v]) => '<tr><td class="sub">' + esc(c) + '</td><td class="dir num">− ' + fR(v) + '</td></tr>').join('');
+  let h = '<div class="filtros"><label for="dre-mes" style="font-weight:600">Mês</label><select id="dre-mes" data-ui="dreMes">' + mesesDisponiveis().map((x) => opt(x, nomeMes(x, true), x === m)).join('') + '</select></div>';
+  h += '<div class="tabela-wrap" style="max-width:720px"><table class="dre"><tbody>' +
+    '<tr class="grupo"><td>Receita bruta</td><td class="dir num">' + fR(totRec) + '</td></tr>' +
+    Object.entries(rec).sort((a, b) => b[1] - a[1]).map(([c, v]) => '<tr><td class="sub">' + esc(c) + '</td><td class="dir num">' + fR(v) + '</td></tr>').join('') +
+    '<tr class="grupo"><td>(−) Custos diretos</td><td class="dir num">− ' + fR(tg('Custos diretos')) + '</td></tr>' + linhasG('Custos diretos') +
+    '<tr class="res"><td>= Margem de contribuição' + pct(margem) + '</td><td class="dir num">' + fR(margem) + '</td></tr>' +
+    '<tr class="grupo"><td>(−) Despesas operacionais</td><td class="dir num">− ' + fR(tg('Despesas operacionais')) + '</td></tr>' + linhasG('Despesas operacionais') +
+    '<tr class="res"><td>= Resultado operacional' + pct(operacional) + '</td><td class="dir num">' + fR(operacional) + '</td></tr>' +
+    '<tr class="grupo"><td>(−) Impostos</td><td class="dir num">− ' + fR(tg('Impostos')) + '</td></tr>' + linhasG('Impostos') +
+    '<tr class="res"><td>= Resultado do mês' + pct(resultado) + '</td><td class="dir num">' + (resultado < 0 ? '−' : '') + fR(Math.abs(resultado)) + '</td></tr>' +
+    '</tbody></table></div><p class="vazio">DRE gerencial pelo regime de caixa: considera o que de fato entrou e saiu em ' + nomeMes(m, true) + '.</p>';
+  return h;
+}
+
+/* ---------- CRM ---------- */
+VIEWS.crm = function () {
+  let h = '<div class="topo"><div><h1>Captação de alunos</h1><p>Acompanhe cada interessado do primeiro contato até a matrícula.</p></div><div class="acoes"><button class="btn" data-act="nova-tarefa">Nova tarefa</button><button class="btn pri" data-act="novo-lead">Novo interessado</button></div></div>';
+  h += '<div class="tabs" role="tablist">' + tab('tabCrm', 'funil', 'Funil') + tab('tabCrm', 'tarefas', 'Tarefas da equipe') + tab('tabCrm', 'resultados', 'Resultados') + '</div>';
+  if (UI.tabCrm === 'tarefas') {
+    const pend = S.tarefas.filter((t) => !t.feita).sort((a, b) => a.data.localeCompare(b.data));
+    const grupos = [['Atrasadas', pend.filter((t) => t.data < HOJE)], ['Hoje', pend.filter((t) => t.data === HOJE)], ['Próximas', pend.filter((t) => t.data > HOJE)], ['Concluídas recentemente', S.tarefas.filter((t) => t.feita).sort((a, b) => b.data.localeCompare(a.data)).slice(0, 10)]];
+    return h + '<div class="grade2">' + grupos.map(([t, l]) => '<section class="painel"><header><h2>' + t + '</h2><small>' + l.length + '</small></header>' + (l.length ? '<ul class="lista">' + l.map(itemTarefa).join('') + '</ul>' : '<p class="vazio">Nada aqui.</p>') + '</section>').join('') + '</div>';
+  }
+  if (UI.tabCrm === 'resultados') return h + crmResultados();
+  h += '<div class="funil-wrap"><div class="funil">';
+  for (const [k, nome] of ETAPAS) {
+    const ls = S.leads.filter((l) => l.etapa === k).sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || ''));
+    const mostra = (k === 'matriculado' || k === 'perdido') ? ls.slice(0, 8) : ls;
+    h += '<section class="coluna"><header>' + nome + '<span>' + ls.length + '</span></header>' + (mostra.length ? mostra.map(cardLead).join('') : '<p class="vazio" style="padding:4px">Ninguém nesta etapa.</p>') + '</section>';
+  }
+  return h + '</div></div>';
+};
+function cardLead(l) {
+  const exp = l.dataExperimental ? '<small>Experimental: ' + fData(l.dataExperimental) + (l.dataExperimental === HOJE ? ' (hoje)' : '') + '</small>' : '';
+  return '<article class="card-lead"><b>' + esc(l.nome) + '</b><small>' + esc(l.interesse) + ' · ' + esc(l.origem) + '</small>' + exp + (l.obs ? '<small>' + esc(l.obs) + '</small>' : '') +
+    '<select aria-label="Etapa de ' + esc(l.nome) + '" data-etapa="' + l.id + '">' + ETAPAS.map(([k, n]) => opt(k, n, k === l.etapa)).join('') + '</select>' +
+    '<div class="linha">' + waA(l.telefone, 'Olá, ' + l.nome.split(' ')[0] + '! Aqui é do CT. Vi seu interesse em ' + l.interesse + '. Quer agendar uma aula experimental gratuita?') +
+    '<button class="btn link peq" data-act="editar-lead" data-id="' + l.id + '">Editar</button>' +
+    (l.etapa !== 'matriculado' && l.etapa !== 'perdido' ? '<button class="btn peq pri" data-act="converter-lead" data-id="' + l.id + '">Matricular</button>' : '') +
+    (l.alunoId ? '<button class="btn link peq" data-act="abrir-aluno" data-id="' + l.alunoId + '">Ver aluno</button>' : '') + '</div></article>';
+}
+function crmResultados() {
+  const mes = mesDe(HOJE);
+  const doMes = S.leads.filter((l) => mesDe(l.criadoEm) === mes);
+  const fechados = S.leads.filter((l) => l.etapa === 'matriculado' || l.etapa === 'perdido');
+  const matr = S.leads.filter((l) => l.etapa === 'matriculado');
+  const conv = fechados.length ? matr.length / fechados.length : 0;
+  const expRealizadas = S.leads.filter((l) => l.dataExperimental && l.dataExperimental < HOJE);
+  const expConv = expRealizadas.length ? expRealizadas.filter((l) => l.etapa === 'matriculado').length / expRealizadas.length : 0;
+  const porOrigem = {};
+  S.leads.forEach((l) => { const o = porOrigem[l.origem] = porOrigem[l.origem] || { t: 0, m: 0 }; o.t++; if (l.etapa === 'matriculado') o.m++; });
+  let h = '<div class="kpis"><div class="kpi"><span>Novos interessados no mês</span><b>' + doMes.length + '</b></div>' +
+    '<div class="kpi"><span>Em andamento</span><b>' + S.leads.filter((l) => !['matriculado', 'perdido'].includes(l.etapa)).length + '</b></div>' +
+    '<div class="kpi"><span>Conversão geral</span><b>' + Math.round(conv * 100) + '%</b><small>matriculados ÷ negociações encerradas</small></div>' +
+    '<div class="kpi"><span>Conversão da experimental</span><b>' + Math.round(expConv * 100) + '%</b><small>de quem fez aula experimental</small></div></div>';
+  h += '<div class="grade2"><section class="painel"><header><h2>Por etapa</h2></header><ul class="lista">' + ETAPAS.map(([k, n]) => '<li><div class="cresce"><b>' + n + '</b></div><span class="num">' + S.leads.filter((l) => l.etapa === k).length + '</span></li>').join('') + '</ul></section>';
+  h += '<section class="painel"><header><h2>Por origem</h2><small>interessados · matriculados</small></header><ul class="lista">' + Object.entries(porOrigem).sort((a, b) => b[1].t - a[1].t).map(([o, v]) => '<li><div class="cresce"><b>' + esc(o) + '</b></div><span class="num">' + v.t + ' · ' + v.m + '</span></li>').join('') + '</ul></section></div>';
+  return h;
+}
+
+/* ---------- Ajustes ---------- */
+VIEWS.config = function () {
+  const g = grads();
+  const nEx = COLS.reduce((s, c) => s + S[c].filter((x) => x.exemplo).length, 0);
+  const ct = (S.config && S.config.ct) || {};
+  let h = '<div class="topo"><div><h1>Ajustes</h1><p>Seu acesso, equipe, dados do CT, ficha de matrícula e graduações.</p></div></div>';
+  h += '<form class="painel" data-form="senha" style="display:flex;flex-direction:column;gap:14px;max-width:760px"><header><h2>Seu acesso</h2><small>' + esc(USUARIO ? USUARIO.nome + ' · ' + USUARIO.email : '') + '</small></header>' +
+    '<p class="vazio" style="padding:0">Para trocar a senha, informe a atual e a nova. A nova precisa ter pelo menos 10 caracteres.</p>' +
+    '<div class="linha2">' + campo('Senha atual', '<input id="se-atual" name="atual" type="password" autocomplete="current-password" required>') + campo('Nova senha', '<input id="se-nova" name="nova" type="password" autocomplete="new-password" minlength="10" required>') + campo('Repita a nova senha', '<input id="se-nova2" name="nova2" type="password" autocomplete="new-password" minlength="10" required>') + '</div>' +
+    '<div class="rodape"><button class="btn" type="button" data-act="sair">Sair do sistema</button><button class="btn pri" type="submit">Trocar senha</button></div></form>';
+  if (USUARIO && USUARIO.papel === 'admin') h += '<div style="height:16px"></div>' + blocoEquipe();
+  h += '<div style="height:16px"></div>';
+  h += '<form class="painel" data-form="dadosct" style="display:flex;flex-direction:column;gap:14px;max-width:760px"><header><h2>Dados do CT</h2></header>' +
+    '<div class="linha2">' + campo('Nome do CT', inp('ct-nome', 'nome', ct.nome, 'placeholder="Ex.: CT Tatame Niterói"')) + campo('WhatsApp do CT', inp('ct-wa', 'whatsapp', ct.whatsapp, 'inputmode="tel" placeholder="(21) 99999-9999"'), 'Aparece para o aluno no fim da ficha, para tirar dúvidas.') + '</div>' +
+    '<div class="rodape"><button class="btn pri" type="submit">Salvar dados do CT</button></div></form>';
+  h += '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Ficha de matrícula online</h2></header>' + blocoFicha() + '</section>';
+  h += '<div style="height:16px"></div>';
+  h += '<form class="painel" data-form="graduacoes" style="display:flex;flex-direction:column;gap:14px;max-width:760px"><header><h2>Graduações</h2></header><p class="vazio" style="padding:0">Uma faixa por linha, da primeira à última. Para faixas de duas cores, escreva “Cinza e branca”.</p>';
+  for (const m of MODALIDADES) {
+    const k = m.replace(/\W/g, '');
+    h += '<div class="linha2"><label class="campo" style="grid-column:span 2"><span>' + m + '</span><textarea id="g-' + k + '" name="f_' + m + '" rows="5">' + esc(g[m].faixas.join('\n')) + '</textarea></label>' +
+      '<label class="campo"><span>Graus por faixa</span><input id="gg-' + k + '" name="g_' + m + '" type="number" min="0" max="10" value="' + g[m].graus + '"><small>Use 0 se não houver graus.</small></label></div>';
+  }
+  h += '<div class="rodape"><button class="btn pri" type="submit">Salvar graduações</button></div></form>';
+  if (nEx) h += '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Dados de exemplo</h2></header><p style="margin-top:0">Há ' + nEx + ' registros de exemplo no sistema. Remova antes de usar com dados reais.</p><button class="btn perigo" data-act="remover-exemplos">Remover dados de exemplo</button></section>';
+  h += '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Versão 1.0</h2><small>site com login</small></header><p style="margin:12px 0 0">Alunos, graduações, planos e contratos, financeiro, agenda e check-in, captação e ficha de matrícula online.</p><p style="margin:8px 0 0" class="vazio">Próximas versões: relatórios, aplicativo do aluno, catraca e reconhecimento facial, site de vendas, cobrança recorrente automática e campanhas de WhatsApp. Algumas dependem de serviços externos.</p></section>';
+  return h;
+};
+
+/* ---------- Ficha de matrícula ---------- */
+function linkFicha() { return FICHA_URL; }
+function blocoFicha() {
+  const ct = (S.config && S.config.ct) || {};
+  const link = linkFicha();
+  const msg = 'Olá! Para agilizar sua matrícula' + (ct.nome ? ' no ' + ct.nome : '') + ', preencha esta ficha pelo celular. Leva poucos minutos: ' + link;
+  return '<p style="margin-top:0">Mande este link para o aluno. Ele preenche no celular, escolhe o plano e aceita o regimento. A ficha chega aqui em <b>Fichas recebidas</b>, no Painel, para você conferir e cadastrar com um clique.</p>' +
+    '<div class="copiavel"><input id="link-ficha" readonly value="' + esc(link) + '" aria-label="Link da ficha"><button class="btn" data-act="copiar" data-alvo="link-ficha">Copiar link</button></div>' +
+    '<p style="margin:10px 0 0" class="acoes"><a class="btn" href="' + esc('https://wa.me/?text=' + encodeURIComponent(msg)) + '" target="_blank" rel="noopener">Enviar pelo WhatsApp</a><a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">Abrir a ficha</a></p>' +
+    '<p class="vazio" style="padding-bottom:0">A ficha mostra sempre os planos e preços atuais cadastrados em Planos.</p>';
+}
+function painelFichas() {
+  if (!S.fichas.length) return '';
+  return '<section class="painel" style="margin-bottom:20px"><header><h2>Fichas de matrícula recebidas</h2><small>' + S.fichas.length + ' para conferir</small></header><ul class="lista">' +
+    S.fichas.map((f) => '<li><div class="cresce"><b>' + esc(f.n) + '</b><small>' + esc(f.mod || '') + (f.pln ? ' · ' + esc(f.pln) : '') + ' · recebida em ' + fData(String(f.recebidaEm || '').slice(0, 10)) + '</small></div>' +
+      '<button class="btn peq pri" data-act="conferir-ficha" data-id="' + esc(f.id) + '">Conferir e cadastrar</button></li>').join('') + '</ul></section>';
+}
+function blocoEquipe() {
+  if (EQUIPE === null) { EQUIPE = 'carregando'; API.req('GET', '/api/usuarios').then((j) => { EQUIPE = j.usuarios; render(); }).catch((e) => { EQUIPE = null; tratarErro(e); }); }
+  const lista = Array.isArray(EQUIPE) ? EQUIPE : [];
+  return '<section class="painel" style="max-width:760px"><header><h2>Equipe</h2><small>quem pode entrar no sistema</small></header>' +
+    (EQUIPE === 'carregando' ? '<p class="vazio">Carregando…</p>' : '<ul class="lista equipe-lista">' + lista.map((u) => '<li><div class="cresce"><b>' + esc(u.nome) + '</b><small>' + esc(u.email) + ' · ' + (u.papel === 'admin' ? 'administrador' : 'equipe') + '</small></div>' +
+      (USUARIO && u.email === USUARIO.email ? pill('', 'Você') : '<button class="btn peq" data-act="redefinir-senha" data-email="' + esc(u.email) + '" data-nome="' + esc(u.nome) + '">Nova senha</button><button class="btn peq perigo" data-act="remover-usuario" data-email="' + esc(u.email) + '" data-nome="' + esc(u.nome) + '">Remover</button>') + '</li>').join('') + '</ul>') +
+    '<div class="rodape"><button class="btn pri" data-act="novo-usuario">Adicionar pessoa</button></div>' +
+    '<p class="vazio" style="padding-bottom:0">Administradores também gerenciam a equipe. A equipe usa todo o resto do sistema.</p></section>';
+}
+function parseCodigo(txt) {
+  const m = String(txt || '').match(/m-([A-Za-z0-9_-]{20,})/);
+  if (!m) return null;
+  try { const d = b64d(m[1]); return d && d.n ? d : null; } catch (_) { return null; }
+}
+let fichaPendente = null, hashLido = '';
+function duplicadoDe(d) {
+  const tel = (d.tel || '').replace(/\D/g, ''), cpf = (d.cpf || '').replace(/\D/g, ''), nome = (d.n || '').trim().toLowerCase();
+  return S.alunos.find((a) => (cpf && (a.cpf || '').replace(/\D/g, '') === cpf) || (tel.length >= 10 && (a.telefone || '').replace(/\D/g, '') === tel) || (a.nome || '').trim().toLowerCase() === nome);
+}
+function modalFicha(d) {
+  fichaPendente = d;
+  const daFila = String(d.id || '').startsWith('fi_');
+  const dup = duplicadoDe(d);
+  const id = idade(d.nas);
+  const linha = (r, v) => v ? '<dt>' + r + '</dt><dd>' + esc(v) + '</dd>' : '';
+  abrirModal('Ficha de matrícula recebida', '<div class="corpo">' +
+    (dup ? '<div class="aviso forte" style="margin:0">Já existe um cadastro parecido: <b>' + esc(dup.nome) + '</b>. Você pode atualizar esse cadastro com os dados da ficha ou criar um novo.</div>' : '') +
+    '<dl class="dados">' + (d.recebidaEm ? linha('Recebida em', fData(String(d.recebidaEm).slice(0, 10))) : '') + linha('Nome', d.n) + linha('Nascimento', fData(d.nas) + (id != null ? ' (' + id + ' anos)' : '')) + linha('CPF', d.cpf) + linha('Celular', d.tel) + linha('E-mail', d.em) + linha('Endereço', d.end) +
+    linha('Responsável', d.rn ? d.rn + (d.rtel ? ' · ' + d.rtel : '') + (d.rcpf ? ' · CPF ' + d.rcpf : '') : '') +
+    linha('Modalidade', d.mod + (d.fx ? ' · faixa ' + d.fx + (d.gr ? ', ' + d.gr + 'º grau' : '') : ' · ' + (d.exp || ''))) +
+    linha('Saúde', d.sau) + linha('Emergência', [d.ctn, d.ctt].filter(Boolean).join(' · ')) + linha('Conheceu por', d.ori) +
+    (d.pl ? linha('Plano escolhido', (planoPorId(d.pl) || {}).nome || d.pln) + linha('Pagamento', d.fp + (d.dv ? ' · vencimento dia ' + d.dv : '')) + linha('Família', d.fam ? d.fam.split('\n').map((s) => s.trim()).filter(Boolean).join(', ') : '') : '') +
+    linha('Regimento', d.rc ? 'Regimento Interno e Código de Conduta v' + (d.rcv || '1.0') + ' aceito em ' + fData(String(d.rc).slice(0, 10)) + (d.rn ? ' pelo responsável' : '') : 'não aceito (ficha antiga)') +
+    linha('Declaração', d.ok ? 'aceita em ' + fData(String(d.ok).slice(0, 10)) : 'não aceita') + '</dl>' +
+    (d.pl && !planoPorId(d.pl) ? '<p class="aviso" style="margin:0">O plano "' + esc(d.pln || '') + '" não está mais cadastrado. Escolha outro na hora da venda.</p>' : '') +
+    '<div class="rodape">' + (daFila ? '<button class="btn perigo" data-act="descartar-ficha" data-id="' + esc(d.id) + '">Descartar</button>' : '') + '<button class="btn" data-act="fechar-modal">Agora não</button>' +
+    (dup ? '<button class="btn" data-act="ficha-salvar" data-modo="novo">Criar novo cadastro</button><button class="btn pri" data-act="ficha-salvar" data-modo="atualizar" data-id="' + dup.id + '">Atualizar ' + esc(dup.nome.split(' ')[0]) + '</button>'
+      : '<button class="btn pri" data-act="ficha-salvar" data-modo="novo">Cadastrar aluno</button>') + '</div></div>');
+}
+async function salvarFicha(modo, idExistente) {
+  const d = fichaPendente; if (!d) return;
+  const base = modo === 'atualizar' ? alunoPorId(idExistente) : null;
+  const g = grads()[d.mod] || grads()['Jiu-jitsu'];
+  const faixa = d.fx && g.faixas.includes(d.fx) ? d.fx : g.faixas[0];
+  const a = base ? { ...base, modalidades: [...(base.modalidades || [])], historicoGrad: [...(base.historicoGrad || [])] } : { id: novoId('al'), modalidades: [], historicoGrad: [], obs: '', criadoEm: new Date().toISOString() };
+  Object.assign(a, {
+    nome: d.n, nascimento: d.nas || a.nascimento || '', cpf: d.cpf || a.cpf || '', telefone: d.tel || a.telefone || '', email: d.em || a.email || '', endereco: d.end || a.endereco || '',
+    responsavel: d.rn || a.responsavel || '', respCpf: d.rcpf || a.respCpf || '', respTelefone: d.rtel || a.respTelefone || '',
+    emergencia: [d.ctn, d.ctt].filter(Boolean).join(' · ') || a.emergencia || '', saude: d.sau || a.saude || '', origem: d.ori || a.origem || '', termoAceitoEm: d.ok || a.termoAceitoEm || '',
+  });
+  if (d.rc) a.regimento = { versao: d.rcv || '1.0', aceitoEm: d.rc, porResponsavel: !!d.rn };
+  if (d.fam) a.obs = [a.obs, 'Pacote família com: ' + d.fam.split('\n').map((s) => s.trim()).filter(Boolean).join(', ') + '.'].filter(Boolean).join(' ');
+  if (!a.modalidades.some((m) => m.mod === d.mod)) {
+    const m = { mod: d.mod, faixa, grau: Number(d.gr) || 0, desde: HOJE };
+    a.modalidades.push(m); a.historicoGrad.push({ data: HOJE, mod: m.mod, faixa: m.faixa, grau: m.grau });
+  }
+  if (!base && d.exp === 'Já treinei') a.obs = ['Já treinava antes da matrícula.', a.obs].filter(Boolean).join(' ');
+  fichaPendente = null; fecharModal();
+  if (!(await salvar('alunos', a))) return;
+  if (String(d.id || '').startsWith('fi_')) await remover('fichas', d.id);
+  const tel = (d.tel || '').replace(/\D/g, '');
+  const lead = tel.length >= 10 && S.leads.find((l) => (l.telefone || '').replace(/\D/g, '') === tel && !l.alunoId);
+  if (lead) await salvar('leads', { ...lead, etapa: 'matriculado', alunoId: a.id });
+  UI.view = 'aluno'; UI.alunoId = a.id; render();
+  const pl = d.pl && planoPorId(d.pl) && planoPorId(d.pl).ativo !== false ? d.pl : undefined;
+  toast(base ? 'Cadastro atualizado com a ficha.' : 'Aluno cadastrado pela ficha.' + (pl ? ' Confira a venda do plano escolhido.' : ' Agora escolha o plano.'));
+  if (!contratoVigente(a.id)) modalVenda({ alunoId: a.id, planoId: pl, diaVenc: d.dv || undefined, formaPg: d.fp || undefined });
+}
+function verificarHash() {
+  const h = location.hash || '';
+  if (!h.startsWith('#m-') || h === hashLido) return;
+  hashLido = h;
+  const d = parseCodigo(h);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+  if (d) modalFicha(d); else toast('O link da ficha está incompleto. Peça para o aluno enviar de novo.');
+}
+
+/* ---------- Agenda ---------- */
+function inicioSemana(off) { return addDias(HOJE, -((diaSemana(HOJE) + 6) % 7) + 7 * off); }
+VIEWS.agenda = function () {
+  let h = '<div class="topo"><div><h1>Agenda e check-in</h1><p>Turmas da semana, chamada e frequência dos alunos.</p></div><div class="acoes"><button class="btn" data-act="nova-turma">Nova turma</button><button class="btn pri" data-act="checkin">Check-in</button></div></div>';
+  h += '<div class="tabs" role="tablist">' + tab('tabAgenda', 'semana', 'Semana') + tab('tabAgenda', 'turmas', 'Turmas') + '</div>';
+  if (!S.turmas.length) return h + '<div class="painel"><p class="vazio">Nenhuma turma cadastrada. Cadastre as turmas da sua grade (dias, horário e professor) para fazer a chamada.</p><button class="btn pri" data-act="nova-turma">Cadastrar primeira turma</button></div>';
+  if (UI.tabAgenda === 'turmas') {
+    h += '<div class="tabela-wrap"><table><thead><tr><th>Turma</th><th>Dias</th><th>Horário</th><th>Professor</th><th class="dir">Média de presença</th><th></th></tr></thead><tbody>';
+    for (const t of S.turmas.slice().sort((a, b) => (b.ativa !== false) - (a.ativa !== false) || a.inicio.localeCompare(b.inicio))) {
+      const recentes = S.aulas.filter((x) => x.turmaId === t.id && x.data >= addDias(HOJE, -28));
+      const media = recentes.length ? recentes.reduce((s, x) => s + (x.presentes || []).length, 0) / recentes.length : null;
+      h += '<tr><td><b>' + esc(t.nome) + '</b><small>' + esc(t.modalidade) + (t.ativa === false ? ' · inativa' : '') + '</small></td><td>' + (t.dias || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((d) => DIAS[d]).join(', ') + '</td><td class="num">' + esc(t.inicio) + '–' + esc(t.fim) + '</td><td>' + esc(t.professor || '—') + '</td>' +
+        '<td class="dir num">' + (media != null ? media.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + (t.capacidade ? ' / ' + t.capacidade : '') : '—') + '<small>últimas 4 semanas</small></td><td class="dir"><button class="btn peq" data-act="editar-turma" data-id="' + t.id + '">Editar</button></td></tr>';
+    }
+    return h + '</tbody></table></div>';
+  }
+  const seg = inicioSemana(UI.semana), dom = addDias(seg, 6);
+  h += '<div class="semana-nav"><button class="btn peq" data-act="semana" data-d="-1" aria-label="Semana anterior">←</button><b>' + Number(seg.slice(8)) + ' de ' + MESES_L[Number(seg.slice(5, 7)) - 1] + ' a ' + Number(dom.slice(8)) + ' de ' + MESES_L[Number(dom.slice(5, 7)) - 1] + '</b><button class="btn peq" data-act="semana" data-d="1" aria-label="Próxima semana">→</button>' + (UI.semana ? '<button class="btn peq" data-act="semana" data-d="0">Esta semana</button>' : '') + '</div>';
+  h += '<div class="semana-wrap"><div class="semana">';
+  for (let i = 0; i < 7; i++) {
+    const data = addDias(seg, i);
+    const ts = turmasDoDia(data);
+    h += '<section class="dia' + (data === HOJE ? ' hoje' : '') + '"><header><b>' + DIAS_L[diaSemana(data)] + '</b><span>' + fDataC(data) + '</span></header>';
+    if (!ts.length) h += '<p class="vazio" style="padding:4px">Sem aulas</p>';
+    for (const t of ts) {
+      const au = S.aulas.find((x) => x.id === aulaId(t.id, data));
+      const n = au ? (au.presentes || []).length : 0;
+      h += '<article class="aula' + (au ? ' feita' : '') + '"><span class="hora">' + esc(t.inicio) + '–' + esc(t.fim) + '</span><b>' + esc(t.nome) + '</b>' +
+        '<span class="mod"><i class="' + ({ 'Jiu-jitsu': 'm-jj', 'Jiu-jitsu Kids': 'm-kids', 'Muay Thai': 'm-mt' }[t.modalidade] || '') + '"></i>' + esc(t.modalidade) + '</span>' + (t.professor ? '<small>' + esc(t.professor) + '</small>' : '') +
+        (au ? '<small><b class="num">' + n + '</b> presente(s)' + (t.capacidade ? ' de ' + t.capacidade : '') + '</small>' : '') +
+        (data <= HOJE ? '<button class="btn peq' + (au ? '' : ' pri') + '" data-act="chamada" data-t="' + t.id + '" data-d="' + data + '">' + (au ? 'Ver chamada' : 'Fazer chamada') + '</button>' : '') + '</article>';
+    }
+    h += '</section>';
+  }
+  return h + '</div></div>';
+};
+function modalTurma(t) {
+  t = t || { modalidade: 'Jiu-jitsu', dias: [], inicio: '19:00', fim: '20:30', ativa: true };
+  abrirModal(t.id ? 'Editar turma' : 'Nova turma', '<form data-form="turma"><input type="hidden" name="id" value="' + esc(t.id || '') + '">' +
+    '<div class="linha2">' + campo('Nome da turma *', inp('tu-nome', 'nome', t.nome, 'required placeholder="Ex.: Jiu-jitsu Iniciantes"')) + campo('Modalidade', sel('tu-mod', 'modalidade', MODALIDADES.map((m) => opt(m, m, m === t.modalidade)).join(''))) + '</div>' +
+    '<div class="campo"><span>Dias da semana *</span><div class="dias-sel">' + [1, 2, 3, 4, 5, 6, 0].map((d) => '<label><input type="checkbox" name="dia" value="' + d + '"' + ((t.dias || []).includes(d) ? ' checked' : '') + '>' + DIAS[d] + '</label>').join('') + '</div></div>' +
+    '<div class="linha2">' + campo('Começa', inp('tu-ini', 'inicio', t.inicio, 'type="time" required')) + campo('Termina', inp('tu-fim', 'fim', t.fim, 'type="time" required')) + campo('Vagas', inp('tu-cap', 'capacidade', t.capacidade || '', 'type="number" min="0" placeholder="Sem limite"')) + '</div>' +
+    campo('Professor', inp('tu-prof', 'professor', t.professor)) +
+    '<label class="check"><input type="checkbox" name="ativa" id="tu-ativa"' + (t.ativa !== false ? ' checked' : '') + '><span>Turma ativa (aparece na agenda)</span></label>' +
+    rodape(t.id ? 'Salvar turma' : 'Criar turma') + '</form>' + (t.id ? '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-turma" data-id="' + t.id + '" style="align-self:flex-start">Excluir turma</button></div>' : ''));
+}
+function linhaChamada(a, mod, marcado) {
+  const m = (a.modalidades || []).find((x) => x.mod === mod);
+  const s = situacaoAcesso(a.id);
+  return '<li data-nome="' + esc(a.nome.toLowerCase()) + '"><label><input type="checkbox" name="p" value="' + a.id + '"' + (marcado ? ' checked' : '') + '><div class="cresce"><b>' + esc(a.nome) + '</b>' + (m ? '<div>' + faixaHtml(m) + '</div>' : '<small>outra modalidade</small>') + '</div>' + (s ? pill(s[0], s[1]) : '') + '</label></li>';
+}
+function modalChamada(turmaId, data) {
+  const t = turmaPorId(turmaId); if (!t) return;
+  const au = S.aulas.find((x) => x.id === aulaId(t.id, data));
+  const presentes = new Set((au && au.presentes) || []);
+  const daTurma = S.alunos.filter((a) => (a.modalidades || []).some((m) => m.mod === t.modalidade) && (alunoAtivo(a) || presentes.has(a.id)));
+  const extras = S.alunos.filter((a) => presentes.has(a.id) && !daTurma.includes(a));
+  const lista = [...daTurma, ...extras].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const outros = S.alunos.filter((a) => !lista.includes(a)).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  abrirModal('Chamada', '<form data-form="chamada"><input type="hidden" name="turmaId" value="' + t.id + '"><input type="hidden" name="data" value="' + data + '">' +
+    '<div class="resumo"><span><b>' + esc(t.nome) + '</b> · ' + esc(t.modalidade) + '</span><span>' + DIAS_L[diaSemana(data)] + ', ' + fData(data) + ' · ' + esc(t.inicio) + '–' + esc(t.fim) + (t.professor ? ' · ' + esc(t.professor) : '') + '</span><span><b id="ch-cont">' + presentes.size + '</b> marcado(s)' + (t.capacidade ? ' de ' + t.capacidade + ' vagas' : '') + '</span></div>' +
+    '<input type="search" id="ch-busca" data-filtro-chamada placeholder="Buscar aluno na lista" aria-label="Buscar aluno na lista">' +
+    '<ul class="chamada-lista" id="ch-lista">' + (lista.length ? lista.map((a) => linhaChamada(a, t.modalidade, presentes.has(a.id))).join('') : '<li class="vazio" style="padding:12px">Nenhum aluno ativo em ' + esc(t.modalidade) + '.</li>') + '</ul>' +
+    (outros.length ? campo('Adicionar aluno de fora da turma', sel('ch-add', 'add', '<option value="">Escolha um aluno</option>' + outros.map((a) => opt(a.id, a.nome)).join(''), 'data-add-chamada="' + esc(t.modalidade) + '"'), 'Para quem é de outra modalidade ou está sem contrato.') : '') +
+    '<p class="vazio" style="padding:0">Alunos com contrato vencido ou em atraso aparecem marcados com um aviso para você falar com eles.</p>' +
+    rodape('Salvar chamada') + '</form>');
+}
+function modalCheckin(alunoId) {
+  const ativas = S.turmas.filter((t) => t.ativa !== false);
+  if (!ativas.length) { toast('Cadastre uma turma na Agenda antes do check-in.'); modalTurma(); return; }
+  if (!S.alunos.length) { toast('Cadastre um aluno antes do check-in.'); return; }
+  const agora = new Date(); const hm = pad(agora.getHours()) + ':' + pad(agora.getMinutes());
+  const hoje = turmasDoDia(HOJE);
+  const sugerida = hoje.find((t) => t.fim >= hm) || hoje[hoje.length - 1];
+  const alunos = S.alunos.slice().sort((a, b) => (alunoAtivo(b) - alunoAtivo(a)) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  const ordem = [...hoje, ...ativas.filter((t) => !hoje.includes(t))];
+  abrirModal('Check-in', '<form data-form="checkin">' +
+    campo('Aluno *', sel('ci-aluno', 'alunoId', '<option value="">Escolha o aluno</option>' + alunos.map((a) => opt(a.id, a.nome + (alunoAtivo(a) ? '' : ' (inativo)'), a.id === alunoId)).join(''), 'required data-ci')) +
+    '<div id="ci-aviso"></div>' +
+    '<div class="linha2">' + campo('Turma *', sel('ci-turma', 'turmaId', ordem.map((t) => opt(t.id, t.inicio + ' · ' + t.nome + (hoje.includes(t) ? '' : ' (' + (t.dias || []).map((d) => DIAS[d]).join('/') + ')'), sugerida && t.id === sugerida.id)).join(''), 'required')) +
+    campo('Data', inp('ci-data', 'data', HOJE, 'type="date" required max="' + HOJE + '"')) + '</div>' +
+    rodape('Confirmar check-in') + '</form>');
+  avisoCheckin();
+}
+function avisoCheckin() {
+  const el = document.getElementById('ci-aviso'); const s = document.getElementById('ci-aluno');
+  if (!el || !s) return;
+  const sit = s.value ? situacaoAcesso(s.value) : null;
+  el.innerHTML = sit ? '<div class="aviso' + (sit[0] === 'bad' ? ' forte' : '') + '" style="margin:0"><b>' + esc(sit[1]) + '.</b> Combine com o aluno a regularização antes ou depois do treino.</div>' : '';
+}
+function modalImportar() {
+  abrirModal('Importar ficha de matrícula', '<form data-form="importar">' +
+    campo('Mensagem recebida do aluno', '<textarea id="imp-txt" name="txt" rows="6" placeholder="Cole aqui a mensagem inteira que o aluno enviou pelo WhatsApp"></textarea>', 'O mais fácil é tocar no link que vem na mensagem. Se não der, copie a mensagem e cole aqui.') +
+    rodape('Ler ficha') + '</form>');
+}
+function modalEnviarFicha() {
+  abrirModal('Enviar ficha de matrícula', '<div class="corpo">' + blocoFicha() + '</div>');
+}
+
+function modalUsuario() {
+  abrirModal('Adicionar pessoa', '<form data-form="novo-usuario">' + campo('Nome *', inp('us-nome', 'nome', '', 'required autocomplete="off"')) +
+    campo('E-mail *', inp('us-email', 'email', '', 'type="email" required autocomplete="off"'), 'É o login da pessoa.') +
+    '<div class="linha2">' + campo('Senha inicial *', inp('us-senha', 'senha', senhaAleatoria(), 'required minlength="10" autocomplete="off"'), 'Passe para a pessoa. Ela pode trocar depois em Ajustes.') +
+    campo('Papel', sel('us-papel', 'papel', opt('equipe', 'Equipe') + opt('admin', 'Administrador'))) + '</div>' + rodape('Adicionar') + '</form>');
+}
+function modalRedefinir(email, nome) {
+  abrirModal('Nova senha', '<form data-form="redefinir"><input type="hidden" name="email" value="' + esc(email) + '"><p style="margin:0">Defina uma nova senha para <b>' + esc(nome) + '</b>. A pessoa sai do sistema e entra de novo com ela.</p>' +
+    campo('Nova senha *', inp('rd-senha', 'senha', senhaAleatoria(), 'required minlength="10" autocomplete="off"')) + rodape('Salvar nova senha') + '</form>');
+}
+function senhaAleatoria() {
+  const c = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const v = new Uint32Array(12); crypto.getRandomValues(v);
+  return Array.from(v, (x) => c[x % c.length]).join('');
+}
+function modalListaFichas() {
+  abrirModal('Fichas recebidas', '<div class="corpo">' + (S.fichas.length ? '<ul class="lista">' + S.fichas.map((f) => '<li><div class="cresce"><b>' + esc(f.n) + '</b><small>' + esc(f.mod || '') + (f.pln ? ' · ' + esc(f.pln) : '') + ' · ' + fData(String(f.recebidaEm || '').slice(0, 10)) + '</small></div><button class="btn peq pri" data-act="conferir-ficha" data-id="' + esc(f.id) + '">Conferir</button></li>').join('') + '</ul>' : '<p class="vazio">Nenhuma ficha para conferir.</p>') + '</div>');
+}
+
+/* ================= Modais ================= */
+let modalAberto = null, acaoConfirmar = null;
+function abrirModal(titulo, corpo) {
+  modalAberto = titulo;
+  document.getElementById('modal-root').innerHTML = '<div class="fundo" data-act="fundo"><div class="modal" role="dialog" aria-modal="true" aria-label="' + esc(titulo) + '"><header><h2>' + esc(titulo) + '</h2><button class="fechar" data-act="fechar-modal" aria-label="Fechar">×</button></header>' + corpo + '</div></div>';
+  const f = document.querySelector('.modal input:not([type=hidden]), .modal select, .modal textarea');
+  if (f) f.focus();
+}
+function fecharModal() { modalAberto = null; document.getElementById('modal-root').innerHTML = ''; }
+function confirmar(titulo, texto, rotulo, fn) {
+  acaoConfirmar = fn;
+  abrirModal(titulo, '<div class="corpo"><p style="margin:0">' + texto + '</p><div class="rodape"><button class="btn" data-act="fechar-modal">Voltar</button><button class="btn pri" data-act="confirmar">' + esc(rotulo) + '</button></div></div>');
+}
+const campo = (rot, html, dica) => '<label class="campo"><span>' + rot + '</span>' + html + (dica ? '<small>' + dica + '</small>' : '') + '</label>';
+const inp = (id, nome, val, extra) => '<input id="' + id + '" name="' + nome + '" value="' + esc(val ?? '') + '" ' + (extra || '') + '>';
+const sel = (id, nome, opcoes, extra) => '<select id="' + id + '" name="' + nome + '" ' + (extra || '') + '>' + opcoes + '</select>';
+const rodape = (rot) => '<div class="rodape"><button type="button" class="btn" data-act="fechar-modal">Cancelar</button><button type="submit" class="btn pri">' + esc(rot) + '</button></div>';
+const formasOpts = (v) => FORMAS.map((f) => opt(f, f, f === v)).join('');
+
+function modalAluno(a) {
+  a = a || {};
+  const m0 = (a.modalidades || [])[0] || {};
+  let h = '<form data-form="aluno"><input type="hidden" name="id" value="' + esc(a.id || '') + '"><input type="hidden" name="leadId" value="' + esc(a.leadId || '') + '">' +
+    campo('Nome completo *', inp('al-nome', 'nome', a.nome, 'required autocomplete="off"')) +
+    '<div class="linha2">' + campo('Telefone / WhatsApp', inp('al-tel', 'telefone', a.telefone, 'inputmode="tel" placeholder="(21) 99999-9999"')) + campo('E-mail', inp('al-email', 'email', a.email, 'type="email"')) + '</div>' +
+    '<div class="linha2">' + campo('Data de nascimento', inp('al-nasc', 'nascimento', a.nascimento, 'type="date"')) + campo('CPF', inp('al-cpf', 'cpf', a.cpf, 'inputmode="numeric"')) + '</div>' +
+    campo('Endereço', inp('al-end', 'endereco', a.endereco)) +
+    '<div class="linha2">' + campo('Responsável', inp('al-resp', 'responsavel', a.responsavel, 'placeholder="Para alunos menores"')) + campo('Celular do responsável', inp('al-rtel', 'respTelefone', a.respTelefone, 'inputmode="tel"')) + '</div>' +
+    '<div class="linha2">' + campo('Contato de emergência', inp('al-emerg', 'emergencia', a.emergencia, 'placeholder="Nome e telefone"')) + campo('Como conheceu o CT', sel('al-orig', 'origem', '<option value="">—</option>' + ORIGENS.map((o) => opt(o, o, o === a.origem)).join(''))) + '</div>' +
+    campo('Saúde', '<textarea id="al-saude" name="saude" placeholder="Lesões, alergias, medicamentos">' + esc(a.saude || '') + '</textarea>');
+  if (!a.id) {
+    const mod = m0.mod || a.interesse || 'Jiu-jitsu';
+    h += '<div class="linha2">' + campo('Modalidade', sel('al-mod', 'mod', MODALIDADES.map((m) => opt(m, m, m === mod)).join(''), 'data-troca-mod')) +
+      campo('Faixa atual', sel('al-faixa', 'faixa', grads()[mod].faixas.map((f) => opt(f)).join(''))) + campo('Grau', inp('al-grau', 'grau', 0, 'type="number" min="0" max="10"')) + '</div>';
+  }
+  h += campo('Observações', '<textarea id="al-obs" name="obs" placeholder="Saúde, restrições, preferências de horário…">' + esc(a.obs || '') + '</textarea>');
+  h += rodape(a.id ? 'Salvar alterações' : 'Cadastrar aluno') + '</form>';
+  if (a.id) h += '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-aluno" data-id="' + a.id + '" style="align-self:flex-start">Excluir aluno</button></div>';
+  abrirModal(a.id ? 'Editar aluno' : 'Novo aluno', h);
+}
+function modalPlano(p) {
+  p = p || { ativo: true, meses: 1, modalidade: 'Jiu-jitsu' };
+  abrirModal(p.id ? 'Editar plano' : 'Novo plano', '<form data-form="plano"><input type="hidden" name="id" value="' + esc(p.id || '') + '">' +
+    campo('Nome do plano *', inp('pl-nome', 'nome', p.nome, 'required placeholder="Ex.: Jiu-jitsu Trimestral"')) +
+    '<div class="linha2">' + campo('Modalidade', sel('pl-mod', 'modalidade', [...MODALIDADES, 'Livre (todas)'].map((m) => opt(m, m, m === p.modalidade)).join(''))) +
+    campo('Valor por mês (R$) *', inp('pl-valor', 'valor', p.valor, 'required inputmode="decimal" placeholder="150,00"')) +
+    campo('Duração', sel('pl-meses', 'meses', [1, 2, 3, 4, 6, 12, 18, 24].map((n) => opt(n, n + (n > 1 ? ' meses' : ' mês'), n === Number(p.meses))).join(''))) + '</div>' +
+    campo('Forma de cobrança padrão', sel('pl-forma', 'formaPadrao', opt('mensal', 'Mensalidades (Pix, débito, dinheiro, débito automático)', p.formaPadrao === 'mensal') + opt('cartao', 'Cartão de crédito', p.formaPadrao === 'cartao') + opt('avista', 'À vista (pagamento único)', p.formaPadrao === 'avista')), 'Já vem escolhida na hora da venda. Dá para trocar se precisar.') +
+    '<div class="campo"><span>Formas de pagamento aceitas</span><div class="dias-sel">' + FORMAS.map((f) => '<label><input type="checkbox" name="aceita" value="' + esc(f) + '"' + ((p.pagamentos || ['Pix', 'Cartão de débito', 'Dinheiro']).includes(f) ? ' checked' : '') + '>' + esc(f) + '</label>').join('') + '</div><small>São as opções que o aluno vê na ficha de matrícula para este plano.</small></div>' +
+    campo('Condições comerciais', '<textarea id="pl-cond" name="condicoes" placeholder="Ex.: fidelidade, frequência semanal, brindes">' + esc(p.condicoes || '') + '</textarea>') +
+    '<label class="check"><input type="checkbox" name="ativo" id="pl-ativo"' + (p.ativo !== false ? ' checked' : '') + '><span>Disponível para venda</span></label>' +
+    rodape(p.id ? 'Salvar plano' : 'Criar plano') + '</form>');
+}
+function modalVenda(o) {
+  o = o || {};
+  const planos = S.planos.filter((p) => p.ativo !== false || p.id === o.planoId);
+  if (!planos.length) { toast('Cadastre um plano antes de vender.'); modalPlano(); return; }
+  if (!S.alunos.length) { toast('Cadastre o aluno antes de vender o plano.'); modalAluno(); return; }
+  const alunos = S.alunos.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const inicio = o.inicio || HOJE;
+  abrirModal(o.renovacaoDe ? 'Renovar contrato' : 'Vender plano', '<form data-form="venda"><input type="hidden" name="renovacaoDe" value="' + esc(o.renovacaoDe || '') + '">' +
+    campo('Aluno *', sel('vd-aluno', 'alunoId', '<option value="">Escolha o aluno</option>' + alunos.map((a) => opt(a.id, a.nome, a.id === o.alunoId)).join(''), 'required')) +
+    campo('Plano *', sel('vd-plano', 'planoId', planos.map((p) => opt(p.id, p.nome + ' · ' + fR(p.valor) + '/mês · ' + p.meses + (p.meses > 1 ? ' meses' : ' mês'), p.id === o.planoId)).join(''), 'required')) +
+    '<div class="linha2">' + campo('Início *', inp('vd-inicio', 'inicio', inicio, 'type="date" required'), 'Pode ser uma data passada (venda retroativa).') +
+    campo('Desconto por mês (R$)', inp('vd-desc', 'desconto', o.desconto || '', 'inputmode="decimal" placeholder="0,00"')) + '</div>' +
+    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista'))(((planoPorId(o.planoId) || planos[0]) || {}).formaPadrao || 'mensal'))) +
+    campo('Dia de vencimento', inp('vd-dia', 'diaVenc', o.diaVenc || Number(inicio.slice(8, 10)), 'type="number" min="1" max="31"'), 'Para mensalidades.') + '</div>' +
+    '<div class="linha2">' + campo('Taxa de matrícula (R$)', inp('vd-mat', 'matricula', '', 'inputmode="decimal" placeholder="0,00"')) + campo('Forma de pagamento prevista', sel('vd-fp', 'formaPg', formasOpts(o.formaPg || (((planoPorId(o.planoId) || planos[0]) || {}).pagamentos || ['Pix'])[0]))) + '</div>' +
+    '<label class="check"><input type="checkbox" name="retroativo" id="vd-retro"><span>Marcar como pagas as cobranças com vencimento anterior a hoje (para lançar vendas antigas)</span></label>' +
+    '<div class="resumo" id="vd-resumo"></div>' + rodape(o.renovacaoDe ? 'Confirmar renovação' : 'Confirmar venda') + '</form>');
+  atualizarResumoVenda();
+}
+function atualizarResumoVenda() {
+  const f = document.querySelector('form[data-form="venda"]'); const r = document.getElementById('vd-resumo');
+  if (!f || !r) return;
+  const d = Object.fromEntries(new FormData(f));
+  const p = planoPorId(d.planoId); if (!p) { r.innerHTML = ''; return; }
+  const desc = numCampo(d.desconto), mat = numCampo(d.matricula);
+  const mensal = Math.max(0, p.valor - desc);
+  const inicio = d.inicio || HOJE; const fim = addDias(addMeses(inicio, p.meses), -1);
+  const n = d.forma === 'avista' ? 1 : p.meses;
+  r.innerHTML = '<span>Vigência: <b>' + fData(inicio) + ' a ' + fData(fim) + '</b></span><span>' + (d.forma === 'avista' ? 'Pagamento único de <b>' + fR(mensal * p.meses) + '</b>' : '<b>' + n + 'x de ' + fR(mensal) + '</b>' + (d.forma === 'cartao' ? ' no cartão' : ' · vencimento todo dia ' + (d.diaVenc || '—'))) + '</span>' +
+    (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b></span>' : '') + '<span>Total do contrato: <b>' + fR(mensal * p.meses + mat) + '</b></span>';
+}
+function modalBaixa(l) {
+  const saldo = saldoDe(l);
+  abrirModal(l.tipo === 'receita' ? 'Registrar recebimento' : 'Registrar pagamento', '<form data-form="baixa"><input type="hidden" name="id" value="' + l.id + '">' +
+    '<div class="resumo"><span><b>' + esc(l.descricao) + '</b></span>' + (l.alunoId ? '<span>' + esc(nomeAluno(l.alunoId)) + '</span>' : '') + '<span>Vencimento ' + fData(l.vencimento) + ' · valor ' + fR(devidoDe(l)) + (pagoDe(l) ? ' · já pago ' + fR(pagoDe(l)) : '') + '</span><span>Falta: <b>' + fR(saldo) + '</b></span></div>' +
+    '<div class="linha2">' + campo('Valor ' + (l.tipo === 'receita' ? 'recebido' : 'pago') + ' (R$) *', inp('bx-valor', 'valor', saldo.toFixed(2).replace('.', ','), 'required inputmode="decimal"'), 'Pode ser menor que o total (pagamento parcial).') +
+    campo('Data', inp('bx-data', 'data', HOJE, 'type="date" required')) + '</div>' +
+    '<div class="linha2">' + campo('Forma', sel('bx-forma', 'forma', formasOpts(l.formaPrevista || 'Pix'))) + campo('Conceder desconto (R$)', inp('bx-desc', 'desconto', '', 'inputmode="decimal" placeholder="0,00"'), 'Abate do valor total da conta.') + '</div>' +
+    rodape('Confirmar') + '</form>');
+}
+function modalLanc(o) {
+  const tipo = o.tipo;
+  const cats = tipo === 'receita' ? CAT_RECEITA.map((c) => opt(c, c, c === o.categoria)).join('') : Object.entries(CAT_DESPESA).map(([g, cs]) => '<optgroup label="' + g + '">' + cs.map((c) => opt(c, c, c === o.categoria)).join('') + '</optgroup>').join('');
+  const alunos = S.alunos.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  abrirModal(o.titulo || (tipo === 'receita' ? 'Nova receita' : 'Nova conta a pagar'), '<form data-form="lanc"><input type="hidden" name="tipo" value="' + tipo + '">' +
+    campo('Descrição *', inp('lc-desc', 'descricao', o.descricao, 'required placeholder="' + (tipo === 'receita' ? 'Ex.: Rashguard, aula avulsa' : 'Ex.: Aluguel, conta de luz') + '"')) +
+    '<div class="linha2">' + campo('Categoria', sel('lc-cat', 'categoria', cats)) + campo('Valor (R$) *', inp('lc-valor', 'valor', o.valor, 'required inputmode="decimal" placeholder="0,00"'), 'Valor de cada parcela.') + '</div>' +
+    '<div class="linha2">' + campo('Vencimento *', inp('lc-venc', 'vencimento', o.vencimento || HOJE, 'type="date" required')) + campo('Repetir / parcelar', sel('lc-rep', 'repetir', [1, 2, 3, 4, 5, 6, 10, 12].map((n) => opt(n, n === 1 ? 'Só uma vez' : n + 'x (mensal)')).join(''))) + '</div>' +
+    (tipo === 'receita' ? campo('Aluno', sel('lc-aluno', 'alunoId', '<option value="">Nenhum</option>' + alunos.map((a) => opt(a.id, a.nome, a.id === o.alunoId)).join(''))) : '') +
+    '<div class="linha2">' + campo('Forma de pagamento', sel('lc-forma', 'forma', formasOpts('Pix'))) + '</div>' +
+    '<label class="check"><input type="checkbox" name="pago" id="lc-pago"' + (o.pago ? ' checked' : '') + '><span>Já foi ' + (tipo === 'receita' ? 'recebido' : 'pago') + ' (registra a baixa na data de vencimento)</span></label>' +
+    rodape('Salvar') + '</form>');
+}
+function modalDetalhes(l) {
+  const pg = l.pagamentos || [];
+  abrirModal('Detalhes da conta', '<div class="corpo"><dl class="dados"><dt>Descrição</dt><dd>' + esc(l.descricao) + '</dd><dt>Tipo</dt><dd>' + (l.tipo === 'receita' ? 'A receber' : 'A pagar') + ' · ' + esc(l.categoria) + '</dd>' +
+    (l.alunoId ? '<dt>Aluno</dt><dd>' + esc(nomeAluno(l.alunoId)) + '</dd>' : '') + '<dt>Vencimento</dt><dd>' + fData(l.vencimento) + '</dd><dt>Valor</dt><dd>' + fR(l.valor) + (l.desconto ? ' − desconto ' + fR(l.desconto) + ' = ' + fR(devidoDe(l)) : '') + '</dd><dt>Situação</dt><dd>' + pillLanc(l) + '</dd></dl>' +
+    '<h3>Pagamentos</h3>' + (pg.length ? '<ul class="lista">' + pg.map((p, i) => '<li><div class="cresce"><b class="num">' + fR(p.valor) + '</b><small>' + fData(p.data) + ' · ' + esc(p.forma) + '</small></div><button class="btn link peq perigo" data-act="estornar" data-id="' + l.id + '" data-i="' + i + '">Estornar</button></li>').join('') + '</ul>' : '<p class="vazio">Nenhum pagamento registrado.</p>') +
+    '<div class="rodape">' + (!l.cancelado ? '<button class="btn perigo" data-act="cancelar-lanc" data-id="' + l.id + '">Cancelar conta</button>' : '') + (statusLanc(l) !== 'pago' && !l.cancelado ? '<button class="btn pri" data-act="baixar" data-id="' + l.id + '">' + (l.tipo === 'receita' ? 'Receber' : 'Pagar') + '</button>' : '') + '</div></div>');
+}
+function modalGraduar(a, i, nova) {
+  const m = nova ? { mod: MODALIDADES.find((x) => !(a.modalidades || []).some((y) => y.mod === x)) || 'Jiu-jitsu', faixa: '', grau: 0 } : a.modalidades[i];
+  const g = grads()[m.mod];
+  const idx = Math.max(0, g.faixas.indexOf(m.faixa));
+  let faixaSug = m.faixa || g.faixas[0], grauSug = m.grau || 0;
+  if (!nova) { if (g.graus > 0 && grauSug < g.graus) grauSug++; else { faixaSug = g.faixas[Math.min(idx + 1, g.faixas.length - 1)]; grauSug = 0; } }
+  abrirModal(nova ? 'Adicionar modalidade' : 'Registrar graduação', '<form data-form="graduar"><input type="hidden" name="id" value="' + a.id + '"><input type="hidden" name="i" value="' + (nova ? -1 : i) + '">' +
+    (nova ? campo('Modalidade', sel('gr-mod', 'mod', MODALIDADES.map((x) => opt(x, x, x === m.mod)).join(''), 'data-troca-mod')) : '<input type="hidden" name="mod" value="' + esc(m.mod) + '"><div class="resumo"><span>' + esc(a.nome) + ' · ' + esc(m.mod) + '</span><span>Atual: ' + faixaHtml(m) + '</span></div>') +
+    '<div class="linha2">' + campo('Nova faixa', sel('al-faixa', 'faixa', g.faixas.map((f) => opt(f, f, f === faixaSug)).join(''))) + campo('Grau', inp('al-grau', 'grau', grauSug, 'type="number" min="0" max="10"')) + campo('Data', inp('gr-data', 'data', HOJE, 'type="date" required')) + '</div>' +
+    rodape(nova ? 'Adicionar' : 'Salvar graduação') + '</form>');
+}
+function modalLead(l) {
+  l = l || { etapa: 'novo', interesse: 'Jiu-jitsu', origem: 'Instagram' };
+  abrirModal(l.id ? 'Editar interessado' : 'Novo interessado', '<form data-form="lead"><input type="hidden" name="id" value="' + esc(l.id || '') + '">' +
+    campo('Nome *', inp('ld-nome', 'nome', l.nome, 'required')) +
+    '<div class="linha2">' + campo('Telefone / WhatsApp', inp('ld-tel', 'telefone', l.telefone, 'inputmode="tel"')) + campo('Interesse', sel('ld-int', 'interesse', MODALIDADES.map((m) => opt(m, m, m === l.interesse)).join(''))) + '</div>' +
+    '<div class="linha2">' + campo('Como conheceu o CT', sel('ld-orig', 'origem', ORIGENS.map((o) => opt(o, o, o === l.origem)).join(''))) + campo('Etapa', sel('ld-etapa', 'etapa', ETAPAS.map(([k, n]) => opt(k, n, k === l.etapa)).join(''))) + '</div>' +
+    campo('Aula experimental', inp('ld-exp', 'dataExperimental', l.dataExperimental, 'type="date"'), 'Ao preencher, a etapa muda para “Aula experimental”.') +
+    campo('Observações', '<textarea id="ld-obs" name="obs">' + esc(l.obs || '') + '</textarea>') +
+    rodape(l.id ? 'Salvar' : 'Cadastrar') + '</form>' + (l.id ? '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-lead" data-id="' + l.id + '" style="align-self:flex-start">Excluir</button></div>' : ''));
+}
+function modalTarefa(t) {
+  t = t || { data: HOJE };
+  const leads = S.leads.filter((l) => !['matriculado', 'perdido'].includes(l.etapa) || l.id === t.leadId);
+  abrirModal(t.id ? 'Editar tarefa' : 'Nova tarefa', '<form data-form="tarefa"><input type="hidden" name="id" value="' + esc(t.id || '') + '">' +
+    campo('O que precisa ser feito *', inp('tf-tit', 'titulo', t.titulo, 'required placeholder="Ex.: Ligar para o João"')) +
+    '<div class="linha2">' + campo('Para quando', inp('tf-data', 'data', t.data, 'type="date" required')) + campo('Interessado', sel('tf-lead', 'leadId', '<option value="">Nenhum</option>' + leads.map((l) => opt(l.id, l.nome, l.id === t.leadId)).join(''))) + '</div>' +
+    campo('Aluno', sel('tf-aluno', 'alunoId', '<option value="">Nenhum</option>' + S.alunos.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, a.id === t.alunoId)).join(''))) +
+    rodape('Salvar') + '</form>' + (t.id ? '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-tarefa" data-id="' + t.id + '" style="align-self:flex-start">Excluir tarefa</button></div>' : ''));
+}
+
+/* ================= Formulários ================= */
+const FORMS = {
+  async aluno(d) {
+    const ex = d.id ? alunoPorId(d.id) : null;
+    const a = ex ? { ...ex } : { id: novoId('al'), modalidades: [], historicoGrad: [], criadoEm: new Date().toISOString() };
+    Object.assign(a, {
+      nome: d.nome.trim(), telefone: d.telefone.trim(), email: d.email.trim(), nascimento: d.nascimento, responsavel: d.responsavel.trim(), obs: d.obs.trim(),
+      cpf: d.cpf.trim(), endereco: d.endereco.trim(), respTelefone: d.respTelefone.trim(), emergencia: d.emergencia.trim(), origem: d.origem, saude: d.saude.trim(),
+    });
+    if (!ex) {
+      const m = { mod: d.mod, faixa: d.faixa, grau: Number(d.grau) || 0, desde: HOJE };
+      a.modalidades = [m]; a.historicoGrad = [{ data: HOJE, mod: m.mod, faixa: m.faixa, grau: m.grau }];
+    }
+    fecharModal();
+    await salvar('alunos', a);
+    if (d.leadId) { const l = leadPorId(d.leadId); if (l) await salvar('leads', { ...l, etapa: 'matriculado', alunoId: a.id }); }
+    toast(ex ? 'Dados atualizados.' : 'Aluno cadastrado.');
+    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId) modalVenda({ alunoId: a.id }); }
+  },
+  async plano(d, f) {
+    const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe um valor maior que zero.'); return; }
+    const pagamentos = [...f.querySelectorAll('[name="aceita"]:checked')].map((x) => x.value);
+    if (!pagamentos.length) { toast('Marque pelo menos uma forma de pagamento aceita.'); return; }
+    const ex = d.id ? planoPorId(d.id) : null;
+    const p = { ...(ex || { id: novoId('pl'), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), modalidade: d.modalidade, valor, meses: Number(d.meses), formaPadrao: d.formaPadrao, pagamentos, condicoes: d.condicoes.trim(), ativo: !!d.ativo };
+    fecharModal(); await salvar('planos', p); toast(ex ? 'Plano atualizado.' : 'Plano criado.');
+  },
+  async venda(d) {
+    const p = planoPorId(d.planoId); if (!p || !d.alunoId) { toast('Escolha o aluno e o plano.'); return; }
+    const desconto = numCampo(d.desconto);
+    if (desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return; }
+    const c = {
+      id: novoId('ct'), alunoId: d.alunoId, planoId: p.id, planoNome: p.nome, modalidade: p.modalidade, valorMensal: p.valor, desconto,
+      meses: p.meses, inicio: d.inicio, fim: addDias(addMeses(d.inicio, p.meses), -1), diaVenc: Math.min(31, Math.max(1, Number(d.diaVenc) || 10)),
+      forma: d.forma, cancelado: false, renovacaoDe: d.renovacaoDe || '', criadoEm: new Date().toISOString(),
+    };
+    const cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
+    fecharModal();
+    if (!(await salvar('contratos', c))) return;
+    await salvarVarios('lancamentos', cobr);
+    toast((c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + cobr.length + ' cobrança(s) criada(s).');
+    UI.view = 'aluno'; UI.alunoId = c.alunoId; render();
+  },
+  async baixa(d) {
+    const l = S.lancamentos.find((x) => x.id === d.id); if (!l) return;
+    const valor = numCampo(d.valor), desc = numCampo(d.desconto);
+    if (valor < 0 || (valor === 0 && desc === 0)) { toast('Informe o valor pago ou um desconto.'); return; }
+    const n = { ...l, pagamentos: [...(l.pagamentos || [])], desconto: (Number(l.desconto) || 0) + desc };
+    if (valor > 0) n.pagamentos.push({ data: d.data, valor, forma: d.forma });
+    fecharModal(); await salvar('lancamentos', n);
+    const st = statusLanc(n);
+    toast(st === 'pago' ? 'Baixa registrada. Conta quitada.' : 'Pagamento parcial registrado. Falta ' + fR(saldoDe(n)) + '.');
+  },
+  async lanc(d) {
+    const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe um valor maior que zero.'); return; }
+    const n = Number(d.repetir) || 1; const lista = [];
+    for (let i = 0; i < n; i++) {
+      const venc = addMeses(d.vencimento, i);
+      lista.push({
+        id: novoId('lc'), tipo: d.tipo, categoria: d.categoria, descricao: d.descricao.trim() + (n > 1 ? ' · ' + (i + 1) + '/' + n : ''), valor, desconto: 0, vencimento: venc,
+        pagamentos: d.pago ? [{ data: venc, valor, forma: d.forma }] : [], alunoId: d.alunoId || '', contratoId: '', cancelado: false, formaPrevista: d.forma, criadoEm: new Date().toISOString(),
+      });
+    }
+    fecharModal(); await salvarVarios('lancamentos', lista); toast(n > 1 ? n + ' lançamentos criados.' : 'Lançamento salvo.');
+  },
+  async graduar(d) {
+    const a = alunoPorId(d.id); if (!a) return;
+    const n = { ...a, modalidades: (a.modalidades || []).map((m) => ({ ...m })), historicoGrad: [...(a.historicoGrad || [])] };
+    const reg = { mod: d.mod, faixa: d.faixa, grau: Number(d.grau) || 0 };
+    const i = Number(d.i);
+    if (i < 0) {
+      if (n.modalidades.some((m) => m.mod === d.mod)) { toast('O aluno já treina ' + d.mod + '.'); return; }
+      n.modalidades.push({ ...reg, desde: d.data });
+    } else n.modalidades[i] = { ...n.modalidades[i], ...reg };
+    n.historicoGrad.push({ data: d.data, ...reg });
+    fecharModal(); await salvar('alunos', n); toast('Graduação registrada.');
+  },
+  async lead(d) {
+    const ex = d.id ? leadPorId(d.id) : null;
+    let etapa = d.etapa;
+    if (d.dataExperimental && (!ex || ex.dataExperimental !== d.dataExperimental) && ['novo', 'contato'].includes(etapa)) etapa = 'experimental';
+    const l = { ...(ex || { id: novoId('ld'), alunoId: '', criadoEm: new Date().toISOString() }), nome: d.nome.trim(), telefone: d.telefone.trim(), interesse: d.interesse, origem: d.origem, etapa, dataExperimental: d.dataExperimental, obs: d.obs.trim() };
+    fecharModal(); await salvar('leads', l); toast(ex ? 'Interessado atualizado.' : 'Interessado cadastrado.');
+  },
+  async tarefa(d) {
+    const ex = d.id ? S.tarefas.find((t) => t.id === d.id) : null;
+    const t = { ...(ex || { id: novoId('tf'), feita: false, criadoEm: new Date().toISOString() }), titulo: d.titulo.trim(), data: d.data, leadId: d.leadId, alunoId: d.alunoId };
+    fecharModal(); await salvar('tarefas', t); toast('Tarefa salva.');
+  },
+  async dadosct(d) {
+    await salvarConfig({ ...(S.config || {}), ct: { nome: d.nome.trim(), whatsapp: d.whatsapp.trim() } }); toast('Dados do CT salvos. O link da ficha foi atualizado.');
+  },
+  async turma(d, f) {
+    const dias = [...f.querySelectorAll('[name="dia"]:checked')].map((x) => Number(x.value));
+    if (!dias.length) { toast('Marque pelo menos um dia da semana.'); return; }
+    if (d.fim <= d.inicio) { toast('O horário de término deve ser depois do início.'); return; }
+    const ex = d.id ? turmaPorId(d.id) : null;
+    const t = { ...(ex || { id: novoId('tu'), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), modalidade: d.modalidade, dias, inicio: d.inicio, fim: d.fim, capacidade: Number(d.capacidade) || 0, professor: d.professor.trim(), ativa: !!d.ativa };
+    fecharModal(); await salvar('turmas', t); toast(ex ? 'Turma atualizada.' : 'Turma criada.');
+  },
+  async chamada(d, f) {
+    const presentes = [...f.querySelectorAll('[name="p"]:checked')].map((x) => x.value);
+    const id = aulaId(d.turmaId, d.data);
+    const ex = S.aulas.find((x) => x.id === id);
+    fecharModal();
+    if (!presentes.length && !ex) { toast('Nenhum aluno marcado. A chamada não foi salva.'); return; }
+    const t = turmaPorId(d.turmaId) || {};
+    await salvar('aulas', { ...(ex || { id, criadoEm: new Date().toISOString() }), turmaId: d.turmaId, turmaNome: t.nome || '', modalidade: t.modalidade || '', data: d.data, presentes, atualizadoEm: new Date().toISOString() });
+    toast('Chamada salva: ' + presentes.length + ' presente(s).');
+  },
+  async checkin(d) {
+    const t = turmaPorId(d.turmaId), a = alunoPorId(d.alunoId);
+    if (!t || !a) { toast('Escolha o aluno e a turma.'); return; }
+    if (d.data > HOJE) { toast('Não dá para registrar check-in em data futura.'); return; }
+    const id = aulaId(t.id, d.data);
+    const ex = S.aulas.find((x) => x.id === id);
+    if (ex && (ex.presentes || []).includes(a.id)) { fecharModal(); toast(a.nome.split(' ')[0] + ' já está na chamada desta aula.'); return; }
+    fecharModal();
+    await salvar('aulas', { ...(ex || { id, turmaId: t.id, data: d.data, presentes: [], criadoEm: new Date().toISOString() }), turmaNome: t.nome, modalidade: t.modalidade, presentes: [...((ex && ex.presentes) || []), a.id], atualizadoEm: new Date().toISOString() });
+    toast('Check-in registrado: ' + a.nome.split(' ')[0] + ' · ' + t.nome + '.');
+  },
+  importar(d) {
+    const ficha = parseCodigo(d.txt);
+    if (!ficha) { toast('Não encontrei a ficha nesta mensagem. Cole a mensagem inteira, incluindo o link.'); return; }
+    fecharModal(); modalFicha(ficha);
+  },
+  async senha(d, f) {
+    if (d.nova !== d.nova2) { toast('A nova senha e a repetição não são iguais.'); return; }
+    if (String(d.nova).length < 10) { toast('A nova senha precisa ter pelo menos 10 caracteres.'); return; }
+    try { await API.req('POST', '/api/usuarios', { acao: 'senha', atual: d.atual, nova: d.nova }); f.reset(); toast('Senha trocada.'); }
+    catch (e) { tratarErro(e); }
+  },
+  async 'novo-usuario'(d) {
+    try { const j = await API.req('POST', '/api/usuarios', { acao: 'criar', nome: d.nome, email: d.email, senha: d.senha, papel: d.papel }); fecharModal(); EQUIPE = null; render(); toast(j.usuario.nome + ' foi adicionado(a). Passe o e-mail e a senha para a pessoa.'); }
+    catch (e) { tratarErro(e); }
+  },
+  async redefinir(d) {
+    try { await API.req('POST', '/api/usuarios', { acao: 'redefinir', email: d.email, senha: d.senha }); fecharModal(); toast('Nova senha salva. Passe para a pessoa.'); }
+    catch (e) { tratarErro(e); }
+  },
+  async graduacoes(d) {
+    const g = {};
+    for (const m of MODALIDADES) {
+      const faixas = String(d['f_' + m] || '').split('\n').map((s) => s.trim()).filter(Boolean);
+      g[m] = { faixas: faixas.length ? faixas : GRAD_PADRAO[m].faixas, graus: Math.max(0, Math.min(10, Number(d['g_' + m]) || 0)) };
+    }
+    await salvarConfig({ ...(S.config || {}), graduacoes: g }); toast('Graduações salvas.');
+  },
+};
+
+/* ================= Ações ================= */
+const ACOES = {
+  nav(ds) { UI.view = ds.v; if (ds.tab) { if (ds.v === 'crm') UI.tabCrm = ds.tab; if (ds.v === 'financeiro') UI.tabFin = ds.tab; } render(); window.scrollTo(0, 0); },
+  ui(ds) { UI[ds.k] = ds.val; render(); },
+  'abrir-aluno'(ds) { UI.view = 'aluno'; UI.alunoId = ds.id; render(); window.scrollTo(0, 0); },
+  'novo-aluno'() { modalAluno(); },
+  'editar-aluno'(ds) { modalAluno(alunoPorId(ds.id)); },
+  'excluir-aluno'(ds) {
+    const a = alunoPorId(ds.id);
+    confirmar('Excluir aluno', 'Excluir <b>' + esc(a.nome) + '</b> e todos os contratos e cobranças dele? Isso não pode ser desfeito. Se ele só parou de treinar, não exclua: o cadastro fica como inativo.', 'Excluir definitivamente', async () => {
+      const cs = S.contratos.filter((c) => c.alunoId === a.id).map((c) => c.id), ls = S.lancamentos.filter((l) => l.alunoId === a.id).map((l) => l.id);
+      UI.view = 'alunos';
+      await remover('alunos', a.id); for (const id of cs) await remover('contratos', id); for (const id of ls) await remover('lancamentos', id);
+      toast('Aluno excluído.');
+    });
+  },
+  promover(ds) { modalGraduar(alunoPorId(ds.id), Number(ds.i), false); },
+  'add-modalidade'(ds) { modalGraduar(alunoPorId(ds.id), -1, true); },
+  'novo-plano'() { modalPlano(); },
+  'editar-plano'(ds) { modalPlano(planoPorId(ds.id)); },
+  'nova-venda'(ds) { modalVenda({ alunoId: ds.aluno }); },
+  renovar(ds) {
+    const c = S.contratos.find((x) => x.id === ds.id);
+    const inicio = c.fim < HOJE ? HOJE : addDias(c.fim, 1);
+    const plano = planoPorId(c.planoId) && planoPorId(c.planoId).ativo !== false ? c.planoId : undefined;
+    modalVenda({ alunoId: c.alunoId, planoId: plano, inicio, desconto: c.desconto || '', diaVenc: c.diaVenc, renovacaoDe: c.id });
+  },
+  'cancelar-contrato'(ds) {
+    const c = S.contratos.find((x) => x.id === ds.id);
+    const futuras = S.lancamentos.filter((l) => l.contratoId === c.id && !l.cancelado && l.vencimento >= HOJE && pagoDe(l) === 0);
+    confirmar('Cancelar contrato', 'Cancelar o contrato <b>' + esc(c.planoNome) + '</b> de ' + esc(nomeAluno(c.alunoId)) + '? ' + (futuras.length ? futuras.length + ' cobrança(s) futura(s) sem pagamento também serão canceladas. ' : '') + 'Cobranças vencidas continuam em aberto.', 'Cancelar contrato', async () => {
+      await salvar('contratos', { ...c, cancelado: true, canceladoEm: HOJE });
+      for (const l of futuras) await salvar('lancamentos', { ...l, cancelado: true });
+      toast('Contrato cancelado.');
+    });
+  },
+  baixar(ds) { modalBaixa(S.lancamentos.find((l) => l.id === ds.id)); },
+  'ver-lanc'(ds) { modalDetalhes(S.lancamentos.find((l) => l.id === ds.id)); },
+  'novo-lanc'(ds) { modalLanc({ tipo: ds.tipo }); },
+  'venda-produto'(ds) { modalLanc({ tipo: 'receita', categoria: 'Produtos', alunoId: ds.id, pago: true, titulo: 'Vender produto' }); },
+  'cancelar-lanc'(ds) {
+    const l = S.lancamentos.find((x) => x.id === ds.id);
+    confirmar('Cancelar conta', 'Cancelar <b>' + esc(l.descricao) + '</b>? Ela deixa de contar no financeiro.', 'Cancelar conta', async () => { await salvar('lancamentos', { ...l, cancelado: true }); toast('Conta cancelada.'); });
+  },
+  async estornar(ds) {
+    const l = S.lancamentos.find((x) => x.id === ds.id); const pg = [...l.pagamentos]; pg.splice(Number(ds.i), 1);
+    const n = { ...l, pagamentos: pg }; await salvar('lancamentos', n); modalDetalhes(n); toast('Pagamento estornado.');
+  },
+  'novo-lead'() { modalLead(); },
+  'editar-lead'(ds) { modalLead(leadPorId(ds.id)); },
+  'excluir-lead'(ds) { const l = leadPorId(ds.id); confirmar('Excluir interessado', 'Excluir <b>' + esc(l.nome) + '</b>?', 'Excluir', async () => { await remover('leads', l.id); toast('Interessado excluído.'); }); },
+  'converter-lead'(ds) {
+    const l = leadPorId(ds.id);
+    modalAluno({ nome: l.nome.replace(/\s*\(.*\)\s*$/, ''), telefone: l.telefone, interesse: l.interesse, obs: l.obs, origem: l.origem, leadId: l.id, modalidades: [{ mod: l.interesse }] });
+  },
+  'nova-tarefa'() { modalTarefa(); },
+  'editar-tarefa'(ds) { modalTarefa(S.tarefas.find((t) => t.id === ds.id)); },
+  'excluir-tarefa'(ds) { fecharModal(); remover('tarefas', ds.id); toast('Tarefa excluída.'); },
+  async 'toggle-tarefa'(ds, el) { const t = S.tarefas.find((x) => x.id === ds.id); await salvar('tarefas', { ...t, feita: el.checked }); },
+  'enviar-ficha'() { modalEnviarFicha(); },
+  'importar-ficha'() { modalImportar(); },
+  'ficha-salvar'(ds) {
+    if (somenteLeitura && MODO === 'db') { toast('Você só pode consultar. Peça acesso de edição ao responsável pelo CT.'); return; }
+    salvarFicha(ds.modo, ds.id);
+  },
+  async copiar(ds, el) {
+    const inpEl = document.getElementById(ds.alvo); if (!inpEl) return;
+    try { await navigator.clipboard.writeText(inpEl.value); toast('Link copiado.'); }
+    catch (_) { inpEl.focus(); inpEl.select(); toast('Link selecionado. Use Copiar do seu aparelho.'); }
+  },
+  checkin(ds) { modalCheckin(ds.aluno); },
+  chamada(ds) { modalChamada(ds.t, ds.d); },
+  semana(ds) { const n = Number(ds.d); UI.semana = n === 0 ? 0 : UI.semana + n; render(); },
+  'nova-turma'() { modalTurma(); },
+  'editar-turma'(ds) { modalTurma(turmaPorId(ds.id)); },
+  'excluir-turma'(ds) {
+    const t = turmaPorId(ds.id);
+    confirmar('Excluir turma', 'Excluir a turma <b>' + esc(t.nome) + '</b>? As presenças já registradas continuam no histórico dos alunos. Se a turma só parou, desmarque “Turma ativa” em vez de excluir.', 'Excluir turma', async () => { await remover('turmas', t.id); toast('Turma excluída.'); });
+  },
+  sair() { sair(); },
+  'novo-usuario'() { modalUsuario(); },
+  'redefinir-senha'(ds) { modalRedefinir(ds.email, ds.nome); },
+  'remover-usuario'(ds) {
+    confirmar('Remover acesso', 'Remover o acesso de <b>' + esc(ds.nome) + '</b>? A pessoa sai do sistema na hora.', 'Remover acesso', async () => {
+      try { await API.req('DELETE', '/api/usuarios?email=' + encodeURIComponent(ds.email)); EQUIPE = null; render(); toast('Acesso removido.'); } catch (e) { tratarErro(e); }
+    });
+  },
+  'fichas-recebidas'() { modalListaFichas(); },
+  'conferir-ficha'(ds) { const f = S.fichas.find((x) => x.id === ds.id); if (f) modalFicha(f); else toast('Esta ficha já foi conferida.'); },
+  'descartar-ficha'(ds) {
+    const f = S.fichas.find((x) => x.id === ds.id); if (!f) return;
+    confirmar('Descartar ficha', 'Descartar a ficha de <b>' + esc(f.n) + '</b>? Ela sai da lista e os dados não são cadastrados.', 'Descartar', async () => { await remover('fichas', f.id); toast('Ficha descartada.'); });
+  },
+  'fechar-modal'() { fecharModal(); },
+  fundo(ds, el, e) { if (e.target === el) fecharModal(); },
+  async confirmar() { const fn = acaoConfirmar; acaoConfirmar = null; fecharModal(); if (fn) await fn(); },
+  async 'carregar-exemplos'(ds, el) {
+    const ex = window.gerarExemplos ? window.gerarExemplos(HOJE) : null; if (!ex) return;
+    if (el) el.disabled = true; toast('Carregando exemplos…');
+    for (const c of COLS) { for (const o of ex[c]) { const ok = await salvar(c, o); if (!ok) return; } }
+    toast('Dados de exemplo carregados.');
+  },
+  'remover-exemplos'() {
+    confirmar('Remover dados de exemplo', 'Remover todos os registros de exemplo? Os dados que você cadastrou continuam.', 'Remover exemplos', async () => {
+      toast('Removendo exemplos…');
+      for (const c of COLS) for (const o of S[c].filter((x) => x.exemplo)) await remover(c, o.id);
+      UI.view = 'inicio'; toast('Exemplos removidos.');
+    });
+  },
+};
+
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  if (t.tagName === 'A') return;
+  const f = ACOES[t.dataset.act]; if (!f) return;
+  if (t.dataset.act !== 'toggle-tarefa' && t.dataset.act !== 'fundo') e.preventDefault();
+  if (t.dataset.act === 'abrir-aluno') e.stopPropagation();
+  f(t.dataset, t, e);
+});
+document.addEventListener('submit', (e) => {
+  const f = e.target.closest('form[data-form]'); if (!f) return;
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(f));
+  FORMS[f.dataset.form] && FORMS[f.dataset.form](d, f);
+});
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.dataset && el.dataset.ui) { UI[el.dataset.ui] = el.value; render(); }
+  if (el.closest && el.closest('form[data-form="venda"]')) atualizarResumoVenda();
+  if (el.dataset && el.dataset.filtroChamada !== undefined) {
+    const q = el.value.trim().toLowerCase();
+    document.querySelectorAll('#ch-lista li[data-nome]').forEach((li) => { li.hidden = !!q && !li.dataset.nome.includes(q); });
+  }
+});
+document.addEventListener('change', (e) => {
+  const el = e.target;
+  if (el.dataset && el.dataset.addChamada !== undefined && el.value) {
+    const a = alunoPorId(el.value); const ul = document.getElementById('ch-lista');
+    if (a && ul) { const v = ul.querySelector('li.vazio'); if (v) v.remove(); ul.insertAdjacentHTML('beforeend', linhaChamada(a, el.dataset.addChamada, true)); el.querySelector('option[value="' + a.id + '"]').remove(); el.value = ''; }
+  }
+  if (el.closest && el.closest('form[data-form="chamada"]')) { const c = document.getElementById('ch-cont'); if (c) c.textContent = document.querySelectorAll('#ch-lista [name="p"]:checked').length; }
+  if (el.dataset && el.dataset.ci !== undefined) avisoCheckin();
+  if (el.dataset && el.dataset.etapa) {
+    const l = leadPorId(el.dataset.etapa); if (!l) return;
+    if (el.value === 'matriculado' && !l.alunoId) { el.value = l.etapa; ACOES['converter-lead']({ id: l.id }); return; }
+    salvar('leads', { ...l, etapa: el.value }); toast('Etapa atualizada.');
+  }
+  if (el.dataset && el.dataset.trocaMod !== undefined) {
+    const f = el.form.querySelector('[name="faixa"]'); if (f) f.innerHTML = grads()[el.value].faixas.map((x) => opt(x)).join('');
+  }
+  if (el.name === 'planoId' && el.closest && el.closest('form[data-form="venda"]')) {
+    const p = planoPorId(el.value); const f = el.form.querySelector('[name="forma"]');
+    if (p && p.formaPadrao && f) f.value = p.formaPadrao;
+    const fp = el.form.querySelector('[name="formaPg"]');
+    if (p && fp && p.pagamentos && p.pagamentos.length && !p.pagamentos.includes(fp.value)) fp.value = p.pagamentos[0];
+  }
+  if (el.closest && el.closest('form[data-form="venda"]')) atualizarResumoVenda();
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalAberto) fecharModal(); });
+
+/* ================= Início ================= */
+document.getElementById('login-form').addEventListener('submit', entrar);
+(async function iniciar() {
+  render();
+  try { await carregarTudo(); }
+  catch (e) { if (e && e.code !== 401) mostrarLogin(e.message); }
+})();
+</script>
+</body>
+</html>
