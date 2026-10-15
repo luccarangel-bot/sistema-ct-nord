@@ -226,7 +226,7 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
 .modal > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid var(--line-strong); position: sticky; top: 0; background: var(--surface); z-index: 1; }
 .modal form, .modal .corpo { padding: 18px 22px 22px; display: flex; flex-direction: column; gap: 16px; }
 .campo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.campo > span { font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .62rem; }
+.campo > span, .campo > .rotulo { font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .62rem; }
 .campo > small { color: var(--muted); font-size: .8rem; }
 .linha2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; }
@@ -261,6 +261,11 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
 .login .btn.pri::after { content: "→"; font-stretch: 100%; letter-spacing: 0; font-size: .9rem; }
 .login-erro { border-left: 1px solid var(--fg); padding-left: 12px; font-weight: 600; font-size: .9rem; }
 .login-dica { margin: 0; color: var(--muted); font-size: .82rem; }
+.senha-caixa { position: relative; }
+.senha-caixa input { padding-right: 96px; }
+.senha-ver { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 84px; background: transparent; border: 0; border-left: 1px solid var(--line); cursor: pointer; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .62rem; }
+.senha-ver:hover { background: var(--surface-2); }
+.senha-ver:focus-visible { outline-offset: -3px; }
 .modo b { color: var(--side-fg); font-weight: 700; }
 .sair { margin-top: 10px; background: none; border: 1px solid var(--side-muted); color: var(--side-fg); padding: 6px 10px; cursor: pointer; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .6rem; }
 .sair:hover { border-color: var(--side-fg); }
@@ -306,7 +311,7 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
       <span class="sobre">CT NORD — Sistema de gestão</span>
       <h1>Entrar</h1>
       <label class="campo"><span>E-mail</span><input id="login-email" type="email" autocomplete="username" inputmode="email"></label>
-      <label class="campo"><span>Senha</span><input id="login-senha" type="password" autocomplete="current-password"></label>
+      <div class="campo"><label class="rotulo" for="login-senha">Senha</label><div class="senha-caixa"><input id="login-senha" type="password" autocomplete="current-password"><button id="login-ver" class="senha-ver" type="button" aria-controls="login-senha" aria-pressed="false">Mostrar</button></div></div>
       <div id="login-erro" class="login-erro" role="alert" hidden></div>
       <button id="login-btn" class="btn pri" type="submit">Entrar</button>
       <p class="login-dica">Esqueceu a senha? Peça a um administrador do CT para definir uma nova.</p>
@@ -562,6 +567,7 @@ function mostrarLogin(msg) {
   fecharModal();
   document.querySelector('.app').hidden = true;
   const l = document.getElementById('login'); l.hidden = false;
+  verSenha(false);
   const e = document.getElementById('login-erro'); e.textContent = msg || ''; e.hidden = !msg;
   const f = document.getElementById('login-email'); if (f && !f.value) f.focus(); else { const s2 = document.getElementById('login-senha'); if (s2) s2.focus(); }
 }
@@ -576,10 +582,18 @@ async function entrar(ev) {
   try {
     await API.req('POST', '/api/login', { email, senha });
     document.getElementById('login-senha').value = '';
+    verSenha(false);
     MODO = 'carregando'; render();
     await carregarTudo();
   } catch (err) { e.textContent = err.message; e.hidden = false; }
   finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+}
+// Mostra ou esconde a senha digitada no login.
+function verSenha(mostrar) {
+  document.getElementById('login-senha').type = mostrar ? 'text' : 'password';
+  const b = document.getElementById('login-ver');
+  b.textContent = mostrar ? 'Ocultar' : 'Mostrar';
+  b.setAttribute('aria-pressed', String(mostrar));
 }
 async function sair() {
   try { await API.req('POST', '/api/logout'); } catch (_) {}
@@ -1757,6 +1771,10 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalAbe
 
 /* ================= Início ================= */
 document.getElementById('login-form').addEventListener('submit', entrar);
+document.getElementById('login-ver').addEventListener('click', () => {
+  verSenha(document.getElementById('login-senha').type === 'password');
+  document.getElementById('login-senha').focus();
+});
 (async function iniciar() {
   render();
   try { await carregarTudo(); }
