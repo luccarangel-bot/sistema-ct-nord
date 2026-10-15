@@ -617,7 +617,7 @@ function desenhar() {
     const v = UI.view === 'aluno' ? 'alunos' : UI.view;
     if (b.dataset.v === v) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
   });
-  document.getElementById('modo').innerHTML = USUARIO ? '<b>' + esc(USUARIO.nome) + '</b><br>' + esc(USUARIO.email) + '<br><button class="sair" data-act="sair">Sair</button>' : '';
+  document.getElementById('modo').innerHTML = USUARIO ? '<b>' + esc(USUARIO.nome) + '</b><br>' + esc(USUARIO.email) + (USUARIO.semLogin ? '' : '<br><button class="sair" data-act="sair">Sair</button>') : '';
   const main = document.getElementById('main');
   if (MODO === 'login') return;
   if (MODO === 'carregando' || (MODO === 'db' && carregadas.size < COLS.length)) { main.innerHTML = '<div class="carregando">Carregando dados…</div>'; return; }
@@ -1080,7 +1080,8 @@ VIEWS.config = function () {
   const nEx = COLS.reduce((s, c) => s + S[c].filter((x) => x.exemplo).length, 0);
   const ct = (S.config && S.config.ct) || {};
   let h = '<div class="topo"><div><h1>Ajustes</h1><p>Seu acesso, equipe, dados do CT, ficha de matrícula e graduações.</p></div></div>';
-  h += '<form class="painel" data-form="senha" style="display:flex;flex-direction:column;gap:14px;max-width:760px"><header><h2>Seu acesso</h2><small>' + esc(USUARIO ? USUARIO.nome + ' · ' + USUARIO.email : '') + '</small></header>' +
+  if (USUARIO && USUARIO.semLogin) h += '<div class="aviso"><b>Login desativado.</b> Qualquer pessoa com o endereço do sistema consegue ver e alterar os dados. Não cadastre dados de alunos nem divulgue a ficha até o login voltar.</div>';
+  else h += '<form class="painel" data-form="senha" style="display:flex;flex-direction:column;gap:14px;max-width:760px"><header><h2>Seu acesso</h2><small>' + esc(USUARIO ? USUARIO.nome + ' · ' + USUARIO.email : '') + '</small></header>' +
     '<p class="vazio" style="padding:0">Para trocar a senha, informe a atual e a nova. A nova precisa ter pelo menos 10 caracteres.</p>' +
     '<div class="linha2">' + campo('Senha atual', '<input id="se-atual" name="atual" type="password" autocomplete="current-password" required>') + campo('Nova senha', '<input id="se-nova" name="nova" type="password" autocomplete="new-password" minlength="10" required>') + campo('Repita a nova senha', '<input id="se-nova2" name="nova2" type="password" autocomplete="new-password" minlength="10" required>') + '</div>' +
     '<div class="rodape"><button class="btn" type="button" data-act="sair">Sair do sistema</button><button class="btn pri" type="submit">Trocar senha</button></div></form>';

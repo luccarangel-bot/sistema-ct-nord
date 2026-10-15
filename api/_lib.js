@@ -199,7 +199,12 @@ async function lerSessao(req) {
   try { const s = JSON.parse(Buffer.from(dados, 'base64url').toString()); return s.exp > Date.now() ? s : null; } catch (_) { return null; }
 }
 // Confere a sessão e se o usuário ainda existe (quem foi removido perde o acesso na hora).
+// Login desligado temporariamente a pedido do CT: todas as rotas tratam o visitante como o administrador.
+// ATENÇÃO: sem login, qualquer pessoa com o endereço do site vê e altera os dados. Para religar, troque para true.
+export const LOGIN_ATIVO = false;
+
 export async function exigirLogin(req, opts = {}) {
+  if (!LOGIN_ATIVO) return { email: normEmail(process.env.ADMIN_EMAIL) || 'admin', nome: process.env.ADMIN_NOME || 'Administrador', papel: 'admin', semLogin: true };
   const s = await lerSessao(req);
   if (!s) throw new ErroApi(401, 'Faça login para continuar.');
   if (opts.leve) return { email: s.e };
@@ -210,7 +215,7 @@ export async function exigirLogin(req, opts = {}) {
   if (opts.admin && u.papel !== 'admin') throw new ErroApi(403, 'Só administradores podem fazer isso.');
   return u;
 }
-export const publico = (u) => ({ email: u.email, nome: u.nome, papel: u.papel, criadoEm: u.criadoEm });
+export const publico = (u) => ({ email: u.email, nome: u.nome, papel: u.papel, criadoEm: u.criadoEm, ...(u.semLogin ? { semLogin: true } : {}) });
 export const normEmail = (e) => String(e || '').trim().toLowerCase();
 
 /* ---------- Primeiro acesso e dados iniciais ---------- */
