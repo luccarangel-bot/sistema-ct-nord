@@ -199,9 +199,9 @@ async function lerSessao(req) {
   try { const s = JSON.parse(Buffer.from(dados, 'base64url').toString()); return s.exp > Date.now() ? s : null; } catch (_) { return null; }
 }
 // Confere a sessão e se o usuário ainda existe (quem foi removido perde o acesso na hora).
-// Login desligado temporariamente a pedido do CT: todas as rotas tratam o visitante como o administrador.
-// ATENÇÃO: sem login, qualquer pessoa com o endereço do site vê e altera os dados. Para religar, troque para true.
-export const LOGIN_ATIVO = false;
+// Com false, o login fica desligado e todas as rotas tratam o visitante como o administrador.
+// ATENÇÃO: sem login, qualquer pessoa com o endereço do site vê e altera os dados.
+export const LOGIN_ATIVO = true;
 
 export async function exigirLogin(req, opts = {}) {
   if (!LOGIN_ATIVO) return { email: normEmail(process.env.ADMIN_EMAIL) || 'admin', nome: process.env.ADMIN_NOME || 'Administrador', papel: 'admin', semLogin: true };

@@ -1,6 +1,8 @@
 import { rota, corpo, ip, limitar, um, banco, conferirSenha, abrirSessao, normEmail, publico, semear, CHAVES, ErroApi } from './_lib.js';
 
-// POST {email, senha}. No primeiro acesso, o administrador vem das variáveis ADMIN_EMAIL e ADMIN_SENHA_HASH.
+// POST {email, senha}. O administrador vem das variáveis ADMIN_EMAIL e ADMIN_SENHA_HASH:
+// no primeiro acesso, e também sempre que ADMIN_SENHA_HASH mudar no Vercel. Uma variável nova vale
+// para um login; depois disso, quem troca a senha em Ajustes deixa de depender dela.
 export default rota(['POST'], async (req, res) => {
   const b = corpo(req);
   const email = normEmail(b.email);
@@ -11,15 +13,20 @@ export default rota(['POST'], async (req, res) => {
   let bruto = await um('HGET', CHAVES.usuarios, email);
   let usuario = bruto ? JSON.parse(bruto) : null;
 
-  if (!usuario && (await um('HLEN', CHAVES.usuarios)) === 0) {
-    const adm = normEmail(process.env.ADMIN_EMAIL);
-    const hash = process.env.ADMIN_SENHA_HASH;
-    if (!adm || !hash) throw new ErroApi(500, 'O primeiro acesso ainda não foi configurado. No Vercel, preencha ADMIN_EMAIL e ADMIN_SENHA_HASH e publique de novo.');
-    if (email === adm && (await conferirSenha(senha, hash))) {
-      usuario = { email, nome: process.env.ADMIN_NOME || 'Administrador', papel: 'admin', hash, versao: 1, criadoEm: new Date().toISOString() };
-      await banco([['HSET', CHAVES.usuarios, email, JSON.stringify(usuario)]]);
-      await semear();
-    }
+  const adm = normEmail(process.env.ADMIN_EMAIL);
+  const hashEnv = process.env.ADMIN_SENHA_HASH;
+  if (!usuario && (!adm || !hashEnv) && (await um('HLEN', CHAVES.usuarios)) === 0) {
+    throw new ErroApi(500, 'O primeiro acesso ainda não foi configurado. No Vercel, preencha ADMIN_EMAIL e ADMIN_SENHA_HASH e publique de novo.');
+  }
+  const variavelNova = adm && hashEnv && email === adm && (!usuario || usuario.hashEnv !== hashEnv);
+  if (variavelNova && (await conferirSenha(senha, hashEnv))) {
+    // Cria o administrador, ou redefine a senha dele com a variável nova (derruba as sessões antigas).
+    usuario = {
+      email, nome: process.env.ADMIN_NOME || 'Administrador', criadoEm: new Date().toISOString(), ...(usuario || {}),
+      papel: 'admin', hash: hashEnv, hashEnv, versao: ((usuario && usuario.versao) || 0) + 1,
+    };
+    await banco([['HSET', CHAVES.usuarios, email, JSON.stringify(usuario)]]);
+    await semear();
   } else if (usuario && !(await conferirSenha(senha, usuario.hash))) {
     usuario = null;
   }

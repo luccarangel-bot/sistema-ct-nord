@@ -27,7 +27,7 @@ No primeiro login, o sistema cria o administrador e carrega os planos, as turmas
 npm run senha -- "sua senha com pelo menos 10 caracteres"
 ```
 
-Depois do primeiro login, a senha passa a ficar no banco. Para trocá-la, use **Ajustes → Seu acesso** no sistema. Para dar acesso a outras pessoas, use **Ajustes → Equipe**.
+Depois do primeiro login, a senha passa a ficar no banco. **Esqueceu a senha do administrador?** Gere um hash novo, troque `ADMIN_SENHA_HASH` no Vercel e faça *Redeploy*: o próximo login com essa senha redefine o acesso (uma vez só) e derruba as sessões antigas. Para trocá-la, use **Ajustes → Seu acesso** no sistema. Para dar acesso a outras pessoas, use **Ajustes → Equipe**.
 
 ## Teste local
 
