@@ -152,11 +152,21 @@ export async function limitar(chave, max, segundos) {
 export async function gerarHash(senha) {
   const sal = crypto.randomBytes(16);
   const k = await scrypt(String(senha), sal, 64, { N: 16384, r: 8, p: 1 });
-  return 'scrypt$' + sal.toString('base64url') + '$' + Buffer.from(k).toString('base64url');
+  // Separado por pontos: um "$" no valor pode ser apagado ao colar em variáveis de ambiente.
+  return 'scrypt.' + sal.toString('base64url') + '.' + Buffer.from(k).toString('base64url');
+}
+// Lê um hash nos formatos scrypt.sal.chave ou scrypt$sal$chave (o antigo), ignorando espaços e aspas em volta.
+// Devolve null se o valor não tiver o formato esperado.
+export function lerHash(valor) {
+  const v = String(valor || '').trim().replace(/^["']+|["']+$/g, '').trim();
+  const [alg, s, h, ...resto] = v.split(/[.$]/);
+  if (alg !== 'scrypt' || !/^[\w-]{16,}$/.test(s || '') || !/^[\w-]{32,}$/.test(h || '') || resto.length) return null;
+  return { texto: v, s, h };
 }
 export async function conferirSenha(senha, hash) {
-  const [alg, s, h] = String(hash || '').split('$');
-  if (alg !== 'scrypt' || !s || !h) return false;
+  const lido = lerHash(hash);
+  if (!lido) return false;
+  const { s, h } = lido;
   const esperado = Buffer.from(h, 'base64url');
   const k = Buffer.from(await scrypt(String(senha), Buffer.from(s, 'base64url'), esperado.length, { N: 16384, r: 8, p: 1 }));
   return k.length === esperado.length && crypto.timingSafeEqual(k, esperado);

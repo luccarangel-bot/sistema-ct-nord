@@ -1,4 +1,4 @@
-import { rota, corpo, ip, limitar, um, banco, conferirSenha, abrirSessao, normEmail, publico, semear, CHAVES, ErroApi } from './_lib.js';
+import { rota, corpo, ip, limitar, um, banco, conferirSenha, lerHash, abrirSessao, normEmail, publico, semear, CHAVES, ErroApi } from './_lib.js';
 
 // POST {email, senha}. O administrador vem das variáveis ADMIN_EMAIL e ADMIN_SENHA_HASH:
 // no primeiro acesso, e também sempre que ADMIN_SENHA_HASH mudar no Vercel. Uma variável nova vale
@@ -13,9 +13,11 @@ export default rota(['POST'], async (req, res) => {
   let bruto = await um('HGET', CHAVES.usuarios, email);
   let usuario = bruto ? JSON.parse(bruto) : null;
 
-  const adm = normEmail(process.env.ADMIN_EMAIL);
-  const hashEnv = process.env.ADMIN_SENHA_HASH;
-  if (!usuario && (!adm || !hashEnv) && (await um('HLEN', CHAVES.usuarios)) === 0) {
+  const adm = normEmail(String(process.env.ADMIN_EMAIL || '').replace(/["']/g, ''));
+  const brutoEnv = process.env.ADMIN_SENHA_HASH;
+  const lido = lerHash(brutoEnv);
+  const hashEnv = lido ? lido.texto : '';
+  if (!usuario && (!adm || !brutoEnv) && (await um('HLEN', CHAVES.usuarios)) === 0) {
     throw new ErroApi(500, 'O primeiro acesso ainda não foi configurado. No Vercel, preencha ADMIN_EMAIL e ADMIN_SENHA_HASH e publique de novo.');
   }
   const variavelNova = adm && hashEnv && email === adm && (!usuario || usuario.hashEnv !== hashEnv);
@@ -29,6 +31,11 @@ export default rota(['POST'], async (req, res) => {
     await semear();
   } else if (usuario && !(await conferirSenha(senha, usuario.hash))) {
     usuario = null;
+  }
+  if (!usuario && email === adm && brutoEnv && !lido) {
+    // A variável existe mas veio quebrada (por exemplo, cortada ao colar): avisa em vez de dizer "senha incorreta".
+    console.error('ADMIN_SENHA_HASH com formato inválido (tamanho ' + String(brutoEnv).length + ', começo "' + String(brutoEnv).slice(0, 7) + '").');
+    throw new ErroApi(500, 'A senha do administrador no Vercel (ADMIN_SENHA_HASH) está com formato inválido. Cole o valor de novo, sem aspas, e faça Redeploy.');
   }
   if (!usuario) throw new ErroApi(401, 'E-mail ou senha incorretos.');
   await abrirSessao(req, res, usuario);
