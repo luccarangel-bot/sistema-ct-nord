@@ -90,13 +90,15 @@ main { padding-inline: 36px; padding-block: 32px 56px; min-width: 0; }
 .kpis { display: flex; flex-wrap: wrap; border-top: 1px solid var(--line); border-left: 1px solid var(--line); margin-bottom: 28px; }
 .kpi { flex: 1 1 190px; background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .kpi span { color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; }
-.kpi b { font-stretch: 125%; font-size: 1.75rem; font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.kpi b { font-stretch: 125%; font-size: clamp(1.3rem, 1rem + 1vw, 1.75rem); font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .kpi small { color: var(--muted); font-size: .8rem; }
 .kpi.bad { background: var(--inv-bg); }
 .kpi.bad span, .kpi.bad small { color: var(--inv-fg); opacity: .75; }
 .kpi.bad b { color: var(--inv-fg); }
 
 /* Painéis */
+.notif { border-color: var(--line-strong); }
+.notif > header h2::before { content: "● "; font-size: .8em; vertical-align: .1em; }
 .grade2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
 .painel { background: var(--surface); border: 1px solid var(--line); padding: 18px 20px; min-width: 0; }
 .painel > header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--line-strong); }
@@ -719,6 +721,7 @@ VIEWS.inicio = function () {
   let h = '<div class="topo"><div><h1>Painel</h1><p>Resumo de ' + nomeMes(mes, true) + '. Hoje é ' + fData(HOJE) + '.</p></div>' +
     '<div class="acoes"><button class="btn" data-act="checkin">Check-in</button><button class="btn" data-act="novo-aluno">Novo aluno</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
   h += painelFichas();
+  h += painelVenceHoje();
   h += '<div class="kpis">' +
     '<div class="kpi"><span>Alunos ativos</span><b>' + ativos.length + '</b><small>com contrato em vigor</small></div>' +
     '<div class="kpi"><span>Recebido no mês</span><b>' + fR(recebido) + '</b><small>saídas pagas: ' + fR(pagoMes) + '</small></div>' +
@@ -1136,6 +1139,35 @@ function blocoFicha() {
     '<div class="copiavel"><input id="link-ficha" readonly value="' + esc(link) + '" aria-label="Link da ficha"><button class="btn" data-act="copiar" data-alvo="link-ficha">Copiar link</button></div>' +
     '<p style="margin:10px 0 0" class="acoes"><a class="btn" href="' + esc('https://wa.me/?text=' + encodeURIComponent(msg)) + '" target="_blank" rel="noopener">Enviar pelo WhatsApp</a><a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">Abrir a ficha</a></p>' +
     '<p class="vazio" style="padding-bottom:0">A ficha mostra sempre os planos e preços atuais cadastrados em Planos.</p>';
+}
+// Notificação no Painel: cobranças de receita que vencem hoje e ainda não foram pagas.
+function painelVenceHoje() {
+  const hoje = S.lancamentos.filter((l) => l.tipo === 'receita' && l.vencimento === HOJE && ['aberto', 'parcial'].includes(statusLanc(l)))
+    .sort((a, b) => (nomeAluno(a.alunoId) || a.descricao).localeCompare(nomeAluno(b.alunoId) || b.descricao, 'pt-BR'));
+  const total = hoje.reduce((s, l) => s + saldoDe(l), 0);
+  let h = '<section class="painel notif" style="margin-bottom:20px"><header><h2>Vencem hoje</h2><small>' +
+    (hoje.length ? new Set(hoje.map((l) => l.alunoId || l.id)).size + ' aluno(s) · ' + fR(total) : fData(HOJE)) + '</small></header>';
+  if (!hoje.length) return h + '<p class="vazio">Nenhuma cobrança vence hoje.</p></section>';
+  // Uma linha por aluno (mensalidade e matrícula no mesmo dia ficam juntas); cobranças avulsas ficam sozinhas.
+  const grupos = [];
+  for (const l of hoje) {
+    const g = l.alunoId && grupos.find((x) => x.alunoId === l.alunoId);
+    if (g) g.itens.push(l); else grupos.push({ alunoId: l.alunoId, itens: [l] });
+  }
+  h += '<ul class="lista">' + grupos.map((g) => {
+    const a = g.alunoId ? alunoPorId(g.alunoId) : null;
+    const v = g.itens.reduce((s, l) => s + saldoDe(l), 0);
+    const nome = a ? '<button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button>' : esc(g.itens[0].descricao);
+    const det = g.itens.map((l) => (a ? esc(l.descricao) + ' ' : '') + fR(saldoDe(l)) + (statusLanc(l) === 'parcial' ? ' (restante)' : '')).join(' + ');
+    return '<li><div class="cresce"><b>' + nome + '</b><small>' + det + (g.itens.length > 1 ? ' · total ' + fR(v) : '') + '</small></div>' +
+      (a ? waA(a.telefone, msgVenceHoje(a, v), 'Lembrar') : '') +
+      g.itens.map((l) => '<button class="btn peq pri" data-act="baixar" data-id="' + l.id + '">' + (g.itens.length > 1 ? 'Receber ' + fR(saldoDe(l)) : 'Receber') + '</button>').join('') + '</li>';
+  }).join('') + '</ul></section>';
+  return h;
+}
+function msgVenceHoje(a, v) {
+  const nome = (a.responsavel ? a.responsavel.split(/[ (]/)[0] : a.nome.split(' ')[0]);
+  return 'Olá, ' + nome + '! Tudo bem? Passando para lembrar que o pagamento' + (a.responsavel ? ' do(a) ' + a.nome.split(' ')[0] : '') + ' de ' + fR(v) + ' vence hoje. Se já pagou, desconsidere. Bom treino!';
 }
 function painelFichas() {
   if (!S.fichas.length) return '';
