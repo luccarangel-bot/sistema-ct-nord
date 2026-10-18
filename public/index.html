@@ -232,6 +232,10 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: .9rem; }
 .check input { width: auto; margin-top: 4px; accent-color: var(--fg); }
 .rodape { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; padding-top: 6px; }
+.form-secao { border-top: 1px solid var(--line-strong); padding-top: 16px; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; }
+.form-secao small { color: var(--muted); font-size: .82rem; }
+.venda-detalhes { display: flex; flex-direction: column; gap: 16px; }
+.venda-detalhes[hidden] { display: none; }
 .resumo { background: var(--surface-2); border-left: 1px solid var(--line-strong); padding: 12px 14px; font-size: .9rem; display: flex; flex-direction: column; gap: 4px; }
 .resumo b { font-variant-numeric: tabular-nums; }
 .fechar { background: none; border: 1px solid transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--fg); padding: 2px 8px; }
@@ -529,6 +533,24 @@ async function salvar(col, obj) {
   try { const r = await API.req('POST', '/api/dados', { col, id: limpo.id, doc: limpo }); acompanharRev(r.rev); }
   catch (e) { tratarErro(e); agendarRecarga(); return false; }
   return true;
+}
+// Monta o contrato e as cobranças de uma venda a partir dos campos do formulário (null se algo estiver errado).
+function montarVenda(d, alunoId) {
+  const p = planoPorId(d.planoId); if (!p || !alunoId) { toast('Escolha o aluno e o plano.'); return null; }
+  const desconto = numCampo(d.desconto);
+  if (desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return null; }
+  const inicio = d.inicio || HOJE;
+  const c = {
+    id: novoId('ct'), alunoId, planoId: p.id, planoNome: p.nome, modalidade: p.modalidade, valorMensal: p.valor, desconto,
+    meses: p.meses, inicio, fim: addDias(addMeses(inicio, p.meses), -1), diaVenc: Math.min(31, Math.max(1, Number(d.diaVenc) || 10)),
+    forma: d.forma, cancelado: false, renovacaoDe: d.renovacaoDe || '', criadoEm: new Date().toISOString(),
+  };
+  const cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
+  return { c, cobr };
+}
+async function gravarVenda(v) {
+  if (!(await salvar('contratos', v.c))) return false;
+  return salvarVarios('lancamentos', v.cobr);
 }
 async function salvarVarios(col, lista) { for (const o of lista) { const ok = await salvar(col, o); if (!ok) return false; } return true; }
 async function remover(col, id) {
@@ -1352,9 +1374,15 @@ function modalAluno(a) {
       campo('Faixa atual', sel('al-faixa', 'faixa', grads()[mod].faixas.map((f) => opt(f)).join(''))) + campo('Grau', inp('al-grau', 'grau', 0, 'type="number" min="0" max="10"')) + '</div>';
   }
   h += campo('Observações', '<textarea id="al-obs" name="obs" placeholder="Saúde, restrições, preferências de horário…">' + esc(a.obs || '') + '</textarea>');
+  const planosVenda = a.id ? [] : S.planos.filter((p) => p.ativo !== false);
+  if (planosVenda.length) {
+    h += '<div class="form-secao"><h3>Plano</h3><small>Escolha o plano para já registrar a venda junto com o cadastro.</small></div>' +
+      camposVenda({ planoId: a.planoId }, planosVenda, true);
+  }
   h += rodape(a.id ? 'Salvar alterações' : 'Cadastrar aluno') + '</form>';
   if (a.id) h += '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-aluno" data-id="' + a.id + '" style="align-self:flex-start">Excluir aluno</button></div>';
   abrirModal(a.id ? 'Editar aluno' : 'Novo aluno', h);
+  if (planosVenda.length) atualizarResumoVenda();
 }
 function modalPlano(p) {
   p = p || { ativo: true, meses: 1, modalidade: 'Jiu-jitsu' };
@@ -1375,24 +1403,36 @@ function modalVenda(o) {
   if (!planos.length) { toast('Cadastre um plano antes de vender.'); modalPlano(); return; }
   if (!S.alunos.length) { toast('Cadastre o aluno antes de vender o plano.'); modalAluno(); return; }
   const alunos = S.alunos.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-  const inicio = o.inicio || HOJE;
   abrirModal(o.renovacaoDe ? 'Renovar contrato' : 'Vender plano', '<form data-form="venda"><input type="hidden" name="renovacaoDe" value="' + esc(o.renovacaoDe || '') + '">' +
     campo('Aluno *', sel('vd-aluno', 'alunoId', '<option value="">Escolha o aluno</option>' + alunos.map((a) => opt(a.id, a.nome, a.id === o.alunoId)).join(''), 'required')) +
-    campo('Plano *', sel('vd-plano', 'planoId', planos.map((p) => opt(p.id, p.nome + ' · ' + fR(p.valor) + '/mês · ' + p.meses + (p.meses > 1 ? ' meses' : ' mês'), p.id === o.planoId)).join(''), 'required')) +
-    '<div class="linha2">' + campo('Início *', inp('vd-inicio', 'inicio', inicio, 'type="date" required'), 'Pode ser uma data passada (venda retroativa).') +
-    campo('Desconto por mês (R$)', inp('vd-desc', 'desconto', o.desconto || '', 'inputmode="decimal" placeholder="0,00"')) + '</div>' +
-    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista'))(((planoPorId(o.planoId) || planos[0]) || {}).formaPadrao || 'mensal'))) +
-    campo('Dia de vencimento', inp('vd-dia', 'diaVenc', o.diaVenc || Number(inicio.slice(8, 10)), 'type="number" min="1" max="31"'), 'Para mensalidades.') + '</div>' +
-    '<div class="linha2">' + campo('Taxa de matrícula (R$)', inp('vd-mat', 'matricula', '', 'inputmode="decimal" placeholder="0,00"')) + campo('Forma de pagamento prevista', sel('vd-fp', 'formaPg', formasOpts(o.formaPg || (((planoPorId(o.planoId) || planos[0]) || {}).pagamentos || ['Pix'])[0]))) + '</div>' +
-    '<label class="check"><input type="checkbox" name="retroativo" id="vd-retro"><span>Marcar como pagas as cobranças com vencimento anterior a hoje (para lançar vendas antigas)</span></label>' +
-    '<div class="resumo" id="vd-resumo"></div>' + rodape(o.renovacaoDe ? 'Confirmar renovação' : 'Confirmar venda') + '</form>');
+    camposVenda(o, planos, false) + rodape(o.renovacaoDe ? 'Confirmar renovação' : 'Confirmar venda') + '</form>');
   atualizarResumoVenda();
 }
+// Campos da venda (plano, início, cobrança…), usados na venda e no cadastro de aluno novo.
+// Com opcional = true, o plano começa em "sem plano" e os demais campos só aparecem ao escolher um.
+function camposVenda(o, planos, opcional) {
+  const inicio = o.inicio || HOJE;
+  const pl = planoPorId(o.planoId) || (opcional ? null : planos[0]) || {};
+  const ref = pl.id ? pl : planos[0] || {};
+  return '<div data-venda>' +
+    campo(opcional ? 'Plano' : 'Plano *', sel('vd-plano', 'planoId', (opcional ? '<option value="">Sem plano agora (vender depois)</option>' : '') +
+      planos.map((p) => opt(p.id, p.nome + ' · ' + fR(p.valor) + '/mês · ' + p.meses + (p.meses > 1 ? ' meses' : ' mês'), p.id === pl.id)).join(''), opcional ? '' : 'required')) +
+    '<div class="venda-detalhes" style="margin-top:16px"' + (opcional && !pl.id ? ' hidden' : '') + '>' +
+    '<div class="linha2">' + campo('Início *', inp('vd-inicio', 'inicio', inicio, 'type="date" required'), 'Pode ser uma data passada (venda retroativa).') +
+    campo('Desconto por mês (R$)', inp('vd-desc', 'desconto', o.desconto || '', 'inputmode="decimal" placeholder="0,00"')) + '</div>' +
+    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista'))(o.forma || ref.formaPadrao || 'mensal'))) +
+    campo('Dia de vencimento', inp('vd-dia', 'diaVenc', o.diaVenc || Number(inicio.slice(8, 10)), 'type="number" min="1" max="31"'), 'Para mensalidades.') + '</div>' +
+    '<div class="linha2">' + campo('Taxa de matrícula (R$)', inp('vd-mat', 'matricula', '', 'inputmode="decimal" placeholder="0,00"')) + campo('Forma de pagamento prevista', sel('vd-fp', 'formaPg', formasOpts(o.formaPg || (ref.pagamentos || ['Pix'])[0]))) + '</div>' +
+    '<label class="check"><input type="checkbox" name="retroativo" id="vd-retro"><span>Marcar como pagas as cobranças com vencimento anterior a hoje (para lançar vendas antigas)</span></label>' +
+    '<div class="resumo" id="vd-resumo"></div></div></div>';
+}
 function atualizarResumoVenda() {
-  const f = document.querySelector('form[data-form="venda"]'); const r = document.getElementById('vd-resumo');
-  if (!f || !r) return;
-  const d = Object.fromEntries(new FormData(f));
-  const p = planoPorId(d.planoId); if (!p) { r.innerHTML = ''; return; }
+  const box = document.querySelector('[data-venda]'); const r = document.getElementById('vd-resumo');
+  if (!box || !r) return;
+  const d = Object.fromEntries(new FormData(box.closest('form')));
+  const p = planoPorId(d.planoId);
+  const det = box.querySelector('.venda-detalhes'); if (det) det.hidden = !p;
+  if (!p) { r.innerHTML = ''; return; }
   const desc = numCampo(d.desconto), mat = numCampo(d.matricula);
   const mensal = Math.max(0, p.valor - desc);
   const inicio = d.inicio || HOJE; const fim = addDias(addMeses(inicio, p.meses), -1);
@@ -1465,6 +1505,9 @@ const FORMS = {
   async aluno(d) {
     const ex = d.id ? alunoPorId(d.id) : null;
     const a = ex ? { ...ex } : { id: novoId('al'), modalidades: [], historicoGrad: [], criadoEm: new Date().toISOString() };
+    // Cadastro novo com plano escolhido: confere a venda antes de gravar qualquer coisa.
+    const v = !ex && d.planoId ? montarVenda(d, a.id) : null;
+    if (!ex && d.planoId && !v) return;
     Object.assign(a, {
       nome: d.nome.trim(), telefone: d.telefone.trim(), email: d.email.trim(), nascimento: d.nascimento, responsavel: d.responsavel.trim(), obs: d.obs.trim(),
       cpf: d.cpf.trim(), endereco: d.endereco.trim(), respTelefone: d.respTelefone.trim(), emergencia: d.emergencia.trim(), origem: d.origem, saude: d.saude.trim(),
@@ -1476,8 +1519,9 @@ const FORMS = {
     fecharModal();
     await salvar('alunos', a);
     if (d.leadId) { const l = leadPorId(d.leadId); if (l) await salvar('leads', { ...l, etapa: 'matriculado', alunoId: a.id }); }
-    toast(ex ? 'Dados atualizados.' : 'Aluno cadastrado.');
-    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId) modalVenda({ alunoId: a.id }); }
+    if (v && (await gravarVenda(v))) toast('Aluno cadastrado e venda registrada: ' + v.cobr.length + ' cobrança(s) criada(s).');
+    else toast(ex ? 'Dados atualizados.' : 'Aluno cadastrado.');
+    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); }
   },
   async plano(d, f) {
     const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe um valor maior que zero.'); return; }
@@ -1488,20 +1532,11 @@ const FORMS = {
     fecharModal(); await salvar('planos', p); toast(ex ? 'Plano atualizado.' : 'Plano criado.');
   },
   async venda(d) {
-    const p = planoPorId(d.planoId); if (!p || !d.alunoId) { toast('Escolha o aluno e o plano.'); return; }
-    const desconto = numCampo(d.desconto);
-    if (desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return; }
-    const c = {
-      id: novoId('ct'), alunoId: d.alunoId, planoId: p.id, planoNome: p.nome, modalidade: p.modalidade, valorMensal: p.valor, desconto,
-      meses: p.meses, inicio: d.inicio, fim: addDias(addMeses(d.inicio, p.meses), -1), diaVenc: Math.min(31, Math.max(1, Number(d.diaVenc) || 10)),
-      forma: d.forma, cancelado: false, renovacaoDe: d.renovacaoDe || '', criadoEm: new Date().toISOString(),
-    };
-    const cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
+    const v = montarVenda(d, d.alunoId); if (!v) return;
     fecharModal();
-    if (!(await salvar('contratos', c))) return;
-    await salvarVarios('lancamentos', cobr);
-    toast((c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + cobr.length + ' cobrança(s) criada(s).');
-    UI.view = 'aluno'; UI.alunoId = c.alunoId; render();
+    if (!(await gravarVenda(v))) return;
+    toast((v.c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + v.cobr.length + ' cobrança(s) criada(s).');
+    UI.view = 'aluno'; UI.alunoId = v.c.alunoId; render();
   },
   async baixa(d) {
     const l = S.lancamentos.find((x) => x.id === d.id); if (!l) return;
@@ -1738,7 +1773,7 @@ document.addEventListener('submit', (e) => {
 document.addEventListener('input', (e) => {
   const el = e.target;
   if (el.dataset && el.dataset.ui) { UI[el.dataset.ui] = el.value; render(); }
-  if (el.closest && el.closest('form[data-form="venda"]')) atualizarResumoVenda();
+  if (el.closest && el.closest('[data-venda]')) atualizarResumoVenda();
   if (el.dataset && el.dataset.filtroChamada !== undefined) {
     const q = el.value.trim().toLowerCase();
     document.querySelectorAll('#ch-lista li[data-nome]').forEach((li) => { li.hidden = !!q && !li.dataset.nome.includes(q); });
@@ -1760,13 +1795,13 @@ document.addEventListener('change', (e) => {
   if (el.dataset && el.dataset.trocaMod !== undefined) {
     const f = el.form.querySelector('[name="faixa"]'); if (f) f.innerHTML = grads()[el.value].faixas.map((x) => opt(x)).join('');
   }
-  if (el.name === 'planoId' && el.closest && el.closest('form[data-form="venda"]')) {
+  if (el.name === 'planoId' && el.closest && el.closest('[data-venda]')) {
     const p = planoPorId(el.value); const f = el.form.querySelector('[name="forma"]');
     if (p && p.formaPadrao && f) f.value = p.formaPadrao;
     const fp = el.form.querySelector('[name="formaPg"]');
     if (p && fp && p.pagamentos && p.pagamentos.length && !p.pagamentos.includes(fp.value)) fp.value = p.pagamentos[0];
   }
-  if (el.closest && el.closest('form[data-form="venda"]')) atualizarResumoVenda();
+  if (el.closest && el.closest('[data-venda]')) atualizarResumoVenda();
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modalAberto) fecharModal(); });
 
