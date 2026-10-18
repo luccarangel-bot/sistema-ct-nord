@@ -334,8 +334,10 @@ const MODALIDADES = ['Jiu-jitsu', 'Jiu-jitsu Kids', 'Muay Thai'];
 const GRAD_PADRAO = {
   'Jiu-jitsu': { faixas: ['Branca', 'Azul', 'Roxa', 'Marrom', 'Preta'], graus: 4 },
   'Jiu-jitsu Kids': { faixas: ['Branca', 'Cinza e branca', 'Cinza', 'Cinza e preta', 'Amarela e branca', 'Amarela', 'Amarela e preta', 'Laranja e branca', 'Laranja', 'Laranja e preta', 'Verde e branca', 'Verde', 'Verde e preta'], graus: 4 },
-  'Muay Thai': { faixas: ['Branco', 'Amarelo', 'Laranja', 'Verde', 'Azul', 'Roxo', 'Marrom', 'Preto'], graus: 0 },
+  'Muay Thai': { faixas: ['Branco', 'Vermelho e Branco', 'Vermelho', 'Vermelho e Azul Claro', 'Azul Claro', 'Azul Claro e Azul Escuro', 'Azul Escuro', 'Azul Escuro e Preto', 'Preto'], graus: 0 },
 };
+// Lista antiga do Muay Thai: se ainda estiver salva em Ajustes sem alteração, vale a nova.
+const MT_ANTIGA = ['Branco', 'Amarelo', 'Laranja', 'Verde', 'Azul', 'Roxo', 'Marrom', 'Preto'];
 const FORMAS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Débito automático', 'Boleto', 'Transferência'];
 const CAT_RECEITA = ['Mensalidades', 'Matrículas', 'Produtos', 'Aulas avulsas', 'Wellhub / TotalPass', 'Outras receitas'];
 const CAT_DESPESA = {
@@ -417,6 +419,7 @@ function grads() {
   const c = (S.config && S.config.graduacoes) || {};
   const r = {};
   for (const m of MODALIDADES) r[m] = c[m] && c[m].faixas && c[m].faixas.length ? c[m] : GRAD_PADRAO[m];
+  if (r['Muay Thai'].faixas.join('|') === MT_ANTIGA.join('|')) r['Muay Thai'] = GRAD_PADRAO['Muay Thai'];
   return r;
 }
 const pagoDe = (l) => (l.pagamentos || []).reduce((s, p) => s + (Number(p.valor) || 0), 0);
@@ -664,7 +667,7 @@ const tab = (key, val, txt) => '<button class="tab" role="tab" data-act="ui" dat
 const waA = (tel, msg, txt) => { const u = linkWa(tel, msg); return u ? '<a class="wa" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(txt || 'WhatsApp') + '</a>' : ''; };
 
 /* Desenho da faixa: cor(es) do cinto, ponteira e graus */
-const CORES = [['bran', '#f3f3ef'], ['azul', '#1f4fa8'], ['rox', '#6a3a90'], ['marr', '#6b4226'], ['pret', '#18181b'], ['cinz', '#8b9097'], ['amar', '#e5c018'], ['lara', '#e5781c'], ['verd', '#2d8a3d'], ['verm', '#c62828'], ['rosa', '#e66aa0'], ['dour', '#c9a227'], ['prat', '#b8bcc4']];
+const CORES = [['bran', '#f3f3ef'], ['azul claro', '#1e96f0'], ['azul escuro', '#0d1fc4'], ['azul', '#1f4fa8'], ['rox', '#6a3a90'], ['marr', '#6b4226'], ['pret', '#18181b'], ['cinz', '#8b9097'], ['amar', '#e5c018'], ['lara', '#e5781c'], ['verd', '#2d8a3d'], ['verm', '#c62828'], ['rosa', '#e66aa0'], ['dour', '#c9a227'], ['prat', '#b8bcc4']];
 function corDe(p) { const w = p.trim().toLowerCase(); for (const [k, c] of CORES) if (w.startsWith(k)) return c; return '#b8bcc4'; }
 function faixaSvg(nome, grau, temGraus) {
   const partes = String(nome || '').split(/\s+e\s+|\s*\/\s*|\s*-\s*/).filter(Boolean);
