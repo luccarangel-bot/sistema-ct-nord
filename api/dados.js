@@ -1,4 +1,4 @@
-import { rota, exigirLogin, banco, um, chaveCol, parHash, corpo, bumpRev, COLECOES, CHAVES, publico, ErroApi } from './_lib.js';
+import { rota, exigirLogin, banco, um, chaveCol, parHash, corpo, bumpRev, COLECOES, CHAVES, publico, semear, ErroApi } from './_lib.js';
 
 const ID_OK = /^[A-Za-z0-9_.:-]{1,80}$/;
 const MAX_DOC = 200 * 1024;
@@ -16,6 +16,7 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
   const usuario = await exigirLogin(req);
 
   if (req.method === 'GET') {
+    await semear();
     const out = await banco([...COLECOES.map((c) => ['HGETALL', chaveCol(c)]), ['GET', CHAVES.rev]]);
     const dados = {};
     COLECOES.forEach((c, i) => { dados[c] = Object.values(parHash(out[i])).map((v) => JSON.parse(v)); });

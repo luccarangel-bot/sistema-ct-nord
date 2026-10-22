@@ -287,6 +287,7 @@ let CT = { n: 'CT NORD', w: '', p: [] };
 let PLANOS = [];
 const ehFamilia = (p) => /fam[ií]lia/i.test(p.nome);
 function linhaPreco(p) {
+  if (p.forma === 'app') return { preco: 'Pelo app', det: 'sem mensalidade no CT · check-in pelo ' + p.aceitas[0] };
   if (p.forma === 'avista') return { preco: fR(p.valor) + '/mês', det: p.meses + ' meses · pagamento único de ' + fR(p.valor * p.meses) };
   return { preco: fR(p.valor) + '/mês', det: ehFamilia(p) ? 'valor por pessoa' : p.meses > 1 ? p.meses + ' mensalidades' : 'renovação mensal' };
 }
@@ -343,10 +344,12 @@ function atualizar() {
       if (p.aceitas.includes(prev)) $('fp').value = prev;
       $('fp').dataset.pl = p.id;
     }
-    $('campo-dv').hidden = p.forma === 'avista';
+    $('campo-dv').hidden = p.forma === 'avista' || p.forma === 'app';
     $('campo-fam').hidden = !ehFamilia(p);
     const l = linhaPreco(p);
-    $('resumo-plano').innerHTML = p.forma === 'avista'
+    $('resumo-plano').innerHTML = p.forma === 'app'
+      ? 'Você treina pelo <b>' + esc(p.aceitas[0]) + '</b>: não paga mensalidade ao CT. Faça o check-in no app a cada aula.'
+      : p.forma === 'avista'
       ? 'Você paga <b>' + fR(p.valor * p.meses) + '</b> de uma vez, em ' + esc($('fp').value) + ', e treina por ' + p.meses + ' meses.'
       : 'Você paga <b>' + fR(p.valor) + '</b> por mês' + (ehFamilia(p) ? ' (valor por pessoa)' : '') + ', em ' + esc($('fp').value) + ', com vencimento no dia ' + $('dv').value + '.';
     $('resumo-plano').hidden = false;
@@ -399,12 +402,12 @@ $('ficha').addEventListener('submit', (e) => {
     sau: v('sau'), ctn: v('ctn'), ctt: v('ctt'), ori: v('ori'), ok: agora, rc: agora, rcv: REGIMENTO_VERSAO,
   };
   if (menor) Object.assign(d, { rn: v('rn'), rcpf: v('rcpf'), rtel: v('rtel') });
-  if (p) Object.assign(d, { pl: p.id, pln: p.nome, fp: $('fp').value, dv: p.forma === 'avista' ? 0 : Number($('dv').value), fam: ehFamilia(p) ? v('fam') : '' });
+  if (p) Object.assign(d, { pl: p.id, pln: p.nome, fp: $('fp').value, dv: p.forma === 'avista' || p.forma === 'app' ? 0 : Number($('dv').value), fam: ehFamilia(p) ? v('fam') : '' });
   const btn = $('btn-concluir'); btn.disabled = true; btn.textContent = 'Enviando…';
   fetch('/api/ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
     .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erro || 'Não foi possível enviar agora.'); })
     .then(() => {
-      $('pronto-resumo').innerHTML = '<b>' + esc(d.n) + '</b> · ' + esc(d.mod) + (p ? '<br>' + esc(p.nome) + ' · ' + esc(d.fp) + ' · ' + (p.forma === 'avista' ? 'pagamento único de <b>' + fR(p.valor * p.meses) + '</b>' : '<b>' + fR(p.valor) + '</b> por mês') : '');
+      $('pronto-resumo').innerHTML = '<b>' + esc(d.n) + '</b> · ' + esc(d.mod) + (p ? '<br>' + esc(p.nome) + ' · ' + esc(d.fp) + ' · ' + (p.forma === 'app' ? 'sem mensalidade no CT' : p.forma === 'avista' ? 'pagamento único de <b>' + fR(p.valor * p.meses) + '</b>' : '<b>' + fR(p.valor) + '</b> por mês') : '');
       const w = soDig(CT.w);
       $('btn-wa').hidden = !w;
       if (w) $('btn-wa').href = 'https://wa.me/' + (w.length <= 11 ? '55' + w : w) + '?text=' + encodeURIComponent('Olá! Acabei de enviar minha ficha de matrícula pelo site. Meu nome é ' + d.n + '.');

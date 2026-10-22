@@ -229,9 +229,23 @@ export const publico = (u) => ({ email: u.email, nome: u.nome, papel: u.papel, c
 export const normEmail = (e) => String(e || '').trim().toLowerCase();
 
 /* ---------- Primeiro acesso e dados iniciais ---------- */
+// Atualizações dos dados iniciais para bancos que já foram semeados. Cada uma roda uma única vez
+// (marca ct:mig:<nome>) e só inclui o que ainda não existe, sem mexer no que o CT já editou.
+const MIGRACOES = [
+  ['planos-app', ['planos', ['pl_totalpass', 'pl_wellhub']]],
+];
+async function migrar() {
+  for (const [nome, [col, ids]] of MIGRACOES) {
+    if (!(await um('SET', P + 'mig:' + nome, new Date().toISOString(), 'NX'))) continue;
+    const existentes = await banco(ids.map((id) => ['HGET', chaveCol(col), id]));
+    const args = [];
+    ids.forEach((id, i) => { const d = SEED[col].find((x) => x.id === id); if (d && !existentes[i]) args.push(id, JSON.stringify(d)); });
+    if (args.length) await banco([['HSET', chaveCol(col), ...args], ['INCR', P + 'rev']]);
+  }
+}
 export async function semear() {
   const ok = await um('SET', P + 'semeado', new Date().toISOString(), 'NX');
-  if (!ok) return;
+  if (!ok) return migrar();
   const cmds = [];
   for (const [col, docs] of Object.entries(SEED)) {
     const args = [];
@@ -240,6 +254,8 @@ export async function semear() {
   }
   cmds.push(['INCR', P + 'rev']);
   await banco(cmds);
+  // Banco novo já nasce com tudo: marca as atualizações como feitas.
+  await banco(MIGRACOES.map(([nome]) => ['SET', P + 'mig:' + nome, new Date().toISOString(), 'NX']));
 }
 export async function bumpRev() { return um('INCR', P + 'rev'); }
 export const CHAVES = { usuarios: P + 'usuarios', rev: P + 'rev' };

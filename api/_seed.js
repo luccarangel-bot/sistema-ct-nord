@@ -19,6 +19,34 @@ export const SEED = {
   },
   {
    "ativo": true,
+   "condicoes": "O aluno paga o TotalPass e faz check-in no app a cada aula. O CT recebe do TotalPass; não há mensalidade no sistema.",
+   "criadoEm": "2026-10-22T12:00:00.000Z",
+   "formaPadrao": "app",
+   "id": "pl_totalpass",
+   "meses": 12,
+   "modalidade": "Livre (todas)",
+   "nome": "TotalPass",
+   "pagamentos": [
+    "TotalPass"
+   ],
+   "valor": 0
+  },
+  {
+   "ativo": true,
+   "condicoes": "O aluno paga o Wellhub (antigo Gympass) e faz check-in no app a cada aula. O CT recebe do Wellhub; não há mensalidade no sistema.",
+   "criadoEm": "2026-10-22T12:00:00.000Z",
+   "formaPadrao": "app",
+   "id": "pl_wellhub",
+   "meses": 12,
+   "modalidade": "Livre (todas)",
+   "nome": "Wellhub (Gympass)",
+   "pagamentos": [
+    "Wellhub (Gympass)"
+   ],
+   "valor": 0
+  },
+  {
+   "ativo": true,
    "condicoes": "Valor por pessoa. Venda um contrato para cada integrante da família.",
    "criadoEm": "2026-10-13T20:45:00",
    "formaPadrao": "mensal",

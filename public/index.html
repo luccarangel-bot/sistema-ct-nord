@@ -338,7 +338,7 @@ const GRAD_PADRAO = {
 };
 // Lista antiga do Muay Thai: se ainda estiver salva em Ajustes sem alteração, vale a nova.
 const MT_ANTIGA = ['Branco', 'Amarelo', 'Laranja', 'Verde', 'Azul', 'Roxo', 'Marrom', 'Preto'];
-const FORMAS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Débito automático', 'Boleto', 'Transferência'];
+const FORMAS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 'Débito automático', 'Boleto', 'Transferência', 'TotalPass', 'Wellhub (Gympass)'];
 const CAT_RECEITA = ['Mensalidades', 'Matrículas', 'Produtos', 'Aulas avulsas', 'Wellhub / TotalPass', 'Outras receitas'];
 const CAT_DESPESA = {
   'Custos diretos': ['Professores', 'Materiais e equipamentos', 'Produtos para revenda'],
@@ -483,7 +483,7 @@ function pagamentosNoMes(mes, tipo) {
 
 /* Gera as cobranças de um contrato */
 function gerarCobrancas(c, opts) {
-  const n = c.forma === 'avista' ? 1 : c.meses;
+  const n = c.forma === 'app' ? 0 : c.forma === 'avista' ? 1 : c.meses;
   const r = [];
   for (let i = 0; i < n; i++) {
     let venc;
@@ -542,8 +542,9 @@ async function salvar(col, obj) {
 // Monta o contrato e as cobranças de uma venda a partir dos campos do formulário (null se algo estiver errado).
 function montarVenda(d, alunoId) {
   const p = planoPorId(d.planoId); if (!p || !alunoId) { toast('Escolha o aluno e o plano.'); return null; }
-  const desconto = numCampo(d.desconto);
-  if (desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return null; }
+  const app = d.forma === 'app';
+  const desconto = app ? 0 : numCampo(d.desconto);
+  if (!app && desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return null; }
   const inicio = d.inicio || HOJE;
   const c = {
     id: novoId('ct'), alunoId, planoId: p.id, planoNome: p.nome, modalidade: p.modalidade, valorMensal: p.valor, desconto,
@@ -553,6 +554,7 @@ function montarVenda(d, alunoId) {
   const cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
   return { c, cobr };
 }
+const txtCobr = (v) => (v.cobr.length ? v.cobr.length + ' cobrança(s) criada(s)' : 'sem mensalidades, pago pelo app');
 async function gravarVenda(v) {
   if (!(await salvar('contratos', v.c))) return false;
   return salvarVarios('lancamentos', v.cobr);
@@ -870,7 +872,9 @@ VIEWS.aluno = function () {
     (produtos.length ? '<ul class="lista">' + produtos.map((l) => '<li><div class="cresce"><b>' + esc(l.descricao) + '</b><small>' + fData(l.vencimento) + '</small></div><span class="num">' + fR(devidoDe(l)) + '</span>' + pillLanc(l) + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhum produto registrado.</p>') + '</section>';
   return h;
 };
-const FORMA_TXT = { mensal: 'Mensalidades', avista: 'À vista', cartao: 'Cartão de crédito' };
+const FORMA_TXT = { mensal: 'Mensalidades', avista: 'À vista', cartao: 'Cartão de crédito', app: 'Pelo app (TotalPass / Wellhub)' };
+// Preço do plano para mostrar em listas: planos pagos pelo app não têm mensalidade no CT.
+const precoPlano = (p) => (p.formaPadrao === 'app' ? 'pelo app' : fR(p.valor) + '/mês');
 
 function tabelaLancamentos(lista, o) {
   o = o || {};
@@ -897,7 +901,7 @@ VIEWS.contratos = function () {
     h += '<div class="tabela-wrap"><table><thead><tr><th>Plano</th><th>Modalidade</th><th class="dir">Valor/mês</th><th class="dir">Duração</th><th class="dir">Total</th><th>Contratos ativos</th><th></th></tr></thead><tbody>';
     for (const p of pl) {
       const ativos = S.contratos.filter((c) => c.planoId === p.id && ['ativo', 'avencer'].includes(statusContrato(c))).length;
-      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + fR(p.valor) + '</td><td class="dir num">' + p.meses + (p.meses > 1 ? ' meses' : ' mês') + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + fR(p.valor * p.meses) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
+      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + (p.formaPadrao === 'app' ? 'Pelo app' : fR(p.valor)) + '</td><td class="dir num">' + p.meses + (p.meses > 1 ? ' meses' : ' mês') + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + (p.formaPadrao === 'app' ? '—' : fR(p.valor * p.meses)) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
     }
     return h + '</tbody></table></div>';
   }
@@ -1426,7 +1430,7 @@ function modalPlano(p) {
     '<div class="linha2">' + campo('Modalidade', sel('pl-mod', 'modalidade', [...MODALIDADES, 'Livre (todas)'].map((m) => opt(m, m, m === p.modalidade)).join(''))) +
     campo('Valor por mês (R$) *', inp('pl-valor', 'valor', p.valor, 'required inputmode="decimal" placeholder="150,00"')) +
     campo('Duração', sel('pl-meses', 'meses', [1, 2, 3, 4, 6, 12, 18, 24].map((n) => opt(n, n + (n > 1 ? ' meses' : ' mês'), n === Number(p.meses))).join(''))) + '</div>' +
-    campo('Forma de cobrança padrão', sel('pl-forma', 'formaPadrao', opt('mensal', 'Mensalidades (Pix, débito, dinheiro, débito automático)', p.formaPadrao === 'mensal') + opt('cartao', 'Cartão de crédito', p.formaPadrao === 'cartao') + opt('avista', 'À vista (pagamento único)', p.formaPadrao === 'avista')), 'Já vem escolhida na hora da venda. Dá para trocar se precisar.') +
+    campo('Forma de cobrança padrão', sel('pl-forma', 'formaPadrao', opt('mensal', 'Mensalidades (Pix, débito, dinheiro, débito automático)', p.formaPadrao === 'mensal') + opt('cartao', 'Cartão de crédito', p.formaPadrao === 'cartao') + opt('avista', 'À vista (pagamento único)', p.formaPadrao === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub): sem mensalidade no CT', p.formaPadrao === 'app')), 'Já vem escolhida na hora da venda. Dá para trocar se precisar.') +
     '<div class="campo"><span>Formas de pagamento aceitas</span><div class="dias-sel">' + FORMAS.map((f) => '<label><input type="checkbox" name="aceita" value="' + esc(f) + '"' + ((p.pagamentos || ['Pix', 'Cartão de débito', 'Dinheiro']).includes(f) ? ' checked' : '') + '>' + esc(f) + '</label>').join('') + '</div><small>São as opções que o aluno vê na ficha de matrícula para este plano.</small></div>' +
     campo('Condições comerciais', '<textarea id="pl-cond" name="condicoes" placeholder="Ex.: fidelidade, frequência semanal, brindes">' + esc(p.condicoes || '') + '</textarea>') +
     '<label class="check"><input type="checkbox" name="ativo" id="pl-ativo"' + (p.ativo !== false ? ' checked' : '') + '><span>Disponível para venda</span></label>' +
@@ -1451,11 +1455,11 @@ function camposVenda(o, planos, opcional) {
   const ref = pl.id ? pl : planos[0] || {};
   return '<div data-venda>' +
     campo(opcional ? 'Plano' : 'Plano *', sel('vd-plano', 'planoId', (opcional ? '<option value="">Sem plano agora (vender depois)</option>' : '') +
-      planos.map((p) => opt(p.id, p.nome + ' · ' + fR(p.valor) + '/mês · ' + p.meses + (p.meses > 1 ? ' meses' : ' mês'), p.id === pl.id)).join(''), opcional ? '' : 'required')) +
+      planos.map((p) => opt(p.id, p.nome + ' · ' + precoPlano(p) + ' · ' + p.meses + (p.meses > 1 ? ' meses' : ' mês'), p.id === pl.id)).join(''), opcional ? '' : 'required')) +
     '<div class="venda-detalhes" style="margin-top:16px"' + (opcional && !pl.id ? ' hidden' : '') + '>' +
     '<div class="linha2">' + campo('Início *', inp('vd-inicio', 'inicio', inicio, 'type="date" required'), 'Pode ser uma data passada (venda retroativa).') +
     campo('Desconto por mês (R$)', inp('vd-desc', 'desconto', o.desconto || '', 'inputmode="decimal" placeholder="0,00"')) + '</div>' +
-    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista'))(o.forma || ref.formaPadrao || 'mensal'))) +
+    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub)', fp === 'app'))(o.forma || ref.formaPadrao || 'mensal'))) +
     campo('Dia de vencimento', inp('vd-dia', 'diaVenc', o.diaVenc || Number(inicio.slice(8, 10)), 'type="number" min="1" max="31"'), 'Para mensalidades.') + '</div>' +
     '<div class="linha2">' + campo('Taxa de matrícula (R$)', inp('vd-mat', 'matricula', '', 'inputmode="decimal" placeholder="0,00"')) + campo('Forma de pagamento prevista', sel('vd-fp', 'formaPg', formasOpts(o.formaPg || (ref.pagamentos || ['Pix'])[0]))) + '</div>' +
     '<label class="check"><input type="checkbox" name="retroativo" id="vd-retro"><span>Marcar como pagas as cobranças com vencimento anterior a hoje (para lançar vendas antigas)</span></label>' +
@@ -1472,6 +1476,11 @@ function atualizarResumoVenda() {
   const mensal = Math.max(0, p.valor - desc);
   const inicio = d.inicio || HOJE; const fim = addDias(addMeses(inicio, p.meses), -1);
   const n = d.forma === 'avista' ? 1 : p.meses;
+  if (d.forma === 'app') {
+    r.innerHTML = '<span>Vigência: <b>' + fData(inicio) + ' a ' + fData(fim) + '</b></span><span>Sem mensalidades no sistema: o aluno paga pelo app e o CT recebe do parceiro.</span>' +
+      (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b></span>' : '');
+    return;
+  }
   r.innerHTML = '<span>Vigência: <b>' + fData(inicio) + ' a ' + fData(fim) + '</b></span><span>' + (d.forma === 'avista' ? 'Pagamento único de <b>' + fR(mensal * p.meses) + '</b>' : '<b>' + n + 'x de ' + fR(mensal) + '</b>' + (d.forma === 'cartao' ? ' no cartão' : ' · vencimento todo dia ' + (d.diaVenc || '—'))) + '</span>' +
     (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b></span>' : '') + '<span>Total do contrato: <b>' + fR(mensal * p.meses + mat) + '</b></span>';
 }
@@ -1554,12 +1563,12 @@ const FORMS = {
     fecharModal();
     await salvar('alunos', a);
     if (d.leadId) { const l = leadPorId(d.leadId); if (l) await salvar('leads', { ...l, etapa: 'matriculado', alunoId: a.id }); }
-    if (v && (await gravarVenda(v))) toast('Aluno cadastrado e venda registrada: ' + v.cobr.length + ' cobrança(s) criada(s).');
+    if (v && (await gravarVenda(v))) toast('Aluno cadastrado e venda registrada: ' + txtCobr(v) + '.');
     else toast(ex ? 'Dados atualizados.' : 'Aluno cadastrado.');
     if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); }
   },
   async plano(d, f) {
-    const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe um valor maior que zero.'); return; }
+    const valor = numCampo(d.valor); if (valor <= 0 && d.formaPadrao !== 'app') { toast('Informe um valor maior que zero.'); return; }
     const pagamentos = [...f.querySelectorAll('[name="aceita"]:checked')].map((x) => x.value);
     if (!pagamentos.length) { toast('Marque pelo menos uma forma de pagamento aceita.'); return; }
     const ex = d.id ? planoPorId(d.id) : null;
@@ -1570,7 +1579,7 @@ const FORMS = {
     const v = montarVenda(d, d.alunoId); if (!v) return;
     fecharModal();
     if (!(await gravarVenda(v))) return;
-    toast((v.c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + v.cobr.length + ' cobrança(s) criada(s).');
+    toast((v.c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + txtCobr(v) + '.');
     UI.view = 'aluno'; UI.alunoId = v.c.alunoId; render();
   },
   async baixa(d) {
