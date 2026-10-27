@@ -6,7 +6,7 @@ import { SEED } from './_seed.js';
 
 const scrypt = promisify(crypto.scrypt);
 
-export const COLECOES = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'config', 'fichas'];
+export const COLECOES = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'config', 'fichas', 'contasfixas'];
 const P = 'ct:';
 const COOKIE = 'ct_sessao';
 const DIAS_SESSAO = 30;
@@ -233,13 +233,17 @@ export const normEmail = (e) => String(e || '').trim().toLowerCase();
 // (marca ct:mig:<nome>) e só inclui o que ainda não existe, sem mexer no que o CT já editou.
 const MIGRACOES = [
   ['planos-app', ['planos', ['pl_totalpass', 'pl_wellhub']]],
+  ['contas-planilha', ['contasfixas', SEED.contasfixas.map((c) => c.id)]],
 ];
+// As contas fixas valem a partir do mês em que entram no sistema (os meses anteriores ficam em branco).
+const mesAtual = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 7);
+const prepararSeed = (col, d) => (col === 'contasfixas' ? { ...d, desde: mesAtual() } : d);
 async function migrar() {
   for (const [nome, [col, ids]] of MIGRACOES) {
     if (!(await um('SET', P + 'mig:' + nome, new Date().toISOString(), 'NX'))) continue;
     const existentes = await banco(ids.map((id) => ['HGET', chaveCol(col), id]));
     const args = [];
-    ids.forEach((id, i) => { const d = SEED[col].find((x) => x.id === id); if (d && !existentes[i]) args.push(id, JSON.stringify(d)); });
+    ids.forEach((id, i) => { const d = SEED[col].find((x) => x.id === id); if (d && !existentes[i]) args.push(id, JSON.stringify(prepararSeed(col, d))); });
     if (args.length) await banco([['HSET', chaveCol(col), ...args], ['INCR', P + 'rev']]);
   }
 }
@@ -249,7 +253,7 @@ export async function semear() {
   const cmds = [];
   for (const [col, docs] of Object.entries(SEED)) {
     const args = [];
-    for (const d of docs) args.push(d.id, JSON.stringify(d));
+    for (const d of docs) args.push(d.id, JSON.stringify(prepararSeed(col, d)));
     if (args.length) cmds.push(['HSET', chaveCol(col), ...args]);
   }
   cmds.push(['INCR', P + 'rev']);

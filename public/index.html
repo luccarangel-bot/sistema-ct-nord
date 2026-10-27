@@ -238,6 +238,35 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
 .form-secao small { color: var(--muted); font-size: .82rem; }
 .venda-detalhes { display: flex; flex-direction: column; gap: 16px; }
 .venda-detalhes[hidden] { display: none; }
+.pg-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.pg-nav > b { font-stretch: 112.5%; text-transform: uppercase; letter-spacing: .06em; font-size: .85rem; min-width: 160px; text-align: center; }
+.pg-legenda { color: var(--muted); margin-left: auto; font-size: .8rem; }
+.pg-kpis { margin-bottom: 12px; }
+.pg-prog { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; font-size: .82rem; color: var(--muted); }
+.pg-prog i { flex: 1; height: 6px; border: 1px solid var(--line-strong); display: block; }
+.pg-prog i b { display: block; height: 100%; background: var(--fg); }
+.pg-bloco { margin-bottom: 20px; }
+.pg-check { width: 30px; height: 30px; flex: none; border: 1px solid var(--line-strong); background: var(--surface); color: var(--inv-fg); cursor: pointer; font-weight: 800; display: grid; place-items: center; padding: 0; }
+.pg-check:hover { background: var(--surface-2); }
+.pg-check[aria-pressed="true"] { background: var(--inv-bg); }
+.pg-linha.pago .cresce > b { color: var(--muted); text-decoration: line-through; }
+.pg-lista .pg-linha { flex-wrap: nowrap; }
+.pg-linha .cresce { min-width: 0; }
+@media (max-width: 860px) { .pg-linha .pg-valor { width: 96px; } .pg-linha { gap: 10px; } }
+.pg-valor { width: 120px; text-align: right; font-variant-numeric: tabular-nums; padding: 7px 10px; }
+.pg-add-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; }
+.pg-add-form input[name=nome] { flex: 1 1 220px; padding: 7px 10px; }
+.pg-ano th, .pg-ano td { padding: 8px 10px; white-space: nowrap; }
+.pg-ano td:first-child { position: sticky; left: 0; background: var(--surface); }
+.pg-prev, .pg-vazio { color: var(--muted); }
+.pg-atras { font-weight: 800; text-decoration: underline; text-underline-offset: 3px; }
+.pg-tot td { font-weight: 800; border-top: 1px solid var(--line-strong); }
+.pg-edit th, .pg-edit td { padding: 6px 8px; }
+.pg-edit input, .pg-edit select { padding: 7px 8px; }
+.seg { display: inline-flex; }
+.seg .btn + .btn { border-left: 0; }
+.seg .btn[aria-pressed="true"] { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.modal.largo { width: min(860px, 100%); }
 .resumo { background: var(--surface-2); border-left: 1px solid var(--line-strong); padding: 12px 14px; font-size: .9rem; display: flex; flex-direction: column; gap: 4px; }
 .resumo b { font-variant-numeric: tabular-nums; }
 .fechar { background: none; border: 1px solid transparent; font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--fg); padding: 2px 8px; }
@@ -303,6 +332,7 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
     <button class="nav-btn" data-act="nav" data-v="agenda"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M8 14l2.5 2.5L16 12"/></svg>Agenda</button>
     <button class="nav-btn" data-act="nav" data-v="contratos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M8.5 13h7M8.5 17h4"/></svg>Planos</button>
     <button class="nav-btn" data-act="nav" data-v="financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="13" rx="2"/><path d="M2.5 10.5h19M6.5 15h3"/></svg>Financeiro</button>
+    <button class="nav-btn" data-act="nav" data-v="pagamentos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h12v19l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>Pagamentos</button>
     <button class="nav-btn" data-act="nav" data-v="crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>Captação</button>
     <button class="nav-btn nav-ajustes" data-act="nav" data-v="config"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Ajustes</button>
     <div class="espaco"></div>
@@ -342,15 +372,16 @@ const FORMAS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 
 const CAT_RECEITA = ['Mensalidades', 'Matrículas', 'Produtos', 'Aulas avulsas', 'Wellhub / TotalPass', 'Outras receitas'];
 const CAT_DESPESA = {
   'Custos diretos': ['Professores', 'Materiais e equipamentos', 'Produtos para revenda'],
-  'Despesas operacionais': ['Aluguel', 'Água, luz e internet', 'Marketing', 'Sistemas e taxas', 'Manutenção e limpeza', 'Salários e encargos', 'Outras despesas'],
-  'Impostos': ['Impostos'],
+  'Despesas operacionais': ['Aluguel', 'Água, luz e internet', 'Marketing', 'Sistemas e taxas', 'Manutenção e limpeza', 'Salários e encargos', 'Contabilidade', 'Outras despesas'],
+  'Impostos': ['Impostos', 'IPTU'],
+  'Retiradas': ['Pró-labore', 'Investidores'],
 };
 const ETAPAS = [
   ['novo', 'Novo contato'], ['contato', 'Em conversa'], ['experimental', 'Aula experimental'],
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const DIAS_L = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -403,12 +434,12 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos',
   tabContratos: 'contratos', filtroContrato: 'ativos',
-  tabFin: 'lancamentos', finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
+  tabFin: 'lancamentos', pgMes: mesDe(HOJE), pgModo: 'mes', pgAno: HOJE.slice(0, 4), finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
   tabCrm: 'funil', tabAgenda: 'semana', semana: 0,
 };
 let DB = null, MODO = 'carregando', somenteLeitura = false, USUARIO = null, EQUIPE = null, revLocal = 0;
@@ -651,7 +682,7 @@ function desenhar() {
   if (MODO === 'login') return;
   if (MODO === 'carregando' || (MODO === 'db' && carregadas.size < COLS.length)) { main.innerHTML = '<div class="carregando">Carregando dados…</div>'; return; }
   main.innerHTML = (MODO === 'demo' ? '<div class="aviso demo">Modo demonstração: você está vendo dados de exemplo e nada do que mudar aqui será salvo.</div>' : '') + (VIEWS[UI.view] || VIEWS.inicio)();
-  const sobre = { inicio: 'Painel', alunos: 'Alunos', aluno: 'Perfil do aluno', agenda: 'Agenda', contratos: 'Planos e contratos', financeiro: 'Financeiro', crm: 'Captação', config: 'Ajustes' }[UI.view] || 'Painel';
+  const sobre = { inicio: 'Painel', alunos: 'Alunos', aluno: 'Perfil do aluno', agenda: 'Agenda', contratos: 'Planos e contratos', financeiro: 'Financeiro', pagamentos: 'Pagamentos', crm: 'Captação', config: 'Ajustes' }[UI.view] || 'Painel';
   const h1 = main.querySelector('.topo h1, .perfil-topo h1');
   if (h1) h1.insertAdjacentHTML('beforebegin', '<span class="sobre">CT NORD — ' + sobre + '</span>');
   if (foco) { const el = document.getElementById(foco.id); if (el) { el.focus(); try { el.setSelectionRange(foco.ini, foco.fim); } catch (_) {} } }
@@ -1047,12 +1078,13 @@ function finDre() {
   const rec = {}, desp = {};
   pagamentosNoMes(m).forEach(({ l, p }) => { const alvo = l.tipo === 'receita' ? rec : desp; alvo[l.categoria] = (alvo[l.categoria] || 0) + p.valor; });
   const totRec = Object.values(rec).reduce((s, v) => s + v, 0);
-  const grupos = { 'Custos diretos': {}, 'Despesas operacionais': {}, 'Impostos': {} };
+  const grupos = { 'Custos diretos': {}, 'Despesas operacionais': {}, 'Impostos': {}, 'Retiradas': {} };
   for (const [c, v] of Object.entries(desp)) grupos[grupoDespesa(c)][c] = v;
   const tg = (g) => Object.values(grupos[g]).reduce((s, v) => s + v, 0);
   const margem = totRec - tg('Custos diretos');
   const operacional = margem - tg('Despesas operacionais');
   const resultado = operacional - tg('Impostos');
+  const sobra = resultado - tg('Retiradas');
   const pct = (v) => totRec ? ' <small style="display:inline">(' + (v / totRec * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%)</small>' : '';
   const linhasG = (g) => Object.entries(grupos[g]).sort((a, b) => b[1] - a[1]).map(([c, v]) => '<tr><td class="sub">' + esc(c) + '</td><td class="dir num">− ' + fR(v) + '</td></tr>').join('');
   let h = '<div class="filtros"><label for="dre-mes" style="font-weight:600">Mês</label><select id="dre-mes" data-ui="dreMes">' + mesesDisponiveis().map((x) => opt(x, nomeMes(x, true), x === m)).join('') + '</select></div>';
@@ -1065,8 +1097,154 @@ function finDre() {
     '<tr class="res"><td>= Resultado operacional' + pct(operacional) + '</td><td class="dir num">' + fR(operacional) + '</td></tr>' +
     '<tr class="grupo"><td>(−) Impostos</td><td class="dir num">− ' + fR(tg('Impostos')) + '</td></tr>' + linhasG('Impostos') +
     '<tr class="res"><td>= Resultado do mês' + pct(resultado) + '</td><td class="dir num">' + (resultado < 0 ? '−' : '') + fR(Math.abs(resultado)) + '</td></tr>' +
+    (tg('Retiradas') ? '<tr class="grupo"><td>(−) Retiradas (pró-labore e investidores)</td><td class="dir num">− ' + fR(tg('Retiradas')) + '</td></tr>' + linhasG('Retiradas') +
+      '<tr class="res"><td>= Sobra no caixa' + pct(sobra) + '</td><td class="dir num">' + (sobra < 0 ? '−' : '') + fR(Math.abs(sobra)) + '</td></tr>' : '') +
     '</tbody></table></div><p class="vazio">DRE gerencial pelo regime de caixa: considera o que de fato entrou e saiu em ' + nomeMes(m, true) + '.</p>';
   return h;
+}
+
+/* ---------- Pagamentos: gastos fixos e variáveis, mês a mês ---------- */
+// As contas fixas aparecem sozinhas em todo mês. Só viram lançamento quando são pagas ou têm o valor mudado.
+const fV = (v) => (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const alunosAtivosN = () => S.alunos.filter(alunoAtivo).length;
+const previstoCF = (c) => Math.round(((Number(c.valor) || 0) + (Number(c.porAluno) || 0) * alunosAtivosN()) * 100) / 100;
+const idContaCF = (c, mes) => 'lc_cf_' + c.id + '_' + mes;
+const cfPorId = (id) => S.contasfixas.find((c) => c.id === id);
+const ordemCF = (a, b) => (Number(a.dia) || 0) - (Number(b.dia) || 0) || a.nome.localeCompare(b.nome, 'pt-BR');
+
+// Linhas do mês: contas fixas (lançadas ou não) + gastos avulsos lançados no mês.
+function linhasDoMes(mes) {
+  const r = [];
+  const lancs = S.lancamentos.filter((l) => l.tipo === 'despesa' && mesDe(l.vencimento) === mes);
+  for (const c of S.contasfixas) {
+    const l = lancs.find((x) => x.id === idContaCF(c, mes));
+    if (l) { if (!l.cancelado) r.push({ k: 'l:' + l.id, cf: c, l }); continue; }
+    if (c.ativo === false || (c.desde || '') > mes) continue;
+    r.push({ k: 'cf:' + c.id + ':' + mes, cf: c, l: null });
+  }
+  for (const l of lancs) if (!l.cancelado && !(l.cfId && cfPorId(l.cfId))) r.push({ k: 'l:' + l.id, cf: null, l });
+  for (const x of r) {
+    x.nome = x.l ? x.l.descricao : x.cf.nome;
+    x.tipo = x.cf ? x.cf.tipo : (x.l.tipoCusto || 'variavel');
+    x.valor = x.l ? devidoDe(x.l) : previstoCF(x.cf);
+    x.venc = x.l ? x.l.vencimento : comDia(mes + '-01', Number(x.cf.dia) || 10);
+    x.pago = !!x.l && statusLanc(x.l) === 'pago';
+    x.pagoEm = x.pago ? ((x.l.pagamentos || []).slice(-1)[0] || {}).data : '';
+  }
+  return r.sort((a, b) => a.venc.localeCompare(b.venc) || a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+// Cria o lançamento de uma conta fixa que ainda não existe no mês.
+function lancDaLinha(x) {
+  if (x.l) return { ...x.l, pagamentos: [...(x.l.pagamentos || [])] };
+  return {
+    id: idContaCF(x.cf, mesDe(x.venc)), tipo: 'despesa', categoria: x.cf.categoria || 'Outras despesas', descricao: x.cf.nome, valor: x.valor, desconto: 0,
+    vencimento: x.venc, pagamentos: [], alunoId: '', contratoId: '', cancelado: false, formaPrevista: 'Pix', cfId: x.cf.id, tipoCusto: x.cf.tipo, criadoEm: new Date().toISOString(),
+  };
+}
+function acharLinha(k) {
+  const mes = k.startsWith('cf:') ? k.split(':')[2] : mesDe((S.lancamentos.find((l) => 'l:' + l.id === k) || {}).vencimento);
+  return linhasDoMes(mes).find((x) => x.k === k);
+}
+const entradasDoMes = (mes) => pagamentosNoMes(mes, 'receita');
+
+VIEWS.pagamentos = function () {
+  const ano = UI.pgModo === 'ano';
+  let h = '<div class="topo"><div><h1>Pagamentos</h1><p>Gastos fixos e variáveis do CT, mês a mês.</p></div><div class="acoes">' +
+    '<div class="seg" role="group" aria-label="Visão"><button class="btn" data-act="pg-modo" data-m="mes" aria-pressed="' + !ano + '">Mês</button><button class="btn" data-act="pg-modo" data-m="ano" aria-pressed="' + ano + '">Ano</button></div>' +
+    '<button class="btn" data-act="pg-editar">Contas fixas</button></div></div>';
+  return h + (ano ? pgAno() : pgMes());
+};
+
+function pgMes() {
+  const mes = UI.pgMes;
+  const linhas = linhasDoMes(mes);
+  const gastos = linhas.reduce((s, x) => s + x.valor, 0);
+  const pagas = linhas.filter((x) => x.pago);
+  const pago = pagas.reduce((s, x) => s + x.valor, 0);
+  const ent = entradasDoMes(mes);
+  const entrou = ent.reduce((s, x) => s + x.p.valor, 0);
+  const gordura = entrou - gastos;
+
+  let h = '<div class="pg-nav"><button class="btn peq" data-act="pg-mes" data-d="-1" aria-label="Mês anterior">‹</button><b>' + nomeMes(mes, true) + '</b>' +
+    '<button class="btn peq" data-act="pg-mes" data-d="1" aria-label="Próximo mês">›</button>' + (mes !== mesDe(HOJE) ? '<button class="btn link peq" data-act="pg-mes" data-d="0">Hoje</button>' : '') + '</div>';
+  h += '<div class="kpis pg-kpis">' +
+    '<div class="kpi"><span>Entrou</span><b>' + fR(entrou) + '</b><small>recebido no mês</small></div>' +
+    '<div class="kpi"><span>Gastos</span><b>' + fR(gastos) + '</b><small>pago ' + fR(pago) + ' · falta ' + fR(gastos - pago) + '</small></div>' +
+    '<div class="kpi' + (gordura < 0 ? ' bad' : '') + '"><span>Gordura</span><b>' + (gordura < 0 ? '−' : '') + fR(Math.abs(gordura)) + '</b><small>entrou menos gastos</small></div></div>';
+  h += '<div class="pg-prog"><span>' + pagas.length + ' de ' + linhas.length + ' contas pagas</span><i><b style="width:' + (linhas.length ? Math.round(pagas.length / linhas.length * 100) : 0) + '%"></b></i></div>';
+
+  const bloco = (tipo, titulo) => {
+    const xs = linhas.filter((x) => x.tipo === tipo);
+    const tot = xs.reduce((s, x) => s + x.valor, 0);
+    let b = '<section class="painel pg-bloco"><header><h2>' + titulo + '</h2><small>' + fR(tot) + '</small></header><ul class="lista pg-lista">';
+    if (!xs.length && tipo === 'fixo') b += '<li class="vazio">Nenhuma conta fixa neste mês.</li>';
+    b += xs.map(linhaPg).join('');
+    if (tipo === 'variavel') b += '<li class="pg-add"><form data-form="pg-gasto" class="pg-add-form"><input name="nome" placeholder="Novo gasto (ex.: kimonos, manutenção)" aria-label="Nome do gasto" required>' +
+      '<input name="valor" inputmode="decimal" placeholder="0,00" aria-label="Valor" class="pg-valor" required><label class="check"><input type="checkbox" name="pago" checked><span>já pago</span></label><button class="btn peq pri" type="submit">Adicionar</button></form></li>';
+    return b + '</ul></section>';
+  };
+  h += bloco('fixo', 'Fixos') + bloco('variavel', 'Variáveis');
+
+  const porCat = {}; ent.forEach(({ l, p }) => { porCat[l.categoria] = (porCat[l.categoria] || 0) + p.valor; });
+  h += '<section class="painel pg-bloco"><header><h2>Entradas</h2><button class="btn peq" data-act="pg-entrada">+ Entrada</button></header>' +
+    (Object.keys(porCat).length ? '<ul class="lista">' + Object.entries(porCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => '<li><div class="cresce"><b>' + esc(c) + '</b></div><b class="num">' + fR(v) + '</b></li>').join('') + '</ul>'
+      : '<p class="vazio">Nada recebido em ' + nomeMes(mes, true) + '. Mensalidades recebidas no sistema entram aqui sozinhas; repasses do Gympass e do TotalPass você lança em + Entrada.</p>') + '</section>';
+  return h;
+}
+function linhaPg(x) {
+  const st = x.pago ? 'pago em ' + fData(x.pagoEm).slice(0, 5) : x.venc < HOJE ? '<b class="neg">atrasada · venceu ' + fData(x.venc).slice(0, 5) + '</b>' : x.venc === HOJE ? '<b>vence hoje</b>' : 'vence ' + fData(x.venc).slice(0, 5);
+  const calc = x.cf && Number(x.cf.porAluno) && !x.l ? ' · ' + fR(x.cf.valor) + ' + ' + fR(x.cf.porAluno) + ' × ' + alunosAtivosN() + ' alunos' : '';
+  return '<li class="pg-linha' + (x.pago ? ' pago' : '') + '"><button class="pg-check" data-act="pg-toggle" data-k="' + esc(x.k) + '" aria-pressed="' + x.pago + '" aria-label="' + (x.pago ? 'Desmarcar pagamento de ' : 'Marcar como pago: ') + esc(x.nome) + '">' + (x.pago ? '✓' : '') + '</button>' +
+    '<div class="cresce"><b>' + esc(x.nome) + '</b><small>' + st + calc + '</small></div>' +
+    '<input class="pg-valor" inputmode="decimal" value="' + fV(x.valor) + '" data-pg-valor="' + esc(x.k) + '" aria-label="Valor de ' + esc(x.nome) + '">' +
+    (!x.cf ? '<button class="btn link peq" data-act="pg-remover" data-k="' + esc(x.k) + '" aria-label="Remover ' + esc(x.nome) + '">Remover</button>' : '') + '</li>';
+}
+
+function pgAno() {
+  const ano = UI.pgAno;
+  const meses = Array.from({ length: 12 }, (_, i) => ano + '-' + String(i + 1).padStart(2, '0'));
+  const porMes = Object.fromEntries(meses.map((m) => [m, linhasDoMes(m)]));
+  const chaves = new Map();
+  for (const m of meses) for (const x of porMes[m]) {
+    const k = x.cf ? 'cf:' + x.cf.id : 'outros';
+    if (!chaves.has(k)) chaves.set(k, { nome: x.cf ? x.cf.nome : 'Outros gastos', ord: x.cf || null });
+  }
+  const linhas = [...chaves.entries()].sort((a, b) => (a[0] === 'outros') - (b[0] === 'outros') || (a[1].ord && b[1].ord ? ordemCF(a[1].ord, b[1].ord) : 0));
+  const cel = (m, k) => {
+    const xs = porMes[m].filter((x) => (k === 'outros' ? !x.cf : x.cf && 'cf:' + x.cf.id === k));
+    if (!xs.length) return '<td class="dir num pg-vazio">—</td>';
+    const v = xs.reduce((s, x) => s + x.valor, 0); const pago = xs.every((x) => x.pago);
+    const atras = !pago && xs.some((x) => x.venc < HOJE);
+    return '<td class="dir num' + (pago ? ' pg-ok' : atras ? ' pg-atras' : ' pg-prev') + '">' + (pago ? '✓ ' : '') + fV(v) + '</td>';
+  };
+  const tot = (m) => porMes[m].reduce((s, x) => s + x.valor, 0);
+  const ent = (m) => entradasDoMes(m).reduce((s, x) => s + x.p.valor, 0);
+  let h = '<div class="pg-nav"><button class="btn peq" data-act="pg-ano" data-d="-1" aria-label="Ano anterior">‹</button><b>' + ano + '</b><button class="btn peq" data-act="pg-ano" data-d="1" aria-label="Próximo ano">›</button>' +
+    '<small class="pg-legenda">✓ pago · <span class="pg-atras">atrasado</span> · <span class="pg-prev">a pagar</span></small></div>';
+  h += '<div class="tabela-wrap"><table class="pg-ano"><thead><tr><th>Conta</th>' + meses.map((m) => '<th class="dir"><button class="btn link peq" data-act="pg-abrir-mes" data-m="' + m + '">' + MESES[Number(m.slice(5)) - 1] + '</button></th>').join('') + '</tr></thead><tbody>' +
+    (linhas.length ? linhas.map(([k, x]) => '<tr><td>' + esc(x.nome) + '</td>' + meses.map((m) => cel(m, k)).join('') + '</tr>').join('') : '<tr><td colspan="13" class="vazio">Nenhuma conta neste ano.</td></tr>') +
+    '<tr class="pg-tot"><td>Gastos</td>' + meses.map((m) => '<td class="dir num">' + (tot(m) ? fV(tot(m)) : '—') + '</td>').join('') + '</tr>' +
+    '<tr><td>Entrou</td>' + meses.map((m) => '<td class="dir num">' + (ent(m) ? fV(ent(m)) : '—') + '</td>').join('') + '</tr>' +
+    '<tr class="pg-tot"><td>Gordura</td>' + meses.map((m) => { const g = ent(m) - tot(m); return '<td class="dir num' + (g < 0 ? ' neg' : '') + '">' + (tot(m) || ent(m) ? (g < 0 ? '−' : '') + fV(Math.abs(g)) : '—') + '</td>'; }).join('') + '</tr>' +
+    '</tbody></table></div>';
+  return h;
+}
+
+function modalContasFixas() {
+  const cs = S.contasfixas.slice().sort((a, b) => (a.tipo === 'fixo' ? 0 : 1) - (b.tipo === 'fixo' ? 0 : 1) || ordemCF(a, b));
+  const linha = (c, i) => '<tr><td><input name="nome' + i + '" value="' + esc(c.nome || '') + '" aria-label="Nome" placeholder="Nova conta"><input type="hidden" name="id' + i + '" value="' + esc(c.id || '') + '"></td>' +
+    '<td><select name="tipo' + i + '" aria-label="Tipo">' + opt('fixo', 'Fixo', c.tipo !== 'variavel') + opt('variavel', 'Variável', c.tipo === 'variavel') + '</select></td>' +
+    '<td><input name="valor' + i + '" inputmode="decimal" value="' + (c.valor != null ? fV(c.valor) : '') + '" placeholder="0,00" aria-label="Valor" class="pg-valor"></td>' +
+    '<td><input name="por' + i + '" inputmode="decimal" value="' + (Number(c.porAluno) ? fV(c.porAluno) : '') + '" placeholder="—" aria-label="Valor por aluno" class="pg-valor" style="width:80px"></td>' +
+    '<td><input name="dia' + i + '" type="number" min="1" max="31" value="' + (c.dia || '') + '" placeholder="10" aria-label="Dia" style="width:64px"></td>' +
+    '<td style="text-align:center"><input type="checkbox" name="ativo' + i + '" aria-label="Ativa"' + (c.ativo !== false ? ' checked' : '') + ' style="width:18px;height:18px"></td></tr>';
+  const novas = [{}, {}, {}];
+  abrirModal('Contas fixas', '<form data-form="pg-fixas"><p class="vazio" style="padding:0">Aparecem sozinhas em todo mês. O que já foi pago não muda. ' +
+    '"Por aluno" soma esse valor × alunos ativos (hoje ' + alunosAtivosN() + '), como a comissão. Desmarque "Ativa" para parar de lançar.</p>' +
+    '<div class="tabela-wrap"><table class="pg-edit"><thead><tr><th>Conta</th><th>Tipo</th><th>Valor (R$)</th><th>Por aluno</th><th>Dia</th><th>Ativa</th></tr></thead><tbody>' +
+    [...cs, ...novas].map(linha).join('') + '</tbody></table></div><input type="hidden" name="n" value="' + (cs.length + novas.length) + '">' +
+    rodape('Salvar') + '</form>');
+  document.querySelector('.modal').classList.add('largo');
 }
 
 /* ---------- CRM ---------- */
@@ -1591,6 +1769,28 @@ const FORMS = {
     toast((v.c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + txtCobr(v) + '.');
     UI.view = 'aluno'; UI.alunoId = v.c.alunoId; render();
   },
+  async 'pg-gasto'(d) {
+    const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe o valor do gasto.'); return; }
+    const venc = UI.pgMes === mesDe(HOJE) ? HOJE : UI.pgMes + '-01';
+    const l = { id: novoId('lc'), tipo: 'despesa', categoria: 'Outras despesas', descricao: d.nome.trim(), valor, desconto: 0, vencimento: venc,
+      pagamentos: d.pago ? [{ data: venc > HOJE ? HOJE : venc, valor, forma: 'Pix' }] : [], alunoId: '', contratoId: '', cancelado: false, formaPrevista: 'Pix', tipoCusto: 'variavel', criadoEm: new Date().toISOString() };
+    await salvar('lancamentos', l); toast('Gasto adicionado.');
+    const f = document.querySelector('form[data-form="pg-gasto"] input[name="nome"]'); if (f) f.focus();
+  },
+  async 'pg-fixas'(d) {
+    const n = Number(d.n) || 0; const lista = [];
+    for (let i = 0; i < n; i++) {
+      const nome = String(d['nome' + i] || '').trim(); const id = d['id' + i];
+      if (!nome) continue;
+      const ex = id ? cfPorId(id) : null;
+      const c = { ...(ex || { id: novoId('cf'), desde: mesDe(HOJE), categoria: 'Outras despesas', criadoEm: new Date().toISOString() }), nome, tipo: d['tipo' + i] === 'variavel' ? 'variavel' : 'fixo',
+        valor: numCampo(d['valor' + i]), porAluno: numCampo(d['por' + i]), dia: Math.min(31, Math.max(1, Number(d['dia' + i]) || 10)), ativo: !!d['ativo' + i] };
+      if (!ex || JSON.stringify(ex) !== JSON.stringify(c)) lista.push(c);
+    }
+    fecharModal();
+    if (!lista.length) { toast('Nada mudou.'); return; }
+    if (await salvarVarios('contasfixas', lista)) toast('Contas fixas salvas.');
+  },
   async baixa(d) {
     const l = S.lancamentos.find((x) => x.id === d.id); if (!l) return;
     const valor = numCampo(d.valor), desc = numCampo(d.desconto);
@@ -1746,6 +1946,23 @@ const ACOES = {
     const l = S.lancamentos.find((x) => x.id === ds.id); const pg = [...l.pagamentos]; pg.splice(Number(ds.i), 1);
     const n = { ...l, pagamentos: pg }; await salvar('lancamentos', n); modalDetalhes(n); toast('Pagamento estornado.');
   },
+  'pg-modo'(ds) { UI.pgModo = ds.m; render(); },
+  'pg-mes'(ds) { const d = Number(ds.d); UI.pgMes = d === 0 ? mesDe(HOJE) : mesDe(addMeses(UI.pgMes + '-01', d)); render(); },
+  'pg-ano'(ds) { UI.pgAno = String(Number(UI.pgAno) + Number(ds.d)); render(); },
+  'pg-abrir-mes'(ds) { UI.pgMes = ds.m; UI.pgModo = 'mes'; render(); window.scrollTo(0, 0); },
+  'pg-editar'() { modalContasFixas(); },
+  'pg-entrada'() { modalLanc({ tipo: 'receita', titulo: 'Nova entrada', categoria: 'Wellhub / TotalPass', vencimento: UI.pgMes === mesDe(HOJE) ? HOJE : UI.pgMes + '-01', pago: true }); },
+  async 'pg-toggle'(ds) {
+    const x = acharLinha(ds.k); if (!x) return;
+    const l = lancDaLinha(x);
+    if (x.pago) l.pagamentos = [];
+    else { const data = mesDe(x.venc) === mesDe(HOJE) || x.venc > HOJE ? HOJE : x.venc; l.pagamentos.push({ data, valor: saldoDe(l), forma: l.formaPrevista || 'Pix' }); }
+    await salvar('lancamentos', l);
+  },
+  'pg-remover'(ds) {
+    const x = acharLinha(ds.k); if (!x || !x.l) return;
+    confirmar('Remover gasto', 'Remover <b>' + esc(x.nome) + '</b> de ' + nomeMes(mesDe(x.venc), true) + '?', 'Remover', async () => { await salvar('lancamentos', { ...x.l, cancelado: true }); toast('Gasto removido.'); });
+  },
   'novo-lead'() { modalLead(); },
   'editar-lead'(ds) { modalLead(leadPorId(ds.id)); },
   'excluir-lead'(ds) { const l = leadPorId(ds.id); confirmar('Excluir interessado', 'Excluir <b>' + esc(l.nome) + '</b>?', 'Excluir', async () => { await remover('leads', l.id); toast('Interessado excluído.'); }); },
@@ -1834,6 +2051,15 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => {
   const el = e.target;
+  if (el.dataset && el.dataset.pgValor) {
+    const x = acharLinha(el.dataset.pgValor); const v = numCampo(el.value);
+    if (!x || v <= 0) { if (x) el.value = fV(x.valor); toast('Informe um valor maior que zero.'); return; }
+    if (Math.abs(v - x.valor) < 0.005) { el.value = fV(v); return; }
+    const l = lancDaLinha(x); l.valor = Math.round((v + (Number(l.desconto) || 0)) * 100) / 100;
+    if (x.pago) l.pagamentos = [{ ...(l.pagamentos.slice(-1)[0] || { data: HOJE, forma: 'Pix' }), valor: v }];
+    salvar('lancamentos', l).then(() => toast('Valor atualizado.'));
+    return;
+  }
   if (el.dataset && el.dataset.addChamada !== undefined && el.value) {
     const a = alunoPorId(el.value); const ul = document.getElementById('ch-lista');
     if (a && ul) { const v = ul.querySelector('li.vazio'); if (v) v.remove(); ul.insertAdjacentHTML('beforeend', linhaChamada(a, el.dataset.addChamada, true)); el.querySelector('option[value="' + a.id + '"]').remove(); el.value = ''; }

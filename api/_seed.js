@@ -443,5 +443,150 @@ export const SEED = {
    },
    "id": "geral"
   }
- ]
+ ],
+  "contasfixas": [
+   {
+    "id": "cf_aluguel",
+    "nome": "Aluguel",
+    "categoria": "Aluguel",
+    "tipo": "fixo",
+    "valor": 5000,
+    "porAluno": 0,
+    "dia": 20,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_catraca",
+    "nome": "Catraca",
+    "categoria": "Sistemas e taxas",
+    "tipo": "fixo",
+    "valor": 325,
+    "porAluno": 0,
+    "dia": 20,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_iptu",
+    "nome": "IPTU",
+    "categoria": "IPTU",
+    "tipo": "fixo",
+    "valor": 557,
+    "porAluno": 0,
+    "dia": 10,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_internet",
+    "nome": "Internet",
+    "categoria": "Água, luz e internet",
+    "tipo": "fixo",
+    "valor": 100,
+    "porAluno": 0,
+    "dia": 20,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_sistema",
+    "nome": "Sistema",
+    "categoria": "Sistemas e taxas",
+    "tipo": "fixo",
+    "valor": 300,
+    "porAluno": 0,
+    "dia": 16,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_contadora",
+    "nome": "Contadora",
+    "categoria": "Contabilidade",
+    "tipo": "fixo",
+    "valor": 1000,
+    "porAluno": 0,
+    "dia": 10,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_investidores",
+    "nome": "Investidores",
+    "categoria": "Investidores",
+    "tipo": "fixo",
+    "valor": 500,
+    "porAluno": 0,
+    "dia": 20,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_matheus",
+    "nome": "Matheus",
+    "categoria": "Pró-labore",
+    "tipo": "fixo",
+    "valor": 5750,
+    "porAluno": 0,
+    "dia": 5,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_lucca",
+    "nome": "Lucca",
+    "categoria": "Pró-labore",
+    "tipo": "fixo",
+    "valor": 2000,
+    "porAluno": 0,
+    "dia": 5,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_luz",
+    "nome": "Luz",
+    "categoria": "Água, luz e internet",
+    "tipo": "variavel",
+    "valor": 650,
+    "porAluno": 0,
+    "dia": 5,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_agua",
+    "nome": "Água",
+    "categoria": "Água, luz e internet",
+    "tipo": "variavel",
+    "valor": 300,
+    "porAluno": 0,
+    "dia": 20,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_comissao",
+    "nome": "Comissão",
+    "categoria": "Professores",
+    "tipo": "variavel",
+    "valor": 1800,
+    "porAluno": 50,
+    "dia": 5,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   },
+   {
+    "id": "cf_compass",
+    "nome": "Com. pass",
+    "categoria": "Professores",
+    "tipo": "variavel",
+    "valor": 1770,
+    "porAluno": 0,
+    "dia": 20,
+    "ativo": true,
+    "criadoEm": "2026-10-27T12:00:00.000Z"
+   }
+  ]
 };
