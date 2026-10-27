@@ -88,9 +88,9 @@ main { padding-inline: 36px; padding-block: 32px 56px; min-width: 0; }
 
 /* Números de resumo: células separadas por filete */
 .kpis { display: flex; flex-wrap: wrap; border-top: 1px solid var(--line); border-left: 1px solid var(--line); margin-bottom: 28px; }
-.kpi { flex: 1 1 210px; background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.kpi { flex: 1 1 190px; background: var(--surface); padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; min-width: 0; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .kpi span { color: var(--muted); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; }
-.kpi b { font-stretch: 125%; font-size: clamp(1.2rem, .75rem + 1vw, 1.75rem); font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.kpi b { font-stretch: 125%; font-size: clamp(1.3rem, 1rem + 1vw, 1.75rem); font-weight: 800; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 .kpi small { color: var(--muted); font-size: .8rem; }
 .kpi.bad { background: var(--inv-bg); }
 .kpi.bad span, .kpi.bad small { color: var(--inv-fg); opacity: .75; }
@@ -342,16 +342,15 @@ const FORMAS = ['Pix', 'Dinheiro', 'Cartão de débito', 'Cartão de crédito', 
 const CAT_RECEITA = ['Mensalidades', 'Matrículas', 'Produtos', 'Aulas avulsas', 'Wellhub / TotalPass', 'Outras receitas'];
 const CAT_DESPESA = {
   'Custos diretos': ['Professores', 'Materiais e equipamentos', 'Produtos para revenda'],
-  'Despesas operacionais': ['Aluguel', 'Água, luz e internet', 'Marketing', 'Sistemas e taxas', 'Manutenção e limpeza', 'Salários e encargos', 'Seguros', 'Contabilidade', 'Outras despesas'],
-  'Impostos': ['Impostos', 'IPTU'],
-  'Retiradas': ['Pró-labore', 'Investidores'],
+  'Despesas operacionais': ['Aluguel', 'Água, luz e internet', 'Marketing', 'Sistemas e taxas', 'Manutenção e limpeza', 'Salários e encargos', 'Outras despesas'],
+  'Impostos': ['Impostos'],
 };
 const ETAPAS = [
   ['novo', 'Novo contato'], ['contato', 'Em conversa'], ['experimental', 'Aula experimental'],
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'recorrentes'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const DIAS_L = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -404,12 +403,12 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], recorrentes: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos',
   tabContratos: 'contratos', filtroContrato: 'ativos',
-  tabFin: 'lancamentos', pagMes: mesDe(HOJE), pagFiltro: 'todas', finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
+  tabFin: 'lancamentos', finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
   tabCrm: 'funil', tabAgenda: 'semana', semana: 0,
 };
 let DB = null, MODO = 'carregando', somenteLeitura = false, USUARIO = null, EQUIPE = null, revLocal = 0;
@@ -941,8 +940,8 @@ VIEWS.contratos = function () {
 /* ---------- Financeiro ---------- */
 VIEWS.financeiro = function () {
   let h = '<div class="topo"><div><h1>Financeiro</h1><p>Contas a receber e a pagar, caixa, previsão e resultado do mês.</p></div><div class="acoes"><button class="btn" data-act="novo-lanc" data-tipo="despesa">Nova conta a pagar</button><button class="btn pri" data-act="novo-lanc" data-tipo="receita">Nova receita</button></div></div>';
-  h += '<div class="tabs" role="tablist">' + tab('tabFin', 'lancamentos', 'Contas') + tab('tabFin', 'pagamentos', 'Pagamentos') + tab('tabFin', 'caixa', 'Caixa e fluxo') + tab('tabFin', 'inadimplencia', 'Inadimplência') + tab('tabFin', 'dre', 'DRE do mês') + '</div>';
-  return h + ({ lancamentos: finContas, pagamentos: finPagamentos, caixa: finCaixa, inadimplencia: finInad, dre: finDre }[UI.tabFin] || finContas)();
+  h += '<div class="tabs" role="tablist">' + tab('tabFin', 'lancamentos', 'Contas') + tab('tabFin', 'caixa', 'Caixa e fluxo') + tab('tabFin', 'inadimplencia', 'Inadimplência') + tab('tabFin', 'dre', 'DRE do mês') + '</div>';
+  return h + ({ lancamentos: finContas, caixa: finCaixa, inadimplencia: finInad, dre: finDre }[UI.tabFin] || finContas)();
 };
 function mesesDisponiveis() {
   const set = new Set([mesDe(HOJE)]);
@@ -1048,13 +1047,12 @@ function finDre() {
   const rec = {}, desp = {};
   pagamentosNoMes(m).forEach(({ l, p }) => { const alvo = l.tipo === 'receita' ? rec : desp; alvo[l.categoria] = (alvo[l.categoria] || 0) + p.valor; });
   const totRec = Object.values(rec).reduce((s, v) => s + v, 0);
-  const grupos = { 'Custos diretos': {}, 'Despesas operacionais': {}, 'Impostos': {}, 'Retiradas': {} };
+  const grupos = { 'Custos diretos': {}, 'Despesas operacionais': {}, 'Impostos': {} };
   for (const [c, v] of Object.entries(desp)) grupos[grupoDespesa(c)][c] = v;
   const tg = (g) => Object.values(grupos[g]).reduce((s, v) => s + v, 0);
   const margem = totRec - tg('Custos diretos');
   const operacional = margem - tg('Despesas operacionais');
   const resultado = operacional - tg('Impostos');
-  const sobra = resultado - tg('Retiradas');
   const pct = (v) => totRec ? ' <small style="display:inline">(' + (v / totRec * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%)</small>' : '';
   const linhasG = (g) => Object.entries(grupos[g]).sort((a, b) => b[1] - a[1]).map(([c, v]) => '<tr><td class="sub">' + esc(c) + '</td><td class="dir num">− ' + fR(v) + '</td></tr>').join('');
   let h = '<div class="filtros"><label for="dre-mes" style="font-weight:600">Mês</label><select id="dre-mes" data-ui="dreMes">' + mesesDisponiveis().map((x) => opt(x, nomeMes(x, true), x === m)).join('') + '</select></div>';
@@ -1067,196 +1065,8 @@ function finDre() {
     '<tr class="res"><td>= Resultado operacional' + pct(operacional) + '</td><td class="dir num">' + fR(operacional) + '</td></tr>' +
     '<tr class="grupo"><td>(−) Impostos</td><td class="dir num">− ' + fR(tg('Impostos')) + '</td></tr>' + linhasG('Impostos') +
     '<tr class="res"><td>= Resultado do mês' + pct(resultado) + '</td><td class="dir num">' + (resultado < 0 ? '−' : '') + fR(Math.abs(resultado)) + '</td></tr>' +
-    (tg('Retiradas') ? '<tr class="grupo"><td>(−) Retiradas (pró-labore e investidores)</td><td class="dir num">− ' + fR(tg('Retiradas')) + '</td></tr>' + linhasG('Retiradas') +
-      '<tr class="res"><td>= Sobra no caixa' + pct(sobra) + '</td><td class="dir num">' + (sobra < 0 ? '−' : '') + fR(Math.abs(sobra)) + '</td></tr>' : '') +
     '</tbody></table></div><p class="vazio">DRE gerencial pelo regime de caixa: considera o que de fato entrou e saiu em ' + nomeMes(m, true) + '.</p>';
   return h;
-}
-
-/* ---------- Pagamentos: contas fixas e variáveis do CT ---------- */
-// Sugestões tiradas da planilha de controle de gastos do CT (valores mais recentes de cada conta).
-// Aparecem só na primeira vez, para o CT conferir e cadastrar.
-const SUGESTOES_FIXAS = [
-  { nome: 'Aluguel', categoria: 'Aluguel', tipo: 'fixo', calculo: 'fixo', valor: 5000, dia: 10, marcado: true },
-  { nome: 'Seguro fiança', categoria: 'Seguros', tipo: 'fixo', calculo: 'fixo', valor: 609.58, dia: 8, marcado: true },
-  { nome: 'IPTU', categoria: 'IPTU', tipo: 'fixo', calculo: 'fixo', valor: 557.51, dia: 10, marcado: true },
-  { nome: 'Luz', categoria: 'Água, luz e internet', tipo: 'variavel', calculo: 'estimado', valor: 284.04, dia: 5, marcado: true },
-  { nome: 'Água', categoria: 'Água, luz e internet', tipo: 'variavel', calculo: 'estimado', valor: 200, dia: 20, marcado: true },
-  { nome: 'Internet', categoria: 'Água, luz e internet', tipo: 'fixo', calculo: 'fixo', valor: 167, dia: 15, marcado: true },
-  { nome: 'Catraca', categoria: 'Sistemas e taxas', tipo: 'fixo', calculo: 'fixo', valor: 325, dia: 20, marcado: true },
-  { nome: 'Sistema (ERP)', categoria: 'Sistemas e taxas', tipo: 'fixo', calculo: 'fixo', valor: 139, dia: 15, marcado: true },
-  { nome: 'Limpeza', categoria: 'Manutenção e limpeza', tipo: 'fixo', calculo: 'fixo', valor: 250, dia: 1, marcado: true },
-  { nome: 'Comissão dos professores', categoria: 'Professores', tipo: 'variavel', calculo: 'porAluno', valor: 300, porAluno: 50, dia: 5, marcado: true },
-  { nome: 'Comissão dos professores (TotalPass / Wellhub)', categoria: 'Professores', tipo: 'variavel', calculo: 'estimado', valor: 1770, dia: 20, marcado: true },
-  { nome: 'Contabilidade', categoria: 'Contabilidade', tipo: 'fixo', calculo: 'fixo', valor: 1000, dia: 10, marcado: true },
-  { nome: 'Imposto', categoria: 'Impostos', tipo: 'fixo', calculo: 'fixo', valor: 50, dia: 20, marcado: true },
-  { nome: 'Investidores', categoria: 'Investidores', tipo: 'fixo', calculo: 'fixo', valor: 500, dia: 20, marcado: true },
-  { nome: 'Pró-labore Lucca', categoria: 'Pró-labore', tipo: 'fixo', calculo: 'fixo', valor: 2000, dia: 5, marcado: false },
-  { nome: 'Pró-labore Matheus', categoria: 'Pró-labore', tipo: 'fixo', calculo: 'fixo', valor: 5750, dia: 5, marcado: false },
-];
-const CALCULO_TXT = { fixo: 'Valor fixo', estimado: 'Valor muda todo mês', porAluno: 'Base + valor por aluno' };
-// Alunos ativos que pagam mensalidade ao CT (TotalPass e Wellhub ficam de fora, como na planilha).
-const alunosPagantes = () => S.alunos.filter((a) => { const c = contratoVigente(a.id); return c && c.forma !== 'app' && statusContrato(c) !== 'futuro'; }).length;
-const previstoRec = (r) => Math.round(((Number(r.valor) || 0) + (r.calculo === 'porAluno' ? (Number(r.porAluno) || 0) * alunosPagantes() : 0)) * 100) / 100;
-const idContaRec = (r, mes) => 'lc_rc_' + r.id + '_' + mes;
-const ehFixo = (l) => l.tipoCusto ? l.tipoCusto === 'fixo' : false;
-const despesasDoMes = (mes) => S.lancamentos.filter((l) => l.tipo === 'despesa' && !l.cancelado && mesDe(l.vencimento) === mes);
-// Contas fixas ativas que ainda não foram lançadas no mês (só a partir do mês em que foram cadastradas).
-const fixasFaltando = (mes) => S.recorrentes.filter((r) => r.ativo !== false && (r.desde || '') <= mes && !S.lancamentos.some((l) => l.id === idContaRec(r, mes)));
-function contaDaRecorrente(r, mes) {
-  return {
-    id: idContaRec(r, mes), tipo: 'despesa', categoria: r.categoria, descricao: r.nome, valor: previstoRec(r), desconto: 0,
-    vencimento: comDia(mes + '-01', Number(r.dia) || 10), pagamentos: [], alunoId: '', contratoId: '', cancelado: false, formaPrevista: 'Pix',
-    recorrenteId: r.id, tipoCusto: r.tipo || 'fixo', estimado: r.calculo === 'estimado', criadoEm: new Date().toISOString(),
-  };
-}
-// Ticket médio das mensalidades em vigor (sem TotalPass e Wellhub).
-function ticketMensal() {
-  const cs = S.contratos.filter((c) => ['ativo', 'avencer'].includes(statusContrato(c)) && c.forma !== 'app');
-  return cs.length ? cs.reduce((s, c) => s + Math.max(0, c.valorMensal - (c.desconto || 0)), 0) / cs.length : 0;
-}
-function pillConta(l) {
-  const st = statusLanc(l);
-  if (st === 'pago') { const ult = (l.pagamentos || []).slice(-1)[0]; return pill('ok', 'Pago' + (ult ? ' ' + fData(ult.data).slice(0, 5) : '')); }
-  if (st === 'aberto' && l.vencimento === HOJE) return pill('warn', 'Vence hoje');
-  return pillLanc(l);
-}
-
-function finPagamentos() {
-  const mes = UI.pagMes;
-  const todas = despesasDoMes(mes).sort((a, b) => a.vencimento.localeCompare(b.vencimento) || a.descricao.localeCompare(b.descricao, 'pt-BR'));
-  const faltam = fixasFaltando(mes);
-  const total = todas.reduce((s, l) => s + devidoDe(l), 0);
-  const fixos = todas.filter(ehFixo).reduce((s, l) => s + devidoDe(l), 0);
-  const pago = todas.reduce((s, l) => s + Math.min(pagoDe(l), devidoDe(l)), 0);
-  const abertas = todas.filter((l) => statusLanc(l) !== 'pago');
-  const atrasadas = abertas.filter((l) => statusLanc(l) === 'atrasado');
-  const recebido = pagamentosNoMes(mes, 'receita').reduce((s, x) => s + x.p.valor, 0);
-  const saiu = pagamentosNoMes(mes, 'despesa').reduce((s, x) => s + x.p.valor, 0);
-  const ativos = S.alunos.filter(alunoAtivo).length;
-  const tk = ticketMensal();
-  const prevFaltam = faltam.reduce((s, r) => s + previstoRec(r), 0);
-
-  let h = '<div class="filtros"><button class="btn peq" data-act="pag-mes" data-d="-1" aria-label="Mês anterior">‹</button>' +
-    '<b style="font-stretch:112.5%;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;min-width:150px;text-align:center">' + nomeMes(mes, true) + '</b>' +
-    '<button class="btn peq" data-act="pag-mes" data-d="1" aria-label="Próximo mês">›</button>' + (mes !== mesDe(HOJE) ? '<button class="btn link peq" data-act="pag-mes" data-d="0">Voltar para este mês</button>' : '') +
-    '<span style="flex:1"></span><button class="btn" data-act="novo-gasto">+ Gasto variável</button></div>';
-
-  if (!S.recorrentes.length) h += blocoSugestoes();
-  else if (faltam.length) {
-    h += '<div class="aviso" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>' + faltam.length + ' conta(s) fixa(s) de ' + nomeMes(mes, true) + ' ainda não lançada(s)</b> · ' +
-      fR(prevFaltam) + ' previstos (' + esc(faltam.slice(0, 4).map((r) => r.nome).join(', ') + (faltam.length > 4 ? '…' : '')) + ')</span>' +
-      '<button class="btn pri peq" data-act="lancar-fixas">Lançar contas do mês</button></div>';
-  }
-
-  h += '<div class="kpis">' +
-    '<div class="kpi"><span>Gastos do mês</span><b>' + fR(total + prevFaltam) + '</b><small>fixos ' + fR(fixos + faltam.filter((r) => r.tipo === 'fixo').reduce((s, r) => s + previstoRec(r), 0)) + ' · variáveis ' + fR(total - fixos + faltam.filter((r) => r.tipo !== 'fixo').reduce((s, r) => s + previstoRec(r), 0)) + '</small></div>' +
-    '<div class="kpi"><span>Já pago</span><b>' + fR(pago) + '</b><small>' + todas.filter((l) => statusLanc(l) === 'pago').length + ' de ' + todas.length + ' conta(s)</small></div>' +
-    '<div class="kpi ' + (atrasadas.length ? 'bad' : '') + '"><span>Falta pagar</span><b>' + fR(abertas.reduce((s, l) => s + saldoDe(l), 0) + prevFaltam) + '</b><small>' + (atrasadas.length ? atrasadas.length + ' em atraso' : 'nada em atraso') + '</small></div>' +
-    '<div class="kpi"><span>Recebido no mês</span><b>' + fR(recebido) + '</b><small>sobra no caixa: ' + (recebido - saiu < 0 ? '−' : '') + fR(Math.abs(recebido - saiu)) + '</small></div>' +
-    '<div class="kpi"><span>Custo por aluno</span><b>' + (ativos && total + prevFaltam > 0 ? fR((total + prevFaltam) / ativos) : '—') + '</b><small>' + ativos + ' aluno(s) ativo(s)</small></div>' +
-    '<div class="kpi"><span>Ponto de equilíbrio</span><b>' + (tk && total + prevFaltam > 0 ? Math.ceil((total + prevFaltam) / tk) + ' alunos' : '—') + '</b><small>' + (tk ? 'pagando o ticket médio de ' + fR(tk) : 'sem mensalidades em vigor') + '</small></div></div>';
-
-  const filtro = UI.pagFiltro;
-  const lista = todas.filter((l) => filtro === 'todas' || (filtro === 'pagar' ? statusLanc(l) !== 'pago' : filtro === 'pagas' ? statusLanc(l) === 'pago' : filtro === 'fixos' ? ehFixo(l) : !ehFixo(l)));
-  h += '<section class="painel" style="margin-bottom:20px"><header><h2>Contas de ' + nomeMes(mes, true) + '</h2><div class="filtros" style="margin:0">' +
-    chip('pagFiltro', 'todas', 'Todas', todas.length) + chip('pagFiltro', 'pagar', 'A pagar', abertas.length) + chip('pagFiltro', 'pagas', 'Pagas') + chip('pagFiltro', 'fixos', 'Fixos') + chip('pagFiltro', 'variaveis', 'Variáveis') + '</div></header>';
-  if (!lista.length) h += '<p class="vazio">' + (todas.length ? 'Nenhuma conta neste filtro.' : S.recorrentes.length ? 'Nenhuma conta lançada neste mês.' : 'Cadastre as contas fixas acima para começar.') + '</p>';
-  else {
-    h += '<div class="tabela-wrap" style="border:0"><table><thead><tr><th>Dia</th><th>Conta</th><th class="dir">Valor</th><th>Situação</th><th></th></tr></thead><tbody>';
-    for (const l of lista) {
-      const st = statusLanc(l);
-      const est = l.estimado && st !== 'pago';
-      h += '<tr><td class="num">' + l.vencimento.slice(8, 10) + '</td><td><b style="font-weight:600">' + esc(l.descricao) + '</b><small>' + esc(l.categoria) + ' · ' + (ehFixo(l) ? 'fixo' : 'variável') + (est ? ' · valor estimado' : '') + '</small></td>' +
-        '<td class="dir num">' + (est ? '~' : '') + fR(devidoDe(l)) + (st === 'parcial' || (st === 'atrasado' && pagoDe(l) > 0) ? '<small>falta ' + fR(saldoDe(l)) + '</small>' : '') + '</td><td>' + pillConta(l) + '</td>' +
-        '<td class="dir" style="white-space:nowrap">' + (st !== 'pago' ? '<button class="btn peq pri" data-act="pagar-conta" data-id="' + l.id + '">Pagar</button> <button class="btn peq" data-act="ajustar-conta" data-id="' + l.id + '">Ajustar</button> ' : '') +
-        '<button class="btn peq" data-act="ver-lanc" data-id="' + l.id + '">Detalhes</button></td></tr>';
-    }
-    h += '</tbody></table></div>';
-  }
-  h += '</section>';
-
-  if (S.recorrentes.length) h += blocoRecorrentes();
-  h += blocoHistorico(mes);
-  return h;
-}
-
-function blocoSugestoes() {
-  return '<form class="painel" data-form="importar-fixas" style="margin-bottom:20px"><header><h2>Comece pelas contas fixas</h2><small>valores da sua planilha</small></header>' +
-    '<p class="vazio" style="padding:0 0 10px">Marque as contas que se repetem todo mês e confira o valor e o dia de vencimento. Depois é só lançar as contas de cada mês com um clique.</p>' +
-    '<div class="tabela-wrap" style="border:0"><table><thead><tr><th></th><th>Conta</th><th>Como calcula</th><th class="dir">Valor (R$)</th><th class="dir">Dia</th></tr></thead><tbody>' +
-    SUGESTOES_FIXAS.map((s, i) => '<tr><td><input type="checkbox" name="s' + i + '" aria-label="Cadastrar ' + esc(s.nome) + '" style="width:18px;height:18px"' + (s.marcado ? ' checked' : '') + '></td>' +
-      '<td><b style="font-weight:600">' + esc(s.nome) + '</b><small>' + esc(s.categoria) + ' · ' + (s.tipo === 'fixo' ? 'fixo' : 'variável') + '</small></td><td><small style="display:inline">' + CALCULO_TXT[s.calculo] + (s.calculo === 'porAluno' ? ': + ' + fR(s.porAluno) + ' por aluno' : '') + '</small></td>' +
-      '<td class="dir"><input name="v' + i + '" inputmode="decimal" value="' + String(s.valor).replace('.', ',') + '" style="width:110px;text-align:right" aria-label="Valor de ' + esc(s.nome) + '"></td>' +
-      '<td class="dir"><input name="d' + i + '" type="number" min="1" max="31" value="' + s.dia + '" style="width:70px;text-align:right" aria-label="Dia de vencimento de ' + esc(s.nome) + '"></td></tr>').join('') +
-    '</tbody></table></div><div class="rodape"><button class="btn" type="button" data-act="nova-fixa">Cadastrar outra</button><button class="btn pri" type="submit">Cadastrar as marcadas</button></div></form>';
-}
-
-function blocoRecorrentes() {
-  const rs = S.recorrentes.slice().sort((a, b) => (b.ativo !== false) - (a.ativo !== false) || (Number(a.dia) || 0) - (Number(b.dia) || 0));
-  const total = rs.filter((r) => r.ativo !== false).reduce((s, r) => s + previstoRec(r), 0);
-  return '<section class="painel" style="margin-bottom:20px"><header><h2>Contas fixas e recorrentes</h2><button class="btn peq" data-act="nova-fixa">Nova conta fixa</button></header>' +
-    '<div class="tabela-wrap" style="border:0"><table><thead><tr><th class="dir">Dia</th><th>Conta</th><th>Como calcula</th><th class="dir">Previsto por mês</th><th></th></tr></thead><tbody>' +
-    rs.map((r) => '<tr' + (r.ativo === false ? ' style="opacity:.55"' : '') + '><td class="dir num">' + esc(r.dia) + '</td><td><b style="font-weight:600">' + esc(r.nome) + '</b><small>' + esc(r.categoria) + ' · ' + (r.tipo === 'fixo' ? 'fixo' : 'variável') + (r.ativo === false ? ' · pausada' : '') + '</small></td>' +
-      '<td><small style="display:inline">' + CALCULO_TXT[r.calculo || 'fixo'] + (r.calculo === 'porAluno' ? ': ' + fR(r.valor) + ' + ' + fR(r.porAluno) + ' × ' + alunosPagantes() + ' aluno(s)' : '') + '</small></td>' +
-      '<td class="dir num">' + (r.calculo === 'estimado' ? '~' : '') + fR(previstoRec(r)) + '</td><td class="dir"><button class="btn peq" data-act="editar-fixa" data-id="' + r.id + '">Editar</button></td></tr>').join('') +
-    '<tr><td></td><td><b>Total previsto</b></td><td></td><td class="dir num"><b>' + fR(total) + '</b></td><td></td></tr></tbody></table></div></section>';
-}
-
-// Comparativo dos últimos 6 meses, conta por conta (como as colunas de meses da planilha).
-function blocoHistorico(mesRef) {
-  const meses = []; for (let i = 5; i >= 0; i--) meses.push(mesDe(addMeses(mesRef + '-01', -i)));
-  const linhas = new Map();
-  for (const m of meses) for (const l of despesasDoMes(m)) {
-    const k = l.recorrenteId ? 'r:' + l.recorrenteId : 'v:' + (l.categoria || 'Outros');
-    const nome = l.recorrenteId ? ((S.recorrentes.find((r) => r.id === l.recorrenteId) || {}).nome || l.descricao) : 'Outros gastos · ' + (l.categoria || 'Outros');
-    if (!linhas.has(k)) linhas.set(k, { nome, v: {} });
-    const x = linhas.get(k); x.v[m] = (x.v[m] || 0) + devidoDe(l);
-  }
-  if (!linhas.size) return '';
-  const rec = Object.fromEntries(meses.map((m) => [m, pagamentosNoMes(m, 'receita').reduce((s, x) => s + x.p.valor, 0)]));
-  const tot = Object.fromEntries(meses.map((m) => [m, despesasDoMes(m).reduce((s, l) => s + devidoDe(l), 0)]));
-  const cel = (v) => '<td class="dir num">' + (v ? fR(v) : '—') + '</td>';
-  return '<section class="painel"><header><h2>Últimos 6 meses</h2><small>valor de cada conta por mês</small></header><div class="tabela-wrap" style="border:0"><table><thead><tr><th>Conta</th>' +
-    meses.map((m) => '<th class="dir">' + nomeMes(m) + '</th>').join('') + '</tr></thead><tbody>' +
-    [...linhas.values()].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((x) => '<tr><td>' + esc(x.nome) + '</td>' + meses.map((m) => cel(x.v[m])).join('') + '</tr>').join('') +
-    '<tr><td><b>Total de gastos</b></td>' + meses.map((m) => '<td class="dir num"><b>' + (tot[m] ? fR(tot[m]) : '—') + '</b></td>').join('') + '</tr>' +
-    '<tr><td>Recebido</td>' + meses.map((m) => cel(rec[m])).join('') + '</tr>' +
-    '<tr><td><b>Sobra</b><small>recebido − gastos</small></td>' + meses.map((m) => '<td class="dir num"><b>' + (!tot[m] && !rec[m] ? '—' : (rec[m] - tot[m] < 0 ? '−' : '') + fR(Math.abs(rec[m] - tot[m]))) + '</b></td>').join('') + '</tr>' +
-    '</tbody></table></div></section>';
-}
-
-function modalRecorrente(r) {
-  r = r || { tipo: 'fixo', calculo: 'fixo', dia: 10, ativo: true };
-  const cats = Object.entries(CAT_DESPESA).map(([g, cs]) => '<optgroup label="' + g + '">' + cs.map((c) => opt(c, c, c === r.categoria)).join('') + '</optgroup>').join('');
-  abrirModal(r.id ? 'Editar conta fixa' : 'Nova conta fixa', '<form data-form="recorrente"><input type="hidden" name="id" value="' + esc(r.id || '') + '">' +
-    campo('Nome da conta *', inp('rc-nome', 'nome', r.nome, 'required placeholder="Ex.: Aluguel, Luz, Comissão dos professores"')) +
-    '<div class="linha2">' + campo('Categoria', sel('rc-cat', 'categoria', cats)) + campo('Tipo de gasto', sel('rc-tipo', 'tipo', opt('fixo', 'Fixo (não muda com o movimento)', r.tipo === 'fixo') + opt('variavel', 'Variável (muda com o movimento)', r.tipo !== 'fixo'))) + '</div>' +
-    campo('Como calcular o valor', sel('rc-calc', 'calculo', Object.entries(CALCULO_TXT).map(([k, t]) => opt(k, t, k === (r.calculo || 'fixo'))).join(''), 'data-calc'),
-      'Valor muda todo mês: lança com o valor estimado e você ajusta quando a conta chegar. Base + valor por aluno: para comissões (ex.: R$ 300 + R$ 50 por aluno pagante ativo).') +
-    '<div class="linha2">' + campo('Valor (R$) *', inp('rc-valor', 'valor', r.valor != null ? String(r.valor).replace('.', ',') : '', 'required inputmode="decimal" placeholder="0,00"'), 'Na comissão por aluno, é a parte fixa.') +
-    '<label class="campo" id="rc-por-campo"' + (r.calculo === 'porAluno' ? '' : ' hidden') + '><span>Valor por aluno (R$)</span>' + inp('rc-por', 'porAluno', r.porAluno != null ? String(r.porAluno).replace('.', ',') : '', 'inputmode="decimal" placeholder="0,00"') + '<small>Hoje: ' + alunosPagantes() + ' aluno(s) pagante(s) ativo(s).</small></label>' +
-    campo('Dia de vencimento', inp('rc-dia', 'dia', r.dia || 10, 'type="number" min="1" max="31"')) + '</div>' +
-    '<label class="check"><input type="checkbox" name="ativo" id="rc-ativo"' + (r.ativo !== false ? ' checked' : '') + '><span>Ativa (lançar todo mês)</span></label>' +
-    rodape(r.id ? 'Salvar' : 'Cadastrar conta fixa') + '</form>' +
-    (r.id ? '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-fixa" data-id="' + r.id + '" style="align-self:flex-start">Excluir conta fixa</button><small style="color:var(--muted)">As contas já lançadas continuam no financeiro.</small></div>' : ''));
-}
-function modalPagarConta(l) {
-  const est = l.estimado;
-  abrirModal('Pagar conta', '<form data-form="pagar-conta"><input type="hidden" name="id" value="' + l.id + '">' +
-    '<div class="resumo"><span><b>' + esc(l.descricao) + '</b></span><span>Vencimento ' + fData(l.vencimento) + ' · ' + (est ? 'valor estimado ' : 'valor ') + fR(devidoDe(l)) + (pagoDe(l) ? ' · já pago ' + fR(pagoDe(l)) : '') + '</span></div>' +
-    '<div class="linha2">' + campo('Valor pago (R$) *', inp('pc-valor', 'valor', saldoDe(l).toFixed(2).replace('.', ','), 'required inputmode="decimal"'), est ? 'Coloque o valor que veio na conta.' : '') +
-    campo('Data do pagamento', inp('pc-data', 'data', HOJE, 'type="date" required')) + '</div>' +
-    campo('Forma', sel('pc-forma', 'forma', formasOpts(l.formaPrevista || 'Pix'))) +
-    '<label class="check"><input type="checkbox" name="parcial" id="pc-parcial"><span>Foi só uma parte (a conta continua em aberto com o restante)</span></label>' +
-    rodape('Confirmar pagamento') + '</form>');
-}
-function modalAjustarConta(l) {
-  abrirModal('Ajustar conta', '<form data-form="ajustar-conta"><input type="hidden" name="id" value="' + l.id + '">' +
-    campo('Descrição', inp('aj-desc', 'descricao', l.descricao, 'required')) +
-    '<div class="linha2">' + campo('Valor (R$) *', inp('aj-valor', 'valor', devidoDe(l).toFixed(2).replace('.', ','), 'required inputmode="decimal"'), l.estimado ? 'Use quando a conta chegar com outro valor.' : '') +
-    campo('Vencimento', inp('aj-venc', 'vencimento', l.vencimento, 'type="date" required')) + '</div>' +
-    rodape('Salvar') + '</form>');
 }
 
 /* ---------- CRM ---------- */
@@ -1701,8 +1511,7 @@ function modalLanc(o) {
     '<div class="linha2">' + campo('Categoria', sel('lc-cat', 'categoria', cats)) + campo('Valor (R$) *', inp('lc-valor', 'valor', o.valor, 'required inputmode="decimal" placeholder="0,00"'), 'Valor de cada parcela.') + '</div>' +
     '<div class="linha2">' + campo('Vencimento *', inp('lc-venc', 'vencimento', o.vencimento || HOJE, 'type="date" required')) + campo('Repetir / parcelar', sel('lc-rep', 'repetir', [1, 2, 3, 4, 5, 6, 10, 12].map((n) => opt(n, n === 1 ? 'Só uma vez' : n + 'x (mensal)')).join(''))) + '</div>' +
     (tipo === 'receita' ? campo('Aluno', sel('lc-aluno', 'alunoId', '<option value="">Nenhum</option>' + alunos.map((a) => opt(a.id, a.nome, a.id === o.alunoId)).join(''))) : '') +
-    '<div class="linha2">' + campo('Forma de pagamento', sel('lc-forma', 'forma', formasOpts('Pix'))) +
-    (tipo === 'despesa' ? campo('Tipo de gasto', sel('lc-tipocusto', 'tipoCusto', opt('variavel', 'Variável', o.tipoCusto !== 'fixo') + opt('fixo', 'Fixo', o.tipoCusto === 'fixo'))) : '') + '</div>' +
+    '<div class="linha2">' + campo('Forma de pagamento', sel('lc-forma', 'forma', formasOpts('Pix'))) + '</div>' +
     '<label class="check"><input type="checkbox" name="pago" id="lc-pago"' + (o.pago ? ' checked' : '') + '><span>Já foi ' + (tipo === 'receita' ? 'recebido' : 'pago') + ' (registra a baixa na data de vencimento)</span></label>' +
     rodape('Salvar') + '</form>');
 }
@@ -1782,39 +1591,6 @@ const FORMS = {
     toast((v.c.renovacaoDe ? 'Contrato renovado' : 'Venda registrada') + ': ' + txtCobr(v) + '.');
     UI.view = 'aluno'; UI.alunoId = v.c.alunoId; render();
   },
-  async recorrente(d) {
-    const valor = numCampo(d.valor), porAluno = numCampo(d.porAluno);
-    if (valor < 0 || (valor === 0 && !(d.calculo === 'porAluno' && porAluno > 0))) { toast('Informe o valor da conta.'); return; }
-    const ex = d.id ? S.recorrentes.find((r) => r.id === d.id) : null;
-    const r = { ...(ex || { id: novoId('rc'), desde: mesDe(HOJE), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), categoria: d.categoria, tipo: d.tipo, calculo: d.calculo,
-      valor, porAluno: d.calculo === 'porAluno' ? porAluno : 0, dia: Math.min(31, Math.max(1, Number(d.dia) || 10)), ativo: !!d.ativo };
-    fecharModal(); await salvar('recorrentes', r); toast(ex ? 'Conta fixa atualizada. Vale para os próximos lançamentos.' : 'Conta fixa cadastrada.');
-  },
-  async 'importar-fixas'(d) {
-    const lista = [];
-    SUGESTOES_FIXAS.forEach((sg, i) => {
-      if (!d['s' + i]) return;
-      lista.push({ id: novoId('rc'), desde: mesDe(HOJE), criadoEm: new Date().toISOString(), nome: sg.nome, categoria: sg.categoria, tipo: sg.tipo, calculo: sg.calculo,
-        valor: numCampo(d['v' + i]), porAluno: sg.porAluno || 0, dia: Math.min(31, Math.max(1, Number(d['d' + i]) || sg.dia)), ativo: true });
-    });
-    if (!lista.length) { toast('Marque pelo menos uma conta.'); return; }
-    if (await salvarVarios('recorrentes', lista)) toast(lista.length + ' conta(s) fixa(s) cadastrada(s). Agora lance as contas do mês.');
-  },
-  async 'pagar-conta'(d) {
-    const l = S.lancamentos.find((x) => x.id === d.id); if (!l) return;
-    const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe o valor pago.'); return; }
-    const n = { ...l, pagamentos: [...(l.pagamentos || []), { data: d.data, valor, forma: d.forma }] };
-    // Sem "foi só uma parte", a conta fica quitada com o valor pago (ex.: a luz veio diferente do estimado).
-    if (!d.parcial) { n.valorPrevisto = l.valorPrevisto ?? l.valor; n.valor = Math.round(((Number(l.desconto) || 0) + pagoDe(n)) * 100) / 100; n.estimado = false; }
-    fecharModal(); await salvar('lancamentos', n);
-    toast(statusLanc(n) === 'pago' ? 'Pagamento registrado. Conta quitada.' : 'Pagamento parcial registrado. Falta ' + fR(saldoDe(n)) + '.');
-  },
-  async 'ajustar-conta'(d) {
-    const l = S.lancamentos.find((x) => x.id === d.id); if (!l) return;
-    const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe um valor maior que zero.'); return; }
-    const n = { ...l, descricao: d.descricao.trim(), vencimento: d.vencimento, valorPrevisto: l.valorPrevisto ?? l.valor, valor: Math.round((valor + (Number(l.desconto) || 0)) * 100) / 100, estimado: false };
-    fecharModal(); await salvar('lancamentos', n); toast('Conta ajustada.');
-  },
   async baixa(d) {
     const l = S.lancamentos.find((x) => x.id === d.id); if (!l) return;
     const valor = numCampo(d.valor), desc = numCampo(d.desconto);
@@ -1833,7 +1609,6 @@ const FORMS = {
       lista.push({
         id: novoId('lc'), tipo: d.tipo, categoria: d.categoria, descricao: d.descricao.trim() + (n > 1 ? ' · ' + (i + 1) + '/' + n : ''), valor, desconto: 0, vencimento: venc,
         pagamentos: d.pago ? [{ data: venc, valor, forma: d.forma }] : [], alunoId: d.alunoId || '', contratoId: '', cancelado: false, formaPrevista: d.forma, criadoEm: new Date().toISOString(),
-        ...(d.tipo === 'despesa' ? { tipoCusto: d.tipoCusto || 'variavel' } : {}),
       });
     }
     fecharModal(); await salvarVarios('lancamentos', lista); toast(n > 1 ? n + ' lançamentos criados.' : 'Lançamento salvo.');
@@ -1971,21 +1746,6 @@ const ACOES = {
     const l = S.lancamentos.find((x) => x.id === ds.id); const pg = [...l.pagamentos]; pg.splice(Number(ds.i), 1);
     const n = { ...l, pagamentos: pg }; await salvar('lancamentos', n); modalDetalhes(n); toast('Pagamento estornado.');
   },
-  'pag-mes'(ds) { const d = Number(ds.d); UI.pagMes = d === 0 ? mesDe(HOJE) : mesDe(addMeses(UI.pagMes + '-01', d)); render(); },
-  async 'lancar-fixas'() {
-    const mes = UI.pagMes; const lista = fixasFaltando(mes).map((r) => contaDaRecorrente(r, mes));
-    if (!lista.length) return;
-    if (await salvarVarios('lancamentos', lista)) toast(lista.length + ' conta(s) de ' + nomeMes(mes, true) + ' lançada(s).');
-  },
-  'novo-gasto'() { const v = UI.pagMes === mesDe(HOJE) ? HOJE : UI.pagMes + '-01'; modalLanc({ tipo: 'despesa', titulo: 'Novo gasto variável', categoria: 'Outras despesas', vencimento: v, tipoCusto: 'variavel', pago: true }); },
-  'nova-fixa'() { modalRecorrente(); },
-  'editar-fixa'(ds) { modalRecorrente(S.recorrentes.find((r) => r.id === ds.id)); },
-  'excluir-fixa'(ds) {
-    const r = S.recorrentes.find((x) => x.id === ds.id); if (!r) return;
-    confirmar('Excluir conta fixa', 'Excluir <b>' + esc(r.nome) + '</b>? Ela deixa de ser lançada nos próximos meses. As contas já lançadas continuam no financeiro.', 'Excluir', async () => { await remover('recorrentes', r.id); toast('Conta fixa excluída.'); });
-  },
-  'pagar-conta'(ds) { const l = S.lancamentos.find((x) => x.id === ds.id); if (l) modalPagarConta(l); },
-  'ajustar-conta'(ds) { const l = S.lancamentos.find((x) => x.id === ds.id); if (l) modalAjustarConta(l); },
   'novo-lead'() { modalLead(); },
   'editar-lead'(ds) { modalLead(leadPorId(ds.id)); },
   'excluir-lead'(ds) { const l = leadPorId(ds.id); confirmar('Excluir interessado', 'Excluir <b>' + esc(l.nome) + '</b>?', 'Excluir', async () => { await remover('leads', l.id); toast('Interessado excluído.'); }); },
@@ -2085,7 +1845,6 @@ document.addEventListener('change', (e) => {
     if (el.value === 'matriculado' && !l.alunoId) { el.value = l.etapa; ACOES['converter-lead']({ id: l.id }); return; }
     salvar('leads', { ...l, etapa: el.value }); toast('Etapa atualizada.');
   }
-  if (el.dataset && el.dataset.calc !== undefined) { const c = document.getElementById('rc-por-campo'); if (c) c.hidden = el.value !== 'porAluno'; }
   if (el.dataset && el.dataset.trocaMod !== undefined) {
     const f = el.form.querySelector('[name="faixa"]'); if (f) f.innerHTML = grads()[el.value].faixas.map((x) => opt(x)).join('');
   }

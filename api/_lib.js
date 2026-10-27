@@ -6,7 +6,7 @@ import { SEED } from './_seed.js';
 
 const scrypt = promisify(crypto.scrypt);
 
-export const COLECOES = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'config', 'fichas', 'recorrentes'];
+export const COLECOES = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'config', 'fichas'];
 const P = 'ct:';
 const COOKIE = 'ct_sessao';
 const DIAS_SESSAO = 30;
