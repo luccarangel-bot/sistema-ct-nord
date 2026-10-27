@@ -753,7 +753,7 @@ VIEWS.inicio = function () {
     (devedores.length ? '<ul class="lista">' + devedores.slice(0, 6).map((d) => {
       const a = alunoPorId(d.id); if (!a) return '';
       return '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b><small>deve ' + fR(d.v) + '</small></div>' +
-        waA(a.telefone, msgCobranca(a, d.v), 'Cobrar') + '</li>';
+        waA(a.telefone, msgCobranca(a), 'Cobrar') + '</li>';
     }).join('') + '</ul>' : '<p class="vazio">Ninguém em atraso.</p>') + '</section>';
   h += '<section class="painel"><header><h2>Renovações</h2><small>vencem em até 30 dias ou venceram há pouco</small></header>' +
     ((vencendo.length + vencidosRecentes.length) ? '<ul class="lista">' + [...vencendo, ...vencidosRecentes].slice(0, 8).map((c) =>
@@ -766,9 +766,18 @@ VIEWS.inicio = function () {
   return h;
 };
 
-function msgCobranca(a, v) {
-  const nome = (a.responsavel ? a.responsavel.split(/[ (]/)[0] : a.nome.split(' ')[0]);
-  return 'Olá, ' + nome + '! Tudo bem? Passando para lembrar que há ' + fR(v) + ' em aberto referente às mensalidades' + (a.responsavel ? ' do(a) ' + a.nome.split(' ')[0] : '') + '. Se já pagou, desconsidere. Qualquer dúvida, estamos à disposição.';
+// Mensagem de cobrança para quem está com mensalidade atrasada (texto definido pelo CT).
+// A data é a do vencimento mais antigo em atraso, no formato DD/MM.
+function msgCobranca(a) {
+  const venc = lancsDo(a.id).filter((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado').map((l) => l.vencimento).sort()[0] || HOJE;
+  return '[Mensagem Automática]\n' +
+    '📣 CT Nord – Lembrete de Mensalidade\n\n' +
+    'Olá, ' + a.nome.trim().split(/\s+/)[0] + '! Tudo bem? 😊\n' +
+    'Estamos passando apenas para lembrar que a sua mensalidade venceu dia ' + venc.slice(8, 10) + '/' + venc.slice(5, 7) + '. ' +
+    'Regularize o seu pagamento para que você continue aproveitando seus treinos da melhor forma possível.\n\n' +
+    'Caso já tenha realizado, pode desconsiderar este aviso.\n' +
+    'Qualquer dúvida, estamos por aqui!\n\n' +
+    'CT Nord 💪';
 }
 function itemTarefa(t) {
   const rel = t.leadId ? (leadPorId(t.leadId) || {}).nome : t.alunoId ? nomeAluno(t.alunoId) : '';
@@ -865,7 +874,7 @@ VIEWS.aluno = function () {
   h += '</section>';
 
   h += '<section class="painel" style="margin-top:16px"><header><h2>Financeiro do aluno</h2><small>já pagou ' + fR(totalPago) + ' · em aberto ' + fR(pendentes.reduce((s, l) => s + saldoDe(l), 0)) + '</small></header>';
-  if (div > 0) h += '<p style="margin:0 0 10px">' + waA(a.telefone, msgCobranca(a, div), 'Enviar lembrete de cobrança no WhatsApp') + '</p>';
+  if (div > 0) h += '<p style="margin:0 0 10px">' + waA(a.telefone, msgCobranca(a), 'Enviar lembrete de cobrança no WhatsApp') + '</p>';
   h += tabelaLancamentos(lancs, { semAluno: true, vazio: 'Nenhuma cobrança para este aluno.' }) + '</section>';
 
   h += '<section class="painel" style="margin-top:16px"><header><h2>Produtos consumidos</h2><button class="btn link" data-act="venda-produto" data-id="' + a.id + '">+ Registrar venda</button></header>' +
@@ -1029,7 +1038,7 @@ function finInad() {
     const a = alunoPorId(x.id);
     h += '<tr><td>' + (a ? '<button class="btn link" style="padding:0;text-align:left" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button><small>' + esc(a.responsavel ? 'Resp.: ' + a.responsavel : a.telefone || '') + '</small>' : 'Sem aluno vinculado') + '</td>' +
       '<td>' + x.ls.map((l) => esc(l.descricao) + ' <small style="display:inline">(' + fDataC(l.vencimento) + ')</small>').join('<br>') + '</td><td class="dir num"><b>' + fR(x.total) + '</b></td><td class="dir num">' + x.dias + ' dias</td>' +
-      '<td class="dir" style="white-space:nowrap">' + (a ? waA(a.telefone, msgCobranca(a, x.total), 'Cobrar') + ' ' : '') + '<button class="btn peq pri" data-act="baixar" data-id="' + x.ls[0].id + '">Receber</button></td></tr>';
+      '<td class="dir" style="white-space:nowrap">' + (a ? waA(a.telefone, msgCobranca(a), 'Cobrar') + ' ' : '') + '<button class="btn peq pri" data-act="baixar" data-id="' + x.ls[0].id + '">Receber</button></td></tr>';
   }
   return h + '</tbody></table></div>';
 }
