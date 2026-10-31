@@ -480,8 +480,14 @@ function statusLanc(l) {
   if (pagoDe(l) > 0) return 'parcial';
   return 'aberto';
 }
+// Planos que renovam sozinhos todo mês (mensais, recorrência, TotalPass/Wellhub): o contrato não tem data para acabar.
+const planoRenovaSozinho = (p) => !!p && (p.renovaSozinho != null ? !!p.renovaSozinho : (Number(p.meses) === 1 || p.formaPadrao === 'app' || /recorr/i.test(p.nome || '')));
+const fimDe = (c) => (c.continuo ? '9999-12-31' : c.fim);
+const vigenciaTxt = (c) => (c.continuo ? 'desde ' + fData(c.inicio) + (c.cancelado ? '' : ' · renova todo mês') : fData(c.inicio) + ' a ' + fData(c.fim));
+const txtRenovar = (c) => (Number(c.meses) === 1 ? 'Reativar' : 'Renovar +' + c.meses + ' meses');
 function statusContrato(c) {
   if (c.cancelado) return 'cancelado';
+  if (c.continuo) return c.inicio > HOJE ? 'futuro' : 'ativo';
   if (c.fim < HOJE) return 'vencido';
   if (c.inicio > HOJE) return 'futuro';
   if (difDias(HOJE, c.fim) <= 30) return 'avencer';
@@ -529,6 +535,40 @@ function pagamentosNoMes(mes, tipo) {
   return r;
 }
 
+/* Mensalidades dos contratos que renovam sozinhos */
+// Mensalidade k do contrato: a primeira vence no início, as seguintes no dia de vencimento de cada mês.
+const vencMensalidade = (c, k) => (k === 0 ? c.inicio : comDia(addMeses(c.inicio, k), c.diaVenc));
+function mensalidadesQueFaltam(c, existentes) {
+  if (!c.continuo || c.cancelado || c.forma === 'app') return [];
+  const ate = addDias(HOJE, 10); const r = [];
+  for (let k = 0; k < 600; k++) {
+    const venc = vencMensalidade(c, k); if (venc > ate) break;
+    // Não duplica: se já existe mensalidade deste contrato no mês (mesmo cancelada), pula.
+    if (existentes.some((l) => l.contratoId === c.id && l.categoria === 'Mensalidades' && mesDe(l.vencimento) === mesDe(venc))) continue;
+    r.push({
+      id: 'lc_ct_' + c.id + '_' + k, tipo: 'receita', categoria: 'Mensalidades', descricao: c.planoNome + ' · mensalidade ' + nomeMes(mesDe(venc)),
+      valor: c.valorMensal, desconto: c.desconto || 0, vencimento: venc, pagamentos: [], alunoId: c.alunoId, contratoId: c.id, cancelado: false,
+      formaPrevista: c.forma === 'cartao' ? 'Cartão de crédito' : (c.formaPg || 'Pix'), criadoEm: new Date().toISOString(),
+    });
+  }
+  return r;
+}
+// Roda ao abrir o sistema: passa os contratos mensais antigos para "renova sozinho" e cria as mensalidades do mês.
+let renovandoAgora = false;
+async function renovacaoAutomatica() {
+  if (renovandoAgora || MODO !== 'db') return;
+  renovandoAgora = true;
+  try {
+    for (const c of S.contratos.slice()) {
+      const p = planoPorId(c.planoId) || { meses: c.meses, nome: c.planoNome, formaPadrao: c.forma };
+      if (c.continuo || c.cancelado || c.forma === 'avista' || !planoRenovaSozinho(p)) continue;
+      if (!c.fim || c.fim < addDias(HOJE, -10) || S.contratos.some((x) => x.renovacaoDe === c.id && !x.cancelado)) continue;
+      if (!(await salvar('contratos', { ...c, continuo: true, fim: '' }))) return;
+    }
+    const novas = S.contratos.flatMap((c) => mensalidadesQueFaltam(c, S.lancamentos));
+    if (novas.length) await salvarVarios('lancamentos', novas);
+  } finally { renovandoAgora = false; }
+}
 /* Gera as cobranças de um contrato */
 function gerarCobrancas(c, opts) {
   const n = c.forma === 'app' ? 0 : c.forma === 'avista' ? 1 : c.meses;
@@ -594,15 +634,22 @@ function montarVenda(d, alunoId) {
   const desconto = app ? 0 : numCampo(d.desconto);
   if (!app && desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return null; }
   const inicio = d.inicio || HOJE;
+  const continuo = planoRenovaSozinho(p) && d.forma !== 'avista';
   const c = {
     id: novoId('ct'), alunoId, planoId: p.id, planoNome: p.nome, modalidade: p.modalidade, valorMensal: p.valor, desconto,
-    meses: p.meses, inicio, fim: addDias(addMeses(inicio, p.meses), -1), diaVenc: Math.min(31, Math.max(1, Number(d.diaVenc) || 10)),
-    forma: d.forma, cancelado: false, renovacaoDe: d.renovacaoDe || '', criadoEm: new Date().toISOString(),
+    meses: p.meses, inicio, fim: continuo ? '' : addDias(addMeses(inicio, p.meses), -1), diaVenc: Math.min(31, Math.max(1, Number(d.diaVenc) || 10)),
+    forma: d.forma, formaPg: d.formaPg || 'Pix', continuo, cancelado: false, renovacaoDe: d.renovacaoDe || '', criadoEm: new Date().toISOString(),
   };
-  const cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
+  let cobr;
+  if (continuo) {
+    // Cria as mensalidades até hoje (+10 dias); as próximas o sistema cria sozinho todo mês.
+    cobr = mensalidadesQueFaltam(c, []);
+    if (d.retroativo) cobr.forEach((l) => { if (l.vencimento < HOJE) l.pagamentos.push({ data: l.vencimento, valor: devidoDe(l), forma: l.formaPrevista }); });
+    cobr.push(...gerarCobrancas({ ...c, forma: 'app' }, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg }));
+  } else cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
   return { c, cobr };
 }
-const txtCobr = (v) => (v.cobr.length ? v.cobr.length + ' cobrança(s) criada(s)' : 'sem mensalidades, pago pelo app');
+const txtCobr = (v) => (v.c.forma === 'app' && !v.cobr.length ? 'sem mensalidades, pago pelo app' : v.cobr.length + ' cobrança(s) criada(s)' + (v.c.continuo ? '. As próximas mensalidades são criadas sozinhas todo mês' : ''));
 async function gravarVenda(v) {
   if (!(await salvar('contratos', v.c))) return false;
   return salvarVarios('lancamentos', v.cobr);
@@ -627,6 +674,7 @@ async function carregarTudo() {
   USUARIO = j.usuario; revLocal = j.rev || 0;
   COLS.forEach((c) => carregadas.add(c));
   MODO = 'db'; mostrarApp(); render();
+  renovacaoAutomatica().catch(() => {});
 }
 let recargaT = 0;
 function agendarRecarga() { clearTimeout(recargaT); recargaT = setTimeout(() => { if (MODO === 'db') carregarTudo().catch(() => {}); }, 400); }
@@ -708,7 +756,7 @@ function desenhar() {
 window.addEventListener('hashchange', () => render());
 function pill(cls, txt) { return '<span class="pill ' + cls + '">' + esc(txt) + '</span>'; }
 const PILL_LANC = { pago: ['ok', 'Pago'], atrasado: ['bad', 'Atrasado'], parcial: ['warn', 'Parcial'], aberto: ['', 'Em aberto'], cancelado: ['', 'Cancelado'] };
-const PILL_CONTR = { ativo: ['ok', 'Ativo'], avencer: ['warn', 'A vencer'], vencido: ['bad', 'Vencido'], cancelado: ['', 'Cancelado'], futuro: ['info', 'Começa em breve'] };
+const PILL_CONTR = { ativo: ['ok', 'Ativo'], avencer: ['warn', 'A vencer'], vencido: ['bad', 'Vencido'], cancelado: ['', 'Encerrado'], futuro: ['info', 'Começa em breve'] };
 const pillLanc = (l) => { const s = statusLanc(l); const [c, t] = PILL_LANC[s]; return pill(c, s === 'atrasado' && pagoDe(l) > 0 ? 'Atrasado (parcial)' : t); };
 const pillContr = (c) => { const [k, t] = PILL_CONTR[statusContrato(c)]; return pill(k, t); };
 const opt = (v, txt, sel) => '<option value="' + esc(v) + '"' + (sel ? ' selected' : '') + '>' + esc(txt ?? v) + '</option>';
@@ -803,10 +851,10 @@ VIEWS.inicio = function () {
       return '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b><small>deve ' + fR(d.v) + '</small></div>' +
         waA(a.telefone, msgCobranca(a), 'Cobrar') + '</li>';
     }).join('') + '</ul>' : '<p class="vazio">Ninguém em atraso.</p>') + '</section>';
-  h += '<section class="painel"><header><h2>Renovações</h2><small>vencem em até 30 dias ou venceram há pouco</small></header>' +
+  h += '<section class="painel"><header><h2>Planos que terminam</h2><small>semestral, anual e outros com prazo</small></header>' +
     ((vencendo.length + vencidosRecentes.length) ? '<ul class="lista">' + [...vencendo, ...vencidosRecentes].slice(0, 8).map((c) =>
-      '<li><div class="cresce"><b>' + esc(nomeAluno(c.alunoId)) + '</b><small>' + esc(c.planoNome) + ' · termina ' + fData(c.fim) + '</small></div>' + pillContr(c) +
-      '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">Renovar</button></li>').join('') + '</ul>' : '<p class="vazio">Nenhum contrato perto do fim.</p>') + '</section>';
+      '<li><div class="cresce"><b>' + esc(nomeAluno(c.alunoId)) + '</b><small>' + esc(c.planoNome) + ' · ' + (c.fim < HOJE ? 'terminou' : 'termina') + ' ' + fData(c.fim) + '</small></div>' + pillContr(c) +
+      '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">' + txtRenovar(c) + '</button></li>').join('') + '</ul>' : '<p class="vazio">Nenhum plano com prazo perto do fim. Os planos mensais renovam sozinhos.</p>') + '</section>';
   h += '<section class="painel"><header><h2>Aulas experimentais</h2><button class="btn link" data-act="nav" data-v="crm">Abrir funil</button></header>' +
     (experimentais.length ? '<ul class="lista">' + experimentais.slice(0, 6).map((l) =>
       '<li><div class="cresce"><b>' + esc(l.nome) + '</b><small>' + esc(l.interesse) + ' · ' + fData(l.dataExperimental) + (l.dataExperimental === HOJE ? ' (hoje)' : '') + '</small></div>' + waA(l.telefone, 'Olá, ' + l.nome.split(' ')[0] + '! Confirmando sua aula experimental de ' + l.interesse + ' no dia ' + fData(l.dataExperimental) + '. Te esperamos!', 'Confirmar') + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhuma aula experimental agendada.</p>') + '</section>';
@@ -859,7 +907,7 @@ VIEWS.alunos = function () {
     const div = dividaDo(a.id);
     h += '<tr class="clicavel" data-act="abrir-aluno" data-id="' + a.id + '"><td><b>' + esc(a.nome) + '</b><small>' + esc(a.telefone || '') + '</small></td>' +
       '<td>' + (a.modalidades || []).map((m) => '<div><small>' + esc(m.mod) + '</small>' + faixaHtml(m) + '</div>').join('') + '</td>' +
-      '<td>' + (c ? esc(c.planoNome) + '<small>até ' + fData(c.fim) + '</small>' : '<small>sem contrato</small>') + '</td>' +
+      '<td>' + (c ? esc(c.planoNome) + '<small>' + (c.continuo ? 'renova todo mês' : 'até ' + fData(c.fim)) + '</small>' : '<small>sem contrato</small>') + '</td>' +
       '<td>' + (c ? pillContr(c) : pill('', 'Sem contrato')) + '</td>' +
       '<td>' + (div > 0 ? pill('bad', 'Deve ' + fR(div)) : pill('ok', 'Em dia')) + '</td>' +
       '<td class="esconde-celular num">' + (ut ? fData(ut) + '<small>há ' + difDias(ut, HOJE) + ' dia(s)</small>' : '<small>—</small>') + '</td></tr>';
@@ -917,8 +965,9 @@ VIEWS.aluno = function () {
   h += '<section class="painel" style="margin-top:16px"><header><h2>Contratos</h2><small>' + contratos.length + ' no histórico</small></header>';
   if (!contratos.length) h += '<p class="vazio">Nenhum contrato vendido ainda.</p>';
   else h += '<div class="tabela-wrap" style="border:0"><table><thead><tr><th>Plano</th><th>Vigência</th><th class="dir">Valor/mês</th><th>Situação</th><th></th></tr></thead><tbody>' + contratos.map((c) =>
-    '<tr><td>' + esc(c.planoNome) + '<small>' + FORMA_TXT[c.forma] + (c.renovacaoDe ? ' · renovação' : '') + '</small></td><td class="num">' + fData(c.inicio) + ' a ' + fData(c.fim) + '</td><td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + pillContr(c) + '</td>' +
-    '<td class="dir">' + (statusContrato(c) !== 'cancelado' ? '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">Renovar</button> <button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Cancelar</button>' : '') + '</td></tr>').join('') + '</tbody></table></div>';
+    '<tr><td>' + esc(c.planoNome) + '<small>' + FORMA_TXT[c.forma] + (c.renovacaoDe ? ' · renovação' : '') + '</small></td><td class="num">' + vigenciaTxt(c) + '</td><td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + pillContr(c) + '</td>' +
+    '<td class="dir" style="white-space:nowrap">' + (statusContrato(c) === 'cancelado' ? '' : c.continuo ? '<button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar matrícula</button>'
+      : '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">' + txtRenovar(c) + '</button> <button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar</button>') + '</td></tr>').join('') + '</tbody></table></div>';
   h += '</section>';
 
   h += '<section class="painel" style="margin-top:16px"><header><h2>Financeiro do aluno</h2><small>já pagou ' + fR(totalPago) + ' · em aberto ' + fR(pendentes.reduce((s, l) => s + saldoDe(l), 0)) + '</small></header>';
@@ -950,7 +999,7 @@ function tabelaLancamentos(lista, o) {
 
 /* ---------- Planos e contratos ---------- */
 VIEWS.contratos = function () {
-  let h = '<div class="topo"><div><h1>Planos e contratos</h1><p>Venda planos, acompanhe vencimentos e renove contratos.</p></div><div class="acoes"><button class="btn" data-act="novo-plano">Novo plano</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
+  let h = '<div class="topo"><div><h1>Planos e contratos</h1><p>Planos mensais renovam sozinhos todo mês. Semestral e anual você renova aqui quando terminarem.</p></div><div class="acoes"><button class="btn" data-act="novo-plano">Novo plano</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
   h += '<div class="tabs" role="tablist">' + tab('tabContratos', 'contratos', 'Contratos') + tab('tabContratos', 'planos', 'Planos à venda') + '</div>';
   if (UI.tabContratos === 'planos') {
     const pl = S.planos.slice().sort((a, b) => (b.ativo - a.ativo) || a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -958,7 +1007,7 @@ VIEWS.contratos = function () {
     h += '<div class="tabela-wrap"><table><thead><tr><th>Plano</th><th>Modalidade</th><th class="dir">Valor/mês</th><th class="dir">Duração</th><th class="dir">Total</th><th>Contratos ativos</th><th></th></tr></thead><tbody>';
     for (const p of pl) {
       const ativos = S.contratos.filter((c) => c.planoId === p.id && ['ativo', 'avencer'].includes(statusContrato(c))).length;
-      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + (p.formaPadrao === 'app' ? 'Pelo app' : fR(p.valor)) + '</td><td class="dir num">' + p.meses + (p.meses > 1 ? ' meses' : ' mês') + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + (p.formaPadrao === 'app' ? '—' : fR(p.valor * p.meses)) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
+      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + (p.formaPadrao === 'app' ? 'Pelo app' : fR(p.valor)) + '</td><td class="dir num">' + (planoRenovaSozinho(p) ? 'Renova todo mês' : p.meses + (p.meses > 1 ? ' meses' : ' mês')) + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + (p.formaPadrao === 'app' || planoRenovaSozinho(p) ? '—' : fR(p.valor * p.meses)) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
     }
     return h + '</tbody></table></div>';
   }
@@ -970,17 +1019,17 @@ VIEWS.contratos = function () {
     todos: () => true,
   };
   const n = (k) => S.contratos.filter(fs[k]).length;
-  h += '<div class="filtros">' + chip('filtroContrato', 'ativos', 'Em vigor', n('ativos')) + chip('filtroContrato', 'avencer', 'Vencem em 30 dias', n('avencer')) + chip('filtroContrato', 'vencidos', 'Vencidos', n('vencidos')) + chip('filtroContrato', 'cancelados', 'Cancelados', n('cancelados')) + chip('filtroContrato', 'todos', 'Histórico completo', S.contratos.length) + '</div>';
-  const lista = S.contratos.filter(fs[UI.filtroContrato]).sort((a, b) => UI.filtroContrato === 'todos' ? b.criadoEm.localeCompare(a.criadoEm) : a.fim.localeCompare(b.fim));
+  h += '<div class="filtros">' + chip('filtroContrato', 'ativos', 'Em vigor', n('ativos')) + chip('filtroContrato', 'avencer', 'Terminam em 30 dias', n('avencer')) + chip('filtroContrato', 'vencidos', 'Terminaram', n('vencidos')) + chip('filtroContrato', 'cancelados', 'Encerrados', n('cancelados')) + chip('filtroContrato', 'todos', 'Histórico completo', S.contratos.length) + '</div>';
+  const lista = S.contratos.filter(fs[UI.filtroContrato]).sort((a, b) => UI.filtroContrato === 'todos' ? b.criadoEm.localeCompare(a.criadoEm) : fimDe(a).localeCompare(fimDe(b)));
   if (!lista.length) return h + '<div class="painel"><p class="vazio">Nenhum contrato neste filtro.</p></div>';
   h += '<div class="tabela-wrap"><table><thead><tr><th>Aluno</th><th>Plano</th><th>Vigência</th><th class="dir">Valor/mês</th><th>Cobrança</th><th>Situação</th><th></th></tr></thead><tbody>';
   for (const c of lista) {
     const st = statusContrato(c);
-    const dias = difDias(HOJE, c.fim);
+    const dias = c.continuo ? 0 : difDias(HOJE, c.fim);
     h += '<tr><td><button class="btn link" style="padding:0;text-align:left" data-act="abrir-aluno" data-id="' + c.alunoId + '">' + esc(nomeAluno(c.alunoId)) + '</button><small>vendido em ' + fData((c.criadoEm || '').slice(0, 10)) + '</small></td><td>' + esc(c.planoNome) + (c.renovacaoDe ? '<small>renovação</small>' : '') + '</td>' +
-      '<td class="num">' + fData(c.inicio) + ' a ' + fData(c.fim) + '<small>' + (st === 'vencido' ? 'venceu há ' + (-dias) + ' dias' : st === 'cancelado' ? 'cancelado' : 'faltam ' + dias + ' dias') + '</small></td>' +
-      '<td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + FORMA_TXT[c.forma] + '<small>' + (c.forma === 'mensal' ? 'vence dia ' + c.diaVenc : c.forma === 'cartao' ? c.meses + 'x no cartão' : '1 pagamento') + '</small></td><td>' + pillContr(c) + '</td>' +
-      '<td class="dir" style="white-space:nowrap">' + (st !== 'cancelado' ? '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">Renovar</button>' : '') + '</td></tr>';
+      '<td class="num">' + vigenciaTxt(c) + '<small>' + (st === 'cancelado' ? 'encerrado' + (c.canceladoEm ? ' em ' + fData(c.canceladoEm) : '') : c.continuo ? '' : st === 'vencido' ? 'terminou há ' + (-dias) + ' dias' : 'faltam ' + dias + ' dias') + '</small></td>' +
+      '<td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + FORMA_TXT[c.forma] + '<small>' + (c.forma === 'app' ? 'pelo app' : c.continuo ? (c.forma === 'cartao' ? 'cartão, todo mês' : 'vence todo dia ' + c.diaVenc) : c.forma === 'mensal' ? 'vence dia ' + c.diaVenc : c.forma === 'cartao' ? c.meses + 'x no cartão' : '1 pagamento') + '</small></td><td>' + pillContr(c) + '</td>' +
+      '<td class="dir" style="white-space:nowrap">' + (st === 'cancelado' ? '' : c.continuo ? '<button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar</button>' : '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">' + txtRenovar(c) + '</button>') + '</td></tr>';
   }
   return h + '</tbody></table></div>';
 };
@@ -1658,6 +1707,7 @@ function modalPlano(p) {
     campo('Forma de cobrança padrão', sel('pl-forma', 'formaPadrao', opt('mensal', 'Mensalidades (Pix, débito, dinheiro, débito automático)', p.formaPadrao === 'mensal') + opt('cartao', 'Cartão de crédito', p.formaPadrao === 'cartao') + opt('avista', 'À vista (pagamento único)', p.formaPadrao === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub): sem mensalidade no CT', p.formaPadrao === 'app')), 'Já vem escolhida na hora da venda. Dá para trocar se precisar.') +
     '<div class="campo"><span>Formas de pagamento aceitas</span><div class="dias-sel">' + FORMAS.map((f) => '<label><input type="checkbox" name="aceita" value="' + esc(f) + '"' + ((p.pagamentos || ['Pix', 'Cartão de débito', 'Dinheiro']).includes(f) ? ' checked' : '') + '>' + esc(f) + '</label>').join('') + '</div><small>São as opções que o aluno vê na ficha de matrícula para este plano.</small></div>' +
     campo('Condições comerciais', '<textarea id="pl-cond" name="condicoes" placeholder="Ex.: fidelidade, frequência semanal, brindes">' + esc(p.condicoes || '') + '</textarea>') +
+    '<label class="check"><input type="checkbox" name="renovaSozinho" id="pl-renova"' + (planoRenovaSozinho({ meses: 1, ...p }) ? ' checked' : '') + '><span>Renova sozinho todo mês (sem data para acabar). Use nos planos mensais. Semestral e anual: deixe desmarcado.</span></label>' +
     '<label class="check"><input type="checkbox" name="ativo" id="pl-ativo"' + (p.ativo !== false ? ' checked' : '') + '><span>Disponível para venda</span></label>' +
     rodape(p.id ? 'Salvar plano' : 'Criar plano') + '</form>');
 }
@@ -1680,7 +1730,7 @@ function camposVenda(o, planos, opcional) {
   const ref = pl.id ? pl : planos[0] || {};
   return '<div data-venda>' +
     campo(opcional ? 'Plano' : 'Plano *', sel('vd-plano', 'planoId', (opcional ? '<option value="">Sem plano agora (vender depois)</option>' : '') +
-      planos.map((p) => opt(p.id, p.nome + ' · ' + precoPlano(p) + ' · ' + p.meses + (p.meses > 1 ? ' meses' : ' mês'), p.id === pl.id)).join(''), opcional ? '' : 'required')) +
+      planos.map((p) => opt(p.id, p.nome + ' · ' + precoPlano(p) + ' · ' + (planoRenovaSozinho(p) ? 'renova todo mês' : p.meses + (p.meses > 1 ? ' meses' : ' mês')), p.id === pl.id)).join(''), opcional ? '' : 'required')) +
     '<div class="venda-detalhes" style="margin-top:16px"' + (opcional && !pl.id ? ' hidden' : '') + '>' +
     '<div class="linha2">' + campo('Início *', inp('vd-inicio', 'inicio', inicio, 'type="date" required'), 'Pode ser uma data passada (venda retroativa).') +
     campo('Desconto por mês (R$)', inp('vd-desc', 'desconto', o.desconto || '', 'inputmode="decimal" placeholder="0,00"')) + '</div>' +
@@ -1701,8 +1751,15 @@ function atualizarResumoVenda() {
   const mensal = Math.max(0, p.valor - desc);
   const inicio = d.inicio || HOJE; const fim = addDias(addMeses(inicio, p.meses), -1);
   const n = d.forma === 'avista' ? 1 : p.meses;
+  const continuo = planoRenovaSozinho(p) && d.forma !== 'avista';
+  const vig = continuo ? 'Começa em <b>' + fData(inicio) + '</b> e <b>renova sozinho todo mês</b>, até você encerrar.' : 'Vigência: <b>' + fData(inicio) + ' a ' + fData(fim) + '</b>';
+  if (continuo && d.forma !== 'app') {
+    r.innerHTML = '<span>' + vig + '</span><span>Mensalidade de <b>' + fR(mensal) + '</b> ' + (d.forma === 'cartao' ? 'no cartão, todo mês' : 'todo dia ' + (d.diaVenc || '—')) + '.</span>' +
+      (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b> · no primeiro dia: <b>' + fR(mensal + mat) + '</b></span>' : '');
+    return;
+  }
   if (d.forma === 'app') {
-    r.innerHTML = '<span>Vigência: <b>' + fData(inicio) + ' a ' + fData(fim) + '</b></span><span>Sem mensalidades no sistema: o aluno paga pelo app e o CT recebe do parceiro.</span>' +
+    r.innerHTML = '<span>' + vig + '</span><span>Sem mensalidades no sistema: o aluno paga pelo app e o CT recebe do parceiro.</span>' +
       (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b></span>' : '');
     return;
   }
@@ -1797,7 +1854,7 @@ const FORMS = {
     const pagamentos = [...f.querySelectorAll('[name="aceita"]:checked')].map((x) => x.value);
     if (!pagamentos.length) { toast('Marque pelo menos uma forma de pagamento aceita.'); return; }
     const ex = d.id ? planoPorId(d.id) : null;
-    const p = { ...(ex || { id: novoId('pl'), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), modalidade: d.modalidade, valor, meses: Number(d.meses), formaPadrao: d.formaPadrao, pagamentos, condicoes: d.condicoes.trim(), ativo: !!d.ativo };
+    const p = { ...(ex || { id: novoId('pl'), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), modalidade: d.modalidade, valor, meses: Number(d.meses), formaPadrao: d.formaPadrao, pagamentos, condicoes: d.condicoes.trim(), ativo: !!d.ativo, renovaSozinho: !!d.renovaSozinho };
     fecharModal(); await salvar('planos', p); toast(ex ? 'Plano atualizado.' : 'Plano criado.');
   },
   async venda(d) {
@@ -1971,10 +2028,10 @@ const ACOES = {
   'cancelar-contrato'(ds) {
     const c = S.contratos.find((x) => x.id === ds.id);
     const futuras = S.lancamentos.filter((l) => l.contratoId === c.id && !l.cancelado && l.vencimento >= HOJE && pagoDe(l) === 0);
-    confirmar('Cancelar contrato', 'Cancelar o contrato <b>' + esc(c.planoNome) + '</b> de ' + esc(nomeAluno(c.alunoId)) + '? ' + (futuras.length ? futuras.length + ' cobrança(s) futura(s) sem pagamento também serão canceladas. ' : '') + 'Cobranças vencidas continuam em aberto.', 'Cancelar contrato', async () => {
+    confirmar('Encerrar matrícula', 'Encerrar o plano <b>' + esc(c.planoNome) + '</b> de ' + esc(nomeAluno(c.alunoId)) + '? ' + (c.continuo ? 'O sistema para de criar as mensalidades. ' : '') + (futuras.length ? futuras.length + ' cobrança(s) futura(s) sem pagamento também serão canceladas. ' : '') + 'O que já venceu e não foi pago continua em aberto.', 'Encerrar', async () => {
       await salvar('contratos', { ...c, cancelado: true, canceladoEm: HOJE });
       for (const l of futuras) await salvar('lancamentos', { ...l, cancelado: true });
-      toast('Contrato cancelado.');
+      toast('Matrícula encerrada.');
     });
   },
   baixar(ds) { modalBaixa(S.lancamentos.find((l) => l.id === ds.id)); },
