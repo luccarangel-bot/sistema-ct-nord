@@ -57,6 +57,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .opcoes label { display: flex; align-items: center; gap: 8px; border: 1px solid var(--fg); padding: 10px 14px; cursor: pointer; font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .7rem; }
 .opcoes input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .opcoes label:has(input:checked) { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
+.horarios label { flex: 1 1 150px; flex-direction: column; align-items: flex-start; gap: 2px; padding: 9px 12px; }
+.horarios label small { font-stretch: 100%; font-weight: 500; text-transform: none; letter-spacing: 0; font-size: .78rem; opacity: .75; }
 .opcoes label:has(input:focus-visible) { outline: 2px solid var(--fg); outline-offset: 2px; }
 .planos { display: flex; flex-direction: column; border-top: 1px solid var(--line-strong); }
 .plano { display: flex; gap: 12px; align-items: center; padding: 14px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
@@ -150,6 +152,11 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
           <label class="campo"><span>Faixa atual</span><select id="fx" name="fx"></select></label>
           <label class="campo" id="campo-grau"><span>Grau</span><select id="gr" name="gr"><option>0</option><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
         </div>
+        <div class="campo" id="bloco-hor"><span>Horários que prefere treinar</span>
+          <small id="hor-dica">Marque um ou mais horários da grade de aulas.</small>
+          <div class="opcoes horarios" id="lista-hor" role="group" aria-label="Horários que prefere treinar"></div>
+        </div>
+        <label class="campo"><span>Outro horário ou observação</span><input id="hro" name="hro" maxlength="120" placeholder="Ex.: só consigo depois das 19h"></label>
       </fieldset>
 
       <fieldset id="bloco-plano" hidden>
@@ -285,6 +292,20 @@ const fR = (v) => BRL.format(Number(v) || 0);
 // Nome do CT e planos à venda vêm do servidor
 let CT = { n: 'CT NORD', w: '', p: [] };
 let PLANOS = [];
+// Grade de aulas (vem do sistema): cada turma vira uma opção de horário na modalidade escolhida.
+const DIAS_F = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const diasTxt = (d) => (d || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((x) => DIAS_F[x]).join(', ');
+const horTxt = (t) => String(t.h || '').replace(':', 'h') + ' · ' + diasTxt(t.d) + ' · ' + t.n;
+let GRADE = []; let modHor = '';
+function montarHorarios(mod) {
+  if (mod === modHor) return;
+  const marcados = new Set([...document.querySelectorAll('[name="ht"]:checked')].map((x) => x.value));
+  modHor = mod;
+  const ts = GRADE.filter((t) => t.m === mod).sort((a, b) => String(a.h).localeCompare(String(b.h)) || diasTxt(a.d).localeCompare(diasTxt(b.d)));
+  $('lista-hor').innerHTML = ts.map((t) => '<label><input type="checkbox" name="ht" value="' + esc(t.i) + '"' + (marcados.has(t.i) ? ' checked' : '') + '>' +
+    esc(String(t.h || '').replace(':', 'h')) + ' · ' + esc(diasTxt(t.d)) + '<small>' + esc(t.n) + '</small></label>').join('');
+  $('bloco-hor').hidden = !ts.length;
+}
 const ehFamilia = (p) => /fam[ií]lia/i.test(p.nome);
 function linhaPreco(p) {
   if (p.forma === 'app') return { preco: 'Pelo app', det: 'sem mensalidade no CT · check-in pelo ' + p.aceitas[0] };
@@ -292,6 +313,7 @@ function linhaPreco(p) {
   return { preco: fR(p.valor) + '/mês', det: ehFamilia(p) ? 'valor por pessoa' : p.meses > 1 ? p.meses + ' mensalidades' : 'renovação mensal' };
 }
 function montarPlanos() {
+  GRADE = Array.isArray(CT.t) ? CT.t : []; modHor = null;
   if (CT.n) { $('nome-ct').textContent = CT.n + ' — Matrícula'; document.title = 'Ficha de Matrícula · ' + CT.n; }
   PLANOS = (Array.isArray(CT.p) ? CT.p : []).map((p) => ({ id: p.i, nome: p.n, valor: Number(p.v) || 0, meses: Number(p.m) || 1, forma: p.f || 'mensal', aceitas: Array.isArray(p.a) && p.a.length ? p.a : ['Pix', 'Cartão de débito', 'Dinheiro'] }));
   $('bloco-plano').hidden = !PLANOS.length;
@@ -328,6 +350,7 @@ function atualizar() {
     ? '<b>Como responsável, li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a fazer o aluno respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.'
     : '<b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.';
   $('bloco-faixa').hidden = exp !== 'Já treinei';
+  montarHorarios(mod);
   const atual = $('fx').value;
   if ($('fx').dataset.mod !== mod) {
     $('fx').innerHTML = FAIXAS[mod].map((x) => '<option>' + x + '</option>').join('');
@@ -401,6 +424,9 @@ $('ficha').addEventListener('submit', (e) => {
     mod, exp, fx: exp === 'Já treinei' ? $('fx').value : '', gr: exp === 'Já treinei' && mod !== 'Muay Thai' ? Number($('gr').value) : 0,
     sau: v('sau'), ctn: v('ctn'), ctt: v('ctt'), ori: v('ori'), ok: agora, rc: agora, rcv: REGIMENTO_VERSAO,
   };
+  const hts = [...document.querySelectorAll('[name="ht"]:checked')].map((x) => x.value);
+  if (hts.length) Object.assign(d, { ht: hts.join(','), hor: hts.map((id) => horTxt(GRADE.find((t) => t.i === id) || {})).join('; ') });
+  if (v('hro')) d.hro = v('hro');
   if (menor) Object.assign(d, { rn: v('rn'), rcpf: v('rcpf'), rtel: v('rtel') });
   if (p) Object.assign(d, { pl: p.id, pln: p.nome, fp: $('fp').value, dv: p.forma === 'avista' || p.forma === 'app' ? 0 : Number($('dv').value), fam: ehFamilia(p) ? v('fam') : '' });
   const btn = $('btn-concluir'); btn.disabled = true; btn.textContent = 'Enviando…';

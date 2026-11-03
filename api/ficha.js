@@ -4,19 +4,22 @@ import { rota, corpo, ip, limitar, banco, um, chaveCol, parHash, bumpRev, semear
 // Rota pública da ficha de matrícula.
 // GET  → nome do CT e planos à venda (para montar a ficha)
 // POST → recebe a ficha preenchida e coloca na fila "Fichas recebidas" do sistema
-const CAMPOS = { n: 120, nas: 10, cpf: 14, tel: 20, em: 120, end: 200, mod: 30, exp: 30, fx: 40, gr: 2, sau: 600, ctn: 120, ctt: 20, ori: 40, ok: 30, rc: 30, rcv: 10, rn: 120, rcpf: 14, rtel: 20, pl: 80, pln: 120, fp: 40, dv: 2, fam: 600 };
+const CAMPOS = { n: 120, nas: 10, cpf: 14, tel: 20, em: 120, end: 200, mod: 30, exp: 30, fx: 40, gr: 2, sau: 600, ctn: 120, ctt: 20, ori: 40, ok: 30, rc: 30, rcv: 10, rn: 120, rcpf: 14, rtel: 20, pl: 80, pln: 120, fp: 40, dv: 2, fam: 600, ht: 400, hor: 600, hro: 120 };
 const MAX_FILA = 300;
 
 export default rota(['GET', 'POST'], async (req, res) => {
   if (req.method === 'GET') {
     await semear();
-    const [cfg, planos] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGETALL', chaveCol('planos')]]);
+    const [cfg, planos, turmas] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGETALL', chaveCol('planos')], ['HGETALL', chaveCol('turmas')]]);
     const ct = (cfg && JSON.parse(cfg).ct) || {};
     const lista = Object.values(parHash(planos)).map((v) => JSON.parse(v)).filter((p) => p.ativo !== false)
       .sort((a, b) => a.meses - b.meses || b.valor - a.valor)
       .map((p) => ({ i: p.id, n: p.nome, v: p.valor, m: p.meses, f: p.formaPadrao || 'mensal', a: p.pagamentos || [] }));
+    // Grade das turmas ativas, para o aluno marcar os horários que prefere.
+    const grade = Object.values(parHash(turmas)).map((v) => JSON.parse(v)).filter((t) => t.ativa !== false)
+      .map((t) => ({ i: t.id, n: t.nome, m: t.modalidade, d: t.dias || [], h: t.inicio }));
     res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-    return res.status(200).json({ n: ct.nome || 'CT NORD', w: ct.whatsapp || '', p: lista });
+    return res.status(200).json({ n: ct.nome || 'CT NORD', w: ct.whatsapp || '', p: lista, t: grade });
   }
 
   await limitar('ficha:' + ip(req), 6, 3600);
