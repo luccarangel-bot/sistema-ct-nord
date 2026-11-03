@@ -158,40 +158,12 @@ export const SEED = {
   {
    "ativa": true,
    "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    2,
-    4
-   ],
-   "fim": "08:00",
-   "id": "tu_fem_0700",
-   "inicio": "07:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu Fem",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    2,
-    4
-   ],
-   "fim": "19:00",
-   "id": "tu_fem_1800",
-   "inicio": "18:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu Fem",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
+   "criadoEm": "2026-11-03T12:00:00",
    "dias": [
     1,
-    3
+    2,
+    3,
+    4
    ],
    "fim": "08:30",
    "id": "tu_jj_0730",
@@ -203,22 +175,37 @@ export const SEED = {
   {
    "ativa": true,
    "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
+   "criadoEm": "2026-11-03T12:00:00",
    "dias": [
-    2,
-    4
+    5
    ],
-   "fim": "09:00",
-   "id": "tu_jj_0800",
-   "inicio": "08:00",
+   "fim": "08:30",
+   "id": "tu_nogi_0730",
+   "inicio": "07:30",
    "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
+   "nome": "No Gi",
    "professor": ""
   },
   {
    "ativa": true,
    "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    1,
+    3,
+    5
+   ],
+   "fim": "10:00",
+   "id": "tu_master_0900",
+   "inicio": "09:00",
+   "modalidade": "Jiu-jitsu",
+   "nome": "Jiu-Jitsu Master",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
    "dias": [
     1,
     2,
@@ -236,178 +223,23 @@ export const SEED = {
   {
    "ativa": true,
    "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
+   "criadoEm": "2026-11-03T12:00:00",
    "dias": [
     1,
     3,
     5
    ],
    "fim": "16:00",
-   "id": "tu_jj_1500",
+   "id": "tu_juvenil_1500",
    "inicio": "15:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    1,
-    2,
-    3,
-    4,
-    5
-   ],
-   "fim": "18:00",
-   "id": "tu_jj_1700",
-   "inicio": "17:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    2,
-    4
-   ],
-   "fim": "20:00",
-   "id": "tu_jj_1900",
-   "inicio": "19:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    1,
-    3
-   ],
-   "fim": "21:00",
-   "id": "tu_jj_2000",
-   "inicio": "20:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    2,
-    4
-   ],
-   "fim": "22:00",
-   "id": "tu_jj_2100",
-   "inicio": "21:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    1,
-    3
-   ],
-   "fim": "22:30",
-   "id": "tu_jj_2130",
-   "inicio": "21:30",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    1,
-    3,
-    5
-   ],
-   "fim": "20:00",
-   "id": "tu_kids_1900",
-   "inicio": "19:00",
    "modalidade": "Jiu-jitsu Kids",
-   "nome": "Jiu-Jitsu Kids",
+   "nome": "Jiu-Jitsu Juvenil",
    "professor": ""
   },
   {
    "ativa": true,
    "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    1,
-    3,
-    5
-   ],
-   "fim": "10:00",
-   "id": "tu_master_0900",
-   "inicio": "09:00",
-   "modalidade": "Jiu-jitsu",
-   "nome": "Jiu-Jitsu Master",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    1,
-    3,
-    5
-   ],
-   "fim": "19:00",
-   "id": "tu_mt_1800",
-   "inicio": "18:00",
-   "modalidade": "Muay Thai",
-   "nome": "Muay Thai",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    2,
-    4
-   ],
-   "fim": "21:00",
-   "id": "tu_mt_2000",
-   "inicio": "20:00",
-   "modalidade": "Muay Thai",
-   "nome": "Muay Thai",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
-   "dias": [
-    5
-   ],
-   "fim": "08:30",
-   "id": "tu_nogi_0730",
-   "inicio": "07:30",
-   "modalidade": "Jiu-jitsu",
-   "nome": "No Gi",
-   "professor": ""
-  },
-  {
-   "ativa": true,
-   "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
+   "criadoEm": "2026-11-03T12:00:00",
    "dias": [
     1,
     3,
@@ -423,7 +255,130 @@ export const SEED = {
   {
    "ativa": true,
    "capacidade": 0,
-   "criadoEm": "2026-10-13T19:45:00",
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "fim": "18:00",
+   "id": "tu_jj_1700",
+   "inicio": "17:00",
+   "modalidade": "Jiu-jitsu",
+   "nome": "Jiu-Jitsu",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    5
+   ],
+   "fim": "18:00",
+   "id": "tu_nogi_1700",
+   "inicio": "17:00",
+   "modalidade": "Jiu-jitsu",
+   "nome": "No Gi",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    1,
+    3,
+    5
+   ],
+   "fim": "19:00",
+   "id": "tu_mt_1800",
+   "inicio": "18:00",
+   "modalidade": "Muay Thai",
+   "nome": "Muay Thai",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    2,
+    4
+   ],
+   "fim": "19:00",
+   "id": "tu_kids1_1800",
+   "inicio": "18:00",
+   "modalidade": "Jiu-jitsu Kids",
+   "nome": "Jiu-Jitsu Kids I",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    1,
+    3,
+    5
+   ],
+   "fim": "20:00",
+   "id": "tu_kids_1900",
+   "inicio": "19:00",
+   "modalidade": "Jiu-jitsu Kids",
+   "nome": "Jiu-Jitsu Kids II",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    2,
+    4
+   ],
+   "fim": "20:00",
+   "id": "tu_jj_1900",
+   "inicio": "19:00",
+   "modalidade": "Jiu-jitsu",
+   "nome": "Jiu-Jitsu",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    1,
+    3
+   ],
+   "fim": "21:00",
+   "id": "tu_jj_2000",
+   "inicio": "20:00",
+   "modalidade": "Jiu-jitsu",
+   "nome": "Jiu-Jitsu",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    2,
+    4
+   ],
+   "fim": "21:00",
+   "id": "tu_mt_2000",
+   "inicio": "20:00",
+   "modalidade": "Muay Thai",
+   "nome": "Muay Thai",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
    "dias": [
     5
    ],
@@ -432,6 +387,36 @@ export const SEED = {
    "inicio": "20:00",
    "modalidade": "Jiu-jitsu",
    "nome": "No Gi",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    2,
+    4
+   ],
+   "fim": "22:00",
+   "id": "tu_jj_2100",
+   "inicio": "21:00",
+   "modalidade": "Jiu-jitsu",
+   "nome": "Jiu-Jitsu",
+   "professor": ""
+  },
+  {
+   "ativa": true,
+   "capacidade": 0,
+   "criadoEm": "2026-11-03T12:00:00",
+   "dias": [
+    1,
+    3
+   ],
+   "fim": "22:30",
+   "id": "tu_jj_2130",
+   "inicio": "21:30",
+   "modalidade": "Jiu-jitsu",
+   "nome": "Jiu-Jitsu",
    "professor": ""
   }
  ],
@@ -444,149 +429,149 @@ export const SEED = {
    "id": "geral"
   }
  ],
-  "contasfixas": [
-   {
-    "id": "cf_aluguel",
-    "nome": "Aluguel",
-    "categoria": "Aluguel",
-    "tipo": "fixo",
-    "valor": 5000,
-    "porAluno": 0,
-    "dia": 20,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_catraca",
-    "nome": "Catraca",
-    "categoria": "Sistemas e taxas",
-    "tipo": "fixo",
-    "valor": 325,
-    "porAluno": 0,
-    "dia": 20,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_iptu",
-    "nome": "IPTU",
-    "categoria": "IPTU",
-    "tipo": "fixo",
-    "valor": 557,
-    "porAluno": 0,
-    "dia": 10,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_internet",
-    "nome": "Internet",
-    "categoria": "Água, luz e internet",
-    "tipo": "fixo",
-    "valor": 100,
-    "porAluno": 0,
-    "dia": 20,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_sistema",
-    "nome": "Sistema",
-    "categoria": "Sistemas e taxas",
-    "tipo": "fixo",
-    "valor": 300,
-    "porAluno": 0,
-    "dia": 16,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_contadora",
-    "nome": "Contadora",
-    "categoria": "Contabilidade",
-    "tipo": "fixo",
-    "valor": 1000,
-    "porAluno": 0,
-    "dia": 10,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_investidores",
-    "nome": "Investidores",
-    "categoria": "Investidores",
-    "tipo": "fixo",
-    "valor": 500,
-    "porAluno": 0,
-    "dia": 20,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_matheus",
-    "nome": "Matheus",
-    "categoria": "Pró-labore",
-    "tipo": "fixo",
-    "valor": 5750,
-    "porAluno": 0,
-    "dia": 5,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_lucca",
-    "nome": "Lucca",
-    "categoria": "Pró-labore",
-    "tipo": "fixo",
-    "valor": 2000,
-    "porAluno": 0,
-    "dia": 5,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_luz",
-    "nome": "Luz",
-    "categoria": "Água, luz e internet",
-    "tipo": "variavel",
-    "valor": 650,
-    "porAluno": 0,
-    "dia": 5,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_agua",
-    "nome": "Água",
-    "categoria": "Água, luz e internet",
-    "tipo": "variavel",
-    "valor": 300,
-    "porAluno": 0,
-    "dia": 20,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_comissao",
-    "nome": "Comissão",
-    "categoria": "Professores",
-    "tipo": "variavel",
-    "valor": 1800,
-    "porAluno": 50,
-    "dia": 5,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   },
-   {
-    "id": "cf_compass",
-    "nome": "Com. pass",
-    "categoria": "Professores",
-    "tipo": "variavel",
-    "valor": 1770,
-    "porAluno": 0,
-    "dia": 20,
-    "ativo": true,
-    "criadoEm": "2026-10-27T12:00:00.000Z"
-   }
-  ]
+ "contasfixas": [
+  {
+   "id": "cf_aluguel",
+   "nome": "Aluguel",
+   "categoria": "Aluguel",
+   "tipo": "fixo",
+   "valor": 5000,
+   "porAluno": 0,
+   "dia": 20,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_catraca",
+   "nome": "Catraca",
+   "categoria": "Sistemas e taxas",
+   "tipo": "fixo",
+   "valor": 325,
+   "porAluno": 0,
+   "dia": 20,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_iptu",
+   "nome": "IPTU",
+   "categoria": "IPTU",
+   "tipo": "fixo",
+   "valor": 557,
+   "porAluno": 0,
+   "dia": 10,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_internet",
+   "nome": "Internet",
+   "categoria": "Água, luz e internet",
+   "tipo": "fixo",
+   "valor": 100,
+   "porAluno": 0,
+   "dia": 20,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_sistema",
+   "nome": "Sistema",
+   "categoria": "Sistemas e taxas",
+   "tipo": "fixo",
+   "valor": 300,
+   "porAluno": 0,
+   "dia": 16,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_contadora",
+   "nome": "Contadora",
+   "categoria": "Contabilidade",
+   "tipo": "fixo",
+   "valor": 1000,
+   "porAluno": 0,
+   "dia": 10,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_investidores",
+   "nome": "Investidores",
+   "categoria": "Investidores",
+   "tipo": "fixo",
+   "valor": 500,
+   "porAluno": 0,
+   "dia": 20,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_matheus",
+   "nome": "Matheus",
+   "categoria": "Pró-labore",
+   "tipo": "fixo",
+   "valor": 5750,
+   "porAluno": 0,
+   "dia": 5,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_lucca",
+   "nome": "Lucca",
+   "categoria": "Pró-labore",
+   "tipo": "fixo",
+   "valor": 2000,
+   "porAluno": 0,
+   "dia": 5,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_luz",
+   "nome": "Luz",
+   "categoria": "Água, luz e internet",
+   "tipo": "variavel",
+   "valor": 650,
+   "porAluno": 0,
+   "dia": 5,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_agua",
+   "nome": "Água",
+   "categoria": "Água, luz e internet",
+   "tipo": "variavel",
+   "valor": 300,
+   "porAluno": 0,
+   "dia": 20,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_comissao",
+   "nome": "Comissão",
+   "categoria": "Professores",
+   "tipo": "variavel",
+   "valor": 1800,
+   "porAluno": 50,
+   "dia": 5,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  },
+  {
+   "id": "cf_compass",
+   "nome": "Com. pass",
+   "categoria": "Professores",
+   "tipo": "variavel",
+   "valor": 1770,
+   "porAluno": 0,
+   "dia": 20,
+   "ativo": true,
+   "criadoEm": "2026-10-27T12:00:00.000Z"
+  }
+ ]
 };

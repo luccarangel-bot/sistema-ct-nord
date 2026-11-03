@@ -234,13 +234,29 @@ export const normEmail = (e) => String(e || '').trim().toLowerCase();
 const MIGRACOES = [
   ['planos-app', ['planos', ['pl_totalpass', 'pl_wellhub']]],
   ['contas-planilha', ['contasfixas', SEED.contasfixas.map((c) => c.id)]],
+  ['grade-2026-11', atualizarGrade],
 ];
+// Grade de novembro/2026: turmas da grade nova ficam ativas (as que já existiam mantêm id, professor,
+// vagas e histórico de chamadas); as que não estão na grade (ex.: Jiu-Jitsu Fem) são desativadas, não apagadas.
+async function atualizarGrade() {
+  const atuais = Object.values(parHash(await um('HGETALL', chaveCol('turmas')))).map((v) => JSON.parse(v));
+  const args = [];
+  for (const t of SEED.turmas) {
+    const ex = atuais.find((x) => x.id === t.id);
+    const novo = ex ? { ...ex, nome: t.nome, modalidade: t.modalidade, dias: t.dias, inicio: t.inicio, fim: t.fim, ativa: true } : t;
+    args.push(t.id, JSON.stringify(novo));
+  }
+  for (const x of atuais) if (!SEED.turmas.some((t) => t.id === x.id) && x.ativa !== false) args.push(x.id, JSON.stringify({ ...x, ativa: false }));
+  await banco([['HSET', chaveCol('turmas'), ...args], ['INCR', P + 'rev']]);
+}
 // As contas fixas valem a partir do mês em que entram no sistema (os meses anteriores ficam em branco).
 const mesAtual = () => new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 7);
 const prepararSeed = (col, d) => (col === 'contasfixas' ? { ...d, desde: mesAtual() } : d);
 async function migrar() {
-  for (const [nome, [col, ids]] of MIGRACOES) {
+  for (const [nome, alvo] of MIGRACOES) {
     if (!(await um('SET', P + 'mig:' + nome, new Date().toISOString(), 'NX'))) continue;
+    if (typeof alvo === 'function') { await alvo(); continue; }
+    const [col, ids] = alvo;
     const existentes = await banco(ids.map((id) => ['HGET', chaveCol(col), id]));
     const args = [];
     ids.forEach((id, i) => { const d = SEED[col].find((x) => x.id === id); if (d && !existentes[i]) args.push(id, JSON.stringify(prepararSeed(col, d))); });

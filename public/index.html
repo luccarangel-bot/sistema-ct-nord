@@ -403,7 +403,7 @@ const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Horários de preferência do aluno: turmas da grade (ids) + observação livre.
 const diasTurma = (t) => (t.dias || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((x) => DIAS[x]).join(', ');
-const horarioTurma = (t) => String(t.inicio || '').replace(':', 'h') + ' · ' + diasTurma(t) + ' · ' + t.nome;
+const horarioTurma = (t) => String(t.inicio || '').replace(':', 'h') + ' · ' + diasTurma(t) + ' · ' + t.nome + (t.ativa === false ? ' (turma encerrada)' : '');
 const horariosDoAluno = (a) => (a.horarios || []).map((id) => S.turmas.find((t) => t.id === id)).filter(Boolean).sort((x, y) => String(x.inicio).localeCompare(String(y.inicio)));
 const DIAS_L = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const COR_MOD = { 'Jiu-jitsu': 'var(--accent)', 'Jiu-jitsu Kids': 'var(--warn)', 'Muay Thai': 'var(--bad)' };
