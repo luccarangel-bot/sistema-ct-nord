@@ -280,6 +280,10 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
 .pg-resumo small { color: var(--muted); font-size: .8rem; }
 .pg-resumo .bad { background: var(--inv-bg); color: var(--inv-fg); }
 .pg-resumo .bad small { color: var(--inv-fg); opacity: .75; }
+.prof-mods { margin: 6px 0 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.prof-sel { display: flex; flex-direction: column; gap: 2px; }
+.prof-sel small { color: var(--muted); font-size: .72rem; }
+.atribuir li { padding: 8px 0; }
 .seg { display: inline-flex; }
 .seg .btn + .btn { border-left: 0; }
 .seg .btn[aria-pressed="true"] { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
@@ -398,7 +402,7 @@ const ETAPAS = [
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Horários de preferência do aluno: turmas da grade (ids) + observação livre.
@@ -455,10 +459,10 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
-  busca: '', filtroAluno: 'ativos',
+  busca: '', filtroAluno: 'ativos', tabAlunos: 'alunos', filtroProf: '',
   tabContratos: 'contratos', filtroContrato: 'ativos',
   tabFin: 'lancamentos', pgMes: mesDe(HOJE), pgModo: 'mes', pgAno: HOJE.slice(0, 4), finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
   tabCrm: 'funil', tabAgenda: 'semana', semana: 0,
@@ -888,6 +892,71 @@ function itemTarefa(t) {
 }
 
 /* ---------- Alunos ---------- */
+/* ---------- Professores: quem dá aula em cada modalidade e quais alunos acompanha ---------- */
+const profPorId = (id) => S.professores.find((p) => p.id === id);
+const profsDaMod = (mod, incluirId) => S.professores.filter((p) => (p.ativo !== false && (p.modalidades || []).includes(mod)) || p.id === incluirId).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+const nomeProf = (id) => (profPorId(id) || {}).nome || '';
+// Alunos de um professor: [{ a, m }] para cada modalidade em que ele é o responsável.
+const alunosDoProf = (pid) => S.alunos.flatMap((a) => (a.modalidades || []).filter((m) => m.prof === pid).map((m) => ({ a, m })))
+  .sort((x, y) => (alunoAtivo(y.a) - alunoAtivo(x.a)) || x.a.nome.localeCompare(y.a.nome, 'pt-BR'));
+// Seletor de professor para uma modalidade (vazio = sem professor).
+const selProf = (id, nome, mod, atual, extra) => sel(id, nome, '<option value="">Sem professor</option>' + profsDaMod(mod, atual).map((p) => opt(p.id, p.nome, p.id === atual)).join(''), extra || '');
+
+function abaProfessores() {
+  const profs = S.professores.slice().sort((a, b) => (b.ativo !== false) - (a.ativo !== false) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  let h = '<div class="filtros" style="justify-content:space-between"><p class="vazio" style="padding:0;margin:0">Cada aluno tem um professor responsável em cada modalidade que treina.</p><button class="btn pri" data-act="novo-prof">Novo professor</button></div>';
+  if (!profs.length) return h + '<div class="painel"><p class="vazio">Nenhum professor cadastrado. Cadastre os professores de cada modalidade e depois atribua os alunos a eles.</p><button class="btn pri" data-act="novo-prof">Cadastrar professor</button></div>';
+  h += '<div class="grade2">' + profs.map((p) => {
+    const xs = alunosDoProf(p.id); const ativos = xs.filter((x) => alunoAtivo(x.a)).length;
+    return '<section class="painel"' + (p.ativo === false ? ' style="opacity:.6"' : '') + '><header><h2>' + esc(p.nome) + '</h2><small>' + ativos + ' aluno(s) ativo(s)</small></header>' +
+      '<p class="prof-mods">' + (p.modalidades || []).map((m) => '<span class="pill">' + esc(m) + '</span>').join(' ') + (p.ativo === false ? ' <span class="pill">Inativo</span>' : '') +
+      (p.telefone ? ' · ' + waA(p.telefone, 'Olá, ' + p.nome.split(' ')[0] + '!', 'WhatsApp') : '') + '</p>' +
+      (xs.length ? '<ul class="lista">' + xs.map(({ a, m }) => '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b>' +
+        '<small>' + esc(m.mod) + ' · ' + esc(m.faixa || '') + (alunoAtivo(a) ? '' : ' · inativo') + '</small></div></li>').join('') + '</ul>' : '<p class="vazio">Nenhum aluno atribuído ainda.</p>') +
+      '<div class="rodape" style="margin-top:8px"><button class="btn peq" data-act="editar-prof" data-id="' + p.id + '">Editar</button><button class="btn peq pri" data-act="atribuir-alunos" data-id="' + p.id + '">Atribuir alunos</button></div></section>';
+  }).join('') + '</div>';
+  // Alunos ativos que ainda não têm professor em alguma modalidade.
+  const sem = S.alunos.filter(alunoAtivo).flatMap((a) => (a.modalidades || []).filter((m) => !m.prof || !profPorId(m.prof)).map((m) => ({ a, m })))
+    .sort((x, y) => x.m.mod.localeCompare(y.m.mod) || x.a.nome.localeCompare(y.a.nome, 'pt-BR'));
+  h += '<section class="painel" style="margin-top:20px"><header><h2>Sem professor</h2><small>' + sem.length + ' aluno(s) ativo(s)</small></header>' +
+    (sem.length ? '<ul class="lista">' + sem.map(({ a, m }) => {
+      const i = a.modalidades.indexOf(m);
+      return '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b><small>' + esc(m.mod) + ' · ' + esc(m.faixa || '') + '</small></div>' +
+        selProf('sp-' + a.id + '-' + i, 'prof', m.mod, '', 'data-prof-aluno="' + a.id + '" data-i="' + i + '" aria-label="Professor de ' + esc(a.nome) + ' em ' + esc(m.mod) + '" style="width:auto"') + '</li>';
+    }).join('') + '</ul>' : '<p class="vazio">Todos os alunos ativos já têm professor.</p>') + '</section>';
+  return h;
+}
+
+function modalProf(p) {
+  p = p || { modalidades: ['Jiu-jitsu'], ativo: true };
+  abrirModal(p.id ? 'Editar professor' : 'Novo professor', '<form data-form="prof"><input type="hidden" name="id" value="' + esc(p.id || '') + '">' +
+    campo('Nome *', inp('pf-nome', 'nome', p.nome, 'required placeholder="Ex.: Yury"')) +
+    campo('Celular / WhatsApp', inp('pf-tel', 'telefone', p.telefone, 'inputmode="tel" placeholder="(21) 99999-9999"')) +
+    '<div class="campo"><span>Modalidades que ensina *</span><div class="dias-sel">' + MODALIDADES.map((m) => '<label><input type="checkbox" name="mod" value="' + esc(m) + '"' + ((p.modalidades || []).includes(m) ? ' checked' : '') + '>' + esc(m) + '</label>').join('') + '</div></div>' +
+    '<label class="check"><input type="checkbox" name="ativo" id="pf-ativo"' + (p.ativo !== false ? ' checked' : '') + '><span>Professor ativo (aparece para escolher nos alunos e turmas)</span></label>' +
+    '<div class="rodape">' + (p.id ? '<button class="btn perigo" type="button" data-act="excluir-prof" data-id="' + p.id + '" style="margin-right:auto">Excluir</button>' : '') +
+    '<button class="btn" type="button" data-act="fechar-modal">Cancelar</button><button class="btn pri" type="submit">Salvar</button></div></form>');
+}
+
+// Marca de uma vez os alunos de um professor, por modalidade.
+function modalAtribuir(p) {
+  const mods = (p.modalidades || []).filter((m) => MODALIDADES.includes(m));
+  const linhas = mods.map((mod) => {
+    const xs = S.alunos.flatMap((a) => (a.modalidades || []).map((m, i) => ({ a, m, i })).filter((x) => x.m.mod === mod))
+      .sort((x, y) => (alunoAtivo(y.a) - alunoAtivo(x.a)) || x.a.nome.localeCompare(y.a.nome, 'pt-BR'));
+    if (!xs.length) return '<h3 style="margin-top:6px">' + esc(mod) + '</h3><p class="vazio" style="padding:0">Nenhum aluno treina ' + esc(mod) + '.</p>';
+    return '<h3 style="margin-top:6px">' + esc(mod) + '</h3><ul class="lista atribuir">' + xs.map(({ a, m, i }) => {
+      const outro = m.prof && m.prof !== p.id ? nomeProf(m.prof) : '';
+      return '<li data-nome="' + esc(a.nome.toLowerCase()) + '"><label class="check" style="flex:1"><input type="checkbox" name="at" value="' + a.id + '|' + i + '"' + (m.prof === p.id ? ' checked' : '') + '><span><b>' + esc(a.nome) + '</b>' +
+        '<small style="display:block;color:var(--muted)">' + esc(m.faixa || '') + (alunoAtivo(a) ? '' : ' · inativo') + (outro ? ' · hoje com ' + esc(outro) : m.prof === p.id ? '' : ' · sem professor') + '</small></span></label></li>';
+    }).join('') + '</ul>';
+  }).join('');
+  abrirModal('Alunos de ' + p.nome, '<form data-form="atribuir"><input type="hidden" name="id" value="' + p.id + '">' +
+    '<input type="search" placeholder="Buscar aluno" aria-label="Buscar aluno" data-filtro-atribuir>' +
+    (mods.length ? linhas : '<p class="vazio">Marque as modalidades que este professor ensina em Editar.</p>') +
+    '<p class="vazio" style="padding:0">Marcar um aluno que hoje está com outro professor passa ele para ' + esc(p.nome) + '.</p>' + rodape('Salvar') + '</form>');
+}
+
 VIEWS.alunos = function () {
   const base = S.alunos.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   const filtros = {
@@ -898,10 +967,14 @@ VIEWS.alunos = function () {
     todos: () => true,
   };
   const q = UI.busca.trim().toLowerCase();
-  const lista = base.filter(filtros[UI.filtroAluno]).filter((a) => !q || a.nome.toLowerCase().includes(q) || (a.telefone || '').replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§'));
+  const doProf = (a) => !UI.filtroProf || (UI.filtroProf === '-' ? (a.modalidades || []).some((m) => !m.prof || !profPorId(m.prof)) : (a.modalidades || []).some((m) => m.prof === UI.filtroProf));
+  const lista = base.filter(filtros[UI.filtroAluno]).filter(doProf).filter((a) => !q || a.nome.toLowerCase().includes(q) || (a.telefone || '').replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§'));
   const cnt = (k) => base.filter(filtros[k]).length;
   let h = '<div class="topo"><div><h1>Alunos</h1><p>' + base.filter(alunoAtivo).length + ' ativos de ' + base.length + ' cadastrados.</p></div><div class="acoes"><button class="btn" data-act="enviar-ficha">Enviar ficha de matrícula</button>' + (S.fichas.length ? '<button class="btn" data-act="fichas-recebidas">Fichas recebidas · ' + S.fichas.length + '</button>' : '') + '<button class="btn pri" data-act="novo-aluno">Novo aluno</button></div></div>';
+  h += '<div class="tabs" role="tablist">' + tab('tabAlunos', 'alunos', 'Alunos') + tab('tabAlunos', 'professores', 'Professores') + '</div>';
+  if (UI.tabAlunos === 'professores') return h + abaProfessores();
   h += '<div class="filtros"><input type="search" id="busca-aluno" data-ui="busca" placeholder="Buscar por nome ou telefone" value="' + esc(UI.busca) + '" aria-label="Buscar aluno">' +
+    (S.professores.length ? '<select data-ui="filtroProf" aria-label="Professor" style="width:auto">' + opt('', 'Todos os professores', !UI.filtroProf) + S.professores.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((p) => opt(p.id, 'Prof. ' + p.nome, UI.filtroProf === p.id)).join('') + opt('-', 'Sem professor', UI.filtroProf === '-') + '</select>' : '') +
     chip('filtroAluno', 'ativos', 'Ativos', cnt('ativos')) + chip('filtroAluno', 'avencer', 'Contrato a vencer', cnt('avencer')) + chip('filtroAluno', 'devendo', 'Em atraso', cnt('devendo')) + chip('filtroAluno', 'inativos', 'Inativos', cnt('inativos')) + chip('filtroAluno', 'todos', 'Todos', base.length) + '</div>';
   if (!lista.length) return h + '<div class="painel"><p class="vazio">Nenhum aluno encontrado com esse filtro.</p></div>';
   h += '<div class="tabela-wrap"><table><thead><tr><th>Aluno</th><th>Graduação</th><th>Plano</th><th>Contrato</th><th>Financeiro</th><th class="esconde-celular">Último treino</th></tr></thead><tbody>';
@@ -910,7 +983,7 @@ VIEWS.alunos = function () {
     const c = contratoVigente(a.id) || contratosDo(a.id)[0];
     const div = dividaDo(a.id);
     h += '<tr class="clicavel" data-act="abrir-aluno" data-id="' + a.id + '"><td><b>' + esc(a.nome) + '</b><small>' + esc(a.telefone || '') + '</small></td>' +
-      '<td>' + (a.modalidades || []).map((m) => '<div><small>' + esc(m.mod) + '</small>' + faixaHtml(m) + '</div>').join('') + '</td>' +
+      '<td>' + (a.modalidades || []).map((m) => '<div><small>' + esc(m.mod) + (m.prof && nomeProf(m.prof) ? ' · Prof. ' + esc(nomeProf(m.prof)) : '') + '</small>' + faixaHtml(m) + '</div>').join('') + '</td>' +
       '<td>' + (c ? esc(c.planoNome) + '<small>' + (c.continuo ? 'renova todo mês' : 'até ' + fData(c.fim)) + '</small>' : '<small>sem contrato</small>') + '</td>' +
       '<td>' + (c ? pillContr(c) : pill('', 'Sem contrato')) + '</td>' +
       '<td>' + (div > 0 ? pill('bad', 'Deve ' + fR(div)) : pill('ok', 'Em dia')) + '</td>' +
@@ -954,7 +1027,8 @@ VIEWS.aluno = function () {
 
   h += '<section class="painel"><header><h2>Graduação</h2><button class="btn link" data-act="add-modalidade" data-id="' + a.id + '">+ Modalidade</button></header>';
   if (!(a.modalidades || []).length) h += '<p class="vazio">Nenhuma modalidade cadastrada.</p>';
-  else h += '<ul class="lista">' + a.modalidades.map((m, i) => { const n = aulasDesdeGrad(a, m.mod); return '<li><div class="cresce"><small>' + esc(m.mod) + ' · desde ' + fData(m.desde) + '</small>' + faixaHtml(m) + '<small>' + n + ' aula(s) desde a última graduação</small></div><button class="btn peq" data-act="promover" data-id="' + a.id + '" data-i="' + i + '">Graduar</button></li>'; }).join('') + '</ul>';
+  else h += '<ul class="lista">' + a.modalidades.map((m, i) => { const n = aulasDesdeGrad(a, m.mod); return '<li><div class="cresce"><small>' + esc(m.mod) + ' · desde ' + fData(m.desde) + '</small>' + faixaHtml(m) + '<small style="display:block">' + n + ' aula(s) desde a última graduação</small></div>' +
+    '<label class="prof-sel"><small>Professor</small>' + selProf('pa-' + i, 'prof', m.mod, m.prof || '', 'data-prof-aluno="' + a.id + '" data-i="' + i + '" style="width:auto"') + '</label><button class="btn peq" data-act="promover" data-id="' + a.id + '" data-i="' + i + '">Graduar</button></li>'; }).join('') + '</ul>';
   const hist = (a.historicoGrad || []).slice().sort((x, y) => y.data.localeCompare(x.data));
   if (hist.length) h += '<h3 style="margin-top:12px">Histórico</h3><ul class="lista">' + hist.map((g) => '<li><div class="cresce"><small>' + fData(g.data) + ' · ' + esc(g.mod) + '</small>' + faixaHtml(g) + '</div></li>').join('') + '</ul>';
   h += '</section></div>';
@@ -1584,7 +1658,7 @@ function modalTurma(t) {
     '<div class="linha2">' + campo('Nome da turma *', inp('tu-nome', 'nome', t.nome, 'required placeholder="Ex.: Jiu-jitsu Iniciantes"')) + campo('Modalidade', sel('tu-mod', 'modalidade', MODALIDADES.map((m) => opt(m, m, m === t.modalidade)).join(''))) + '</div>' +
     '<div class="campo"><span>Dias da semana *</span><div class="dias-sel">' + [1, 2, 3, 4, 5, 6, 0].map((d) => '<label><input type="checkbox" name="dia" value="' + d + '"' + ((t.dias || []).includes(d) ? ' checked' : '') + '>' + DIAS[d] + '</label>').join('') + '</div></div>' +
     '<div class="linha2">' + campo('Começa', inp('tu-ini', 'inicio', t.inicio, 'type="time" required')) + campo('Termina', inp('tu-fim', 'fim', t.fim, 'type="time" required')) + campo('Vagas', inp('tu-cap', 'capacidade', t.capacidade || '', 'type="number" min="0" placeholder="Sem limite"')) + '</div>' +
-    campo('Professor', inp('tu-prof', 'professor', t.professor)) +
+    campo('Professor', inp('tu-prof', 'professor', t.professor, 'list="tu-profs" autocomplete="off"') + '<datalist id="tu-profs">' + S.professores.filter((p) => p.ativo !== false).map((p) => '<option value="' + esc(p.nome) + '">').join('') + '</datalist>') +
     '<label class="check"><input type="checkbox" name="ativa" id="tu-ativa"' + (t.ativa !== false ? ' checked' : '') + '><span>Turma ativa (aparece na agenda)</span></label>' +
     rodape(t.id ? 'Salvar turma' : 'Criar turma') + '</form>' + (t.id ? '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-turma" data-id="' + t.id + '" style="align-self:flex-start">Excluir turma</button></div>' : ''));
 }
@@ -1693,7 +1767,8 @@ function modalAluno(a) {
   if (!a.id) {
     const mod = m0.mod || a.interesse || 'Jiu-jitsu';
     h += '<div class="linha2">' + campo('Modalidade', sel('al-mod', 'mod', MODALIDADES.map((m) => opt(m, m, m === mod)).join(''), 'data-troca-mod')) +
-      campo('Faixa atual', sel('al-faixa', 'faixa', grads()[mod].faixas.map((f) => opt(f)).join(''))) + campo('Grau', inp('al-grau', 'grau', 0, 'type="number" min="0" max="10"')) + '</div>';
+      campo('Faixa atual', sel('al-faixa', 'faixa', grads()[mod].faixas.map((f) => opt(f)).join(''))) + campo('Grau', inp('al-grau', 'grau', 0, 'type="number" min="0" max="10"')) + '</div>' +
+      (S.professores.length ? campo('Professor', selProf('al-prof', 'prof', mod, '')) : '');
   }
   const grade = S.turmas.filter((t) => t.ativa !== false || (a.horarios || []).includes(t.id));
   if (grade.length) {
@@ -1822,6 +1897,7 @@ function modalGraduar(a, i, nova) {
   abrirModal(nova ? 'Adicionar modalidade' : 'Registrar graduação', '<form data-form="graduar"><input type="hidden" name="id" value="' + a.id + '"><input type="hidden" name="i" value="' + (nova ? -1 : i) + '">' +
     (nova ? campo('Modalidade', sel('gr-mod', 'mod', MODALIDADES.map((x) => opt(x, x, x === m.mod)).join(''), 'data-troca-mod')) : '<input type="hidden" name="mod" value="' + esc(m.mod) + '"><div class="resumo"><span>' + esc(a.nome) + ' · ' + esc(m.mod) + '</span><span>Atual: ' + faixaHtml(m) + '</span></div>') +
     '<div class="linha2">' + campo('Nova faixa', sel('al-faixa', 'faixa', g.faixas.map((f) => opt(f, f, f === faixaSug)).join(''))) + campo('Grau', inp('al-grau', 'grau', grauSug, 'type="number" min="0" max="10"')) + campo('Data', inp('gr-data', 'data', HOJE, 'type="date" required')) + '</div>' +
+    (nova && S.professores.length ? campo('Professor', selProf('al-prof', 'prof', m.mod, '')) : '') +
     rodape(nova ? 'Adicionar' : 'Salvar graduação') + '</form>');
 }
 function modalLead(l) {
@@ -1858,7 +1934,7 @@ const FORMS = {
       horarios: f ? [...f.querySelectorAll('[name="hor"]:checked')].map((x) => x.value) : (a.horarios || []), horarioObs: String(d.horarioObs || '').trim(),
     });
     if (!ex) {
-      const m = { mod: d.mod, faixa: d.faixa, grau: Number(d.grau) || 0, desde: HOJE };
+      const m = { mod: d.mod, faixa: d.faixa, grau: Number(d.grau) || 0, desde: HOJE, prof: d.prof || '' };
       a.modalidades = [m]; a.historicoGrad = [{ data: HOJE, mod: m.mod, faixa: m.faixa, grau: m.grau }];
     }
     fecharModal();
@@ -1932,6 +2008,29 @@ const FORMS = {
     }
     fecharModal(); await salvarVarios('lancamentos', lista); toast(n > 1 ? n + ' lançamentos criados.' : 'Lançamento salvo.');
   },
+  async prof(d, f) {
+    const mods = [...f.querySelectorAll('[name="mod"]:checked')].map((x) => x.value);
+    if (!mods.length) { toast('Marque pelo menos uma modalidade.'); return; }
+    const ex = d.id ? profPorId(d.id) : null;
+    const p = { ...(ex || { id: novoId('pf'), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), telefone: d.telefone.trim(), modalidades: mods, ativo: !!d.ativo };
+    fecharModal(); await salvar('professores', p);
+    toast(ex ? 'Professor atualizado.' : 'Professor cadastrado. Agora atribua os alunos a ele.');
+  },
+  async atribuir(d, f) {
+    const p = profPorId(d.id); if (!p) return;
+    const marcados = new Set([...f.querySelectorAll('[name="at"]:checked')].map((x) => x.value));
+    const todos = [...f.querySelectorAll('[name="at"]')].map((x) => x.value);
+    const mudar = new Map();
+    for (const k of todos) {
+      const [aid, i] = k.split('|'); const a = mudar.get(aid) || alunoPorId(aid); if (!a) continue;
+      const m = a.modalidades[Number(i)]; const quer = marcados.has(k);
+      if (quer && m.prof !== p.id) mudar.set(aid, { ...a, modalidades: a.modalidades.map((x, j) => (j === Number(i) ? { ...x, prof: p.id } : x)) });
+      else if (!quer && m.prof === p.id) mudar.set(aid, { ...a, modalidades: a.modalidades.map((x, j) => (j === Number(i) ? { ...x, prof: '' } : x)) });
+    }
+    fecharModal();
+    if (!mudar.size) { toast('Nada mudou.'); return; }
+    if (await salvarVarios('alunos', [...mudar.values()])) toast(mudar.size + ' aluno(s) atualizado(s).');
+  },
   async graduar(d) {
     const a = alunoPorId(d.id); if (!a) return;
     const n = { ...a, modalidades: (a.modalidades || []).map((m) => ({ ...m })), historicoGrad: [...(a.historicoGrad || [])] };
@@ -1939,7 +2038,7 @@ const FORMS = {
     const i = Number(d.i);
     if (i < 0) {
       if (n.modalidades.some((m) => m.mod === d.mod)) { toast('O aluno já treina ' + d.mod + '.'); return; }
-      n.modalidades.push({ ...reg, desde: d.data });
+      n.modalidades.push({ ...reg, desde: d.data, prof: d.prof || '' });
     } else n.modalidades[i] = { ...n.modalidades[i], ...reg };
     n.historicoGrad.push({ data: d.data, ...reg });
     fecharModal(); await salvar('alunos', n); toast('Graduação registrada.');
@@ -2034,6 +2133,16 @@ const ACOES = {
     });
   },
   promover(ds) { modalGraduar(alunoPorId(ds.id), Number(ds.i), false); },
+  'novo-prof'() { modalProf(); },
+  'editar-prof'(ds) { modalProf(profPorId(ds.id)); },
+  'atribuir-alunos'(ds) { const p = profPorId(ds.id); if (p) modalAtribuir(p); },
+  'excluir-prof'(ds) {
+    const p = profPorId(ds.id); if (!p) return; const xs = alunosDoProf(p.id);
+    confirmar('Excluir professor', 'Excluir <b>' + esc(p.nome) + '</b>?' + (xs.length ? ' ' + xs.length + ' aluno(s) ficam sem professor.' : '') + ' Se ele só parou de dar aula, desmarque "Professor ativo" em vez de excluir.', 'Excluir', async () => {
+      for (const a of [...new Set(xs.map((x) => x.a))]) await salvar('alunos', { ...a, modalidades: a.modalidades.map((m) => (m.prof === p.id ? { ...m, prof: '' } : m)) });
+      await remover('professores', p.id); toast('Professor excluído.');
+    });
+  },
   'add-modalidade'(ds) { modalGraduar(alunoPorId(ds.id), -1, true); },
   'novo-plano'() { modalPlano(); },
   'editar-plano'(ds) { modalPlano(planoPorId(ds.id)); },
@@ -2169,6 +2278,10 @@ document.addEventListener('input', (e) => {
   const el = e.target;
   if (el.dataset && el.dataset.ui) { UI[el.dataset.ui] = el.value; render(); }
   if (el.closest && el.closest('[data-venda]')) atualizarResumoVenda();
+  if (el.dataset && el.dataset.filtroAtribuir !== undefined) {
+    const q = el.value.trim().toLowerCase();
+    document.querySelectorAll('.atribuir li[data-nome]').forEach((li) => { li.hidden = !!q && !li.dataset.nome.includes(q); });
+  }
   if (el.dataset && el.dataset.filtroChamada !== undefined) {
     const q = el.value.trim().toLowerCase();
     document.querySelectorAll('#ch-lista li[data-nome]').forEach((li) => { li.hidden = !!q && !li.dataset.nome.includes(q); });
@@ -2187,8 +2300,15 @@ document.addEventListener('change', (e) => {
     if (el.value === 'matriculado' && !l.alunoId) { el.value = l.etapa; ACOES['converter-lead']({ id: l.id }); return; }
     salvar('leads', { ...l, etapa: el.value }); toast('Etapa atualizada.');
   }
+  if (el.dataset && el.dataset.profAluno) {
+    const a = alunoPorId(el.dataset.profAluno); const i = Number(el.dataset.i); if (!a || !a.modalidades[i]) return;
+    const n = { ...a, modalidades: a.modalidades.map((m, j) => (j === i ? { ...m, prof: el.value } : m)) };
+    salvar('alunos', n).then(() => toast(el.value ? 'Professor definido: ' + nomeProf(el.value) + '.' : 'Aluno sem professor em ' + a.modalidades[i].mod + '.'));
+    return;
+  }
   if (el.dataset && el.dataset.trocaMod !== undefined) {
     const f = el.form.querySelector('[name="faixa"]'); if (f) f.innerHTML = grads()[el.value].faixas.map((x) => opt(x)).join('');
+    const pr = el.form.querySelector('[name="prof"]'); if (pr) pr.innerHTML = '<option value="">Sem professor</option>' + profsDaMod(el.value).map((p) => opt(p.id, p.nome)).join('');
   }
   if (el.name === 'planoId' && el.closest && el.closest('[data-venda]')) {
     const p = planoPorId(el.value); const f = el.form.querySelector('[name="forma"]');
