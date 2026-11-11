@@ -25,5 +25,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/catraca/:token/:acao",
+      "destination": "/api/catraca?token=:token&acao=:acao"
+    }
   ]
 }

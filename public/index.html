@@ -402,7 +402,7 @@ const ETAPAS = [
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'catraca'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Horários de preferência do aluno: turmas da grade (ids) + observação livre.
@@ -459,7 +459,7 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], catraca: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos', tabAlunos: 'alunos', filtroProf: '',
@@ -1017,6 +1017,7 @@ VIEWS.aluno = function () {
     (a.endereco ? '<dt>Endereço</dt><dd>' + esc(a.endereco) + '</dd>' : '') +
     (a.responsavel ? '<dt>Responsável</dt><dd>' + esc(a.responsavel) + (a.respTelefone ? ' · ' + esc(a.respTelefone) : '') + (a.respCpf ? '<br><small>CPF ' + esc(a.respCpf) + '</small>' : '') + '</dd>' : '') +
     (a.emergencia ? '<dt>Emergência</dt><dd>' + esc(a.emergencia) + '</dd>' : '') +
+    linhaCatracaAluno(a) +
     (horariosDoAluno(a).length || a.horarioObs ? '<dt>Prefere treinar</dt><dd>' + horariosDoAluno(a).map((t) => esc(horarioTurma(t))).join('<br>') + (a.horarioObs ? (horariosDoAluno(a).length ? '<br>' : '') + '<small>' + esc(a.horarioObs) + '</small>' : '') + '</dd>' : '') +
     (a.saude ? '<dt>Saúde</dt><dd><b>' + esc(a.saude) + '</b></dd>' : '') +
     '<dt>Aluno desde</dt><dd>' + fData((a.criadoEm || '').slice(0, 10)) + '</dd>' +
@@ -1457,6 +1458,7 @@ VIEWS.config = function () {
     '<div class="linha2">' + campo('Nome do CT', inp('ct-nome', 'nome', ct.nome, 'placeholder="Ex.: CT Tatame Niterói"')) + campo('WhatsApp do CT', inp('ct-wa', 'whatsapp', ct.whatsapp, 'inputmode="tel" placeholder="(21) 99999-9999"'), 'Aparece para o aluno no fim da ficha, para tirar dúvidas.') + '</div>' +
     '<div class="rodape"><button class="btn pri" type="submit">Salvar dados do CT</button></div></form>';
   h += '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Ficha de matrícula online</h2></header>' + blocoFicha() + '</section>';
+  h += blocoCatraca();
   h += '<div style="height:16px"></div>';
   h += '<form class="painel" data-form="graduacoes" style="display:flex;flex-direction:column;gap:14px;max-width:760px"><header><h2>Graduações</h2></header><p class="vazio" style="padding:0">Uma faixa por linha, da primeira à última. Para faixas de duas cores, escreva “Cinza e branca”.</p>';
   for (const m of MODALIDADES) {
@@ -1469,6 +1471,71 @@ VIEWS.config = function () {
   h += '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Versão 1.0</h2><small>site com login</small></header><p style="margin:12px 0 0">Alunos, graduações, planos e contratos, financeiro, agenda e check-in, captação e ficha de matrícula online.</p><p style="margin:8px 0 0" class="vazio">Próximas versões: relatórios, aplicativo do aluno, catraca e reconhecimento facial, site de vendas, cobrança recorrente automática e campanhas de WhatsApp. Algumas dependem de serviços externos.</p></section>';
   return h;
 };
+
+/* ---------- Catraca: leitor facial Control iD (iDFace) em Modo Online ---------- */
+const catracaCfg = () => ((S.config || {}).catraca || {});
+const catracaEstado = () => S.catraca.find((x) => x.id === 'estado') || { entradas: [], desconhecidos: {} };
+const urlCatraca = () => location.origin + '/api/catraca/' + (catracaCfg().token || '');
+const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+// Mesma regra do servidor (api/catraca.js), só para mostrar a situação na tela.
+function regraCatraca(a) {
+  const vig = contratosDo(a.id).filter((c) => ['ativo', 'avencer'].includes(statusContrato(c)));
+  if (!vig.length) return { ok: false, motivo: 'sem plano ativo' };
+  if (lancsDo(a.id).some((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado')) return { ok: false, motivo: 'mensalidade em atraso' };
+  if (vig.every((c) => c.forma === 'app')) return a.passLiberadoEm === HOJE ? { ok: true, motivo: 'TotalPass/Wellhub liberado hoje', pass: true } : { ok: false, motivo: 'TotalPass/Wellhub: libere a entrada de hoje depois de conferir o check-in', pass: true };
+  return { ok: true, motivo: 'liberado' };
+}
+// Sugere o aluno de um rosto do aparelho pelo nome.
+function sugerirAluno(nome) {
+  const n = semAcento(nome); if (!n) return null;
+  const livres = S.alunos.filter((a) => !a.catracaId);
+  return livres.find((a) => semAcento(a.nome) === n) || livres.find((a) => semAcento(a.nome).startsWith(n) || n.startsWith(semAcento(a.nome)))
+    || ((xs) => (xs.length === 1 ? xs[0] : null))(livres.filter((a) => semAcento(a.nome).split(' ')[0] === n.split(' ')[0] && semAcento(a.nome).split(' ').slice(-1)[0] === n.split(' ').slice(-1)[0]));
+}
+const quando = (iso) => (iso ? fData(iso.slice(0, 10)).slice(0, 5) + ' ' + new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '');
+
+function blocoCatraca() {
+  const cfg = catracaCfg();
+  let h = '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Catraca (Control iD)</h2>' + (cfg.ativo ? '<small>' + (catracaEstado().ultimoContato ? 'último contato: ' + quando(catracaEstado().ultimoContato) : 'aguardando o aparelho') + '</small>' : '') + '</header>';
+  if (!cfg.ativo) {
+    return h + '<p style="margin-top:0">Liga o leitor facial à catraca do CT ao sistema. A cada passagem, o aparelho pergunta ao sistema se libera: entra quem tem plano ativo e nenhuma mensalidade vencida. Alunos de TotalPass/Wellhub só entram no dia em que a recepção liberar.</p>' +
+      '<div class="rodape"><button class="btn pri" data-act="cat-ativar">Ativar integração com a catraca</button></div></section>';
+  }
+  const est = catracaEstado();
+  const desc = Object.values(est.desconhecidos || {}).sort((a, b) => String(b.ultimo).localeCompare(String(a.ultimo)));
+  const vinculados = S.alunos.filter((a) => a.catracaId).length;
+  h += '<div class="campo"><span>Endereço do servidor para colocar no aparelho</span><div style="display:flex;gap:8px"><input id="cat-url" readonly value="' + esc(urlCatraca()) + '"><button class="btn" data-act="copiar" data-alvo="cat-url">Copiar</button></div>' +
+    '<small>Use no iDFace em Modo Online (Pro). Quem tiver este endereço consegue falar com a catraca: não divulgue.</small></div>';
+  h += '<form data-form="cat-cfg" style="display:flex;flex-direction:column;gap:14px;margin-top:14px"><div class="linha2">' +
+    campo('Como o aparelho abre a catraca', sel('cat-acao', 'acao', opt('sec_box', 'Módulo SecBox', (cfg.acao || 'sec_box') === 'sec_box') + opt('door', 'Relé do próprio aparelho', cfg.acao === 'door') + opt('catra', 'Catraca Control iD (iDBlock)', cfg.acao === 'catra'))) +
+    campo('ID da SecBox ou nº do relé', inp('cat-sb', 'param', cfg.acao === 'door' ? (cfg.porta || 1) : (cfg.secboxId || '65793')), 'Ajustamos no teste, na academia.') + '</div>' +
+    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno (deixe desmarcado para não barrar a equipe)</span></label>' +
+    '<div class="rodape"><button class="btn" type="button" data-act="cat-desativar">Desativar</button><button class="btn" type="button" data-act="cat-token">Gerar novo endereço</button><button class="btn pri" type="submit">Salvar</button></div></form>';
+  h += '<h3 style="margin-top:18px">Rostos do aparelho sem aluno ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s) já ligados</small></h3>' +
+    (desc.length ? '<ul class="lista">' + desc.map((p) => {
+      const sug = sugerirAluno(p.nome);
+      return '<li><div class="cresce"><b>' + esc(p.nome || 'Sem nome') + '</b><small>ID ' + esc(p.id) + ' no aparelho · passou em ' + quando(p.ultimo) + '</small></div>' +
+        sel('cv-' + p.id, 'aluno', '<option value="">Escolha o aluno</option>' + S.alunos.filter((a) => !a.catracaId).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, sug && sug.id === a.id)).join(''), 'style="width:auto" aria-label="Aluno de ' + esc(p.nome) + '"') +
+        '<button class="btn peq pri" data-act="cat-ligar" data-uid="' + esc(p.id) + '">Ligar</button></li>';
+    }).join('') + '</ul>' : '<p class="vazio">Os rostos aparecem aqui na primeira vez que passarem na catraca. Aí é só escolher o aluno e ligar (o sistema já sugere pelo nome).</p>');
+  const ents = (est.entradas || []).slice(0, 15);
+  h += '<h3 style="margin-top:18px">Últimas passagens</h3>' + (ents.length ? '<ul class="lista">' + ents.map((e) => '<li><div class="cresce"><b>' + esc(e.nome || e.nomeAparelho || 'Não reconhecido') + '</b><small>' + quando(e.em) + ' · ' + esc(e.motivo || '') + '</small></div>' + pill(e.ok ? 'ok' : 'bad', e.ok ? 'Liberado' : 'Barrado') + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhuma passagem registrada ainda.</p>');
+  return h + '</section>';
+}
+// Linha "Catraca" no perfil do aluno.
+function linhaCatracaAluno(a) {
+  if (!catracaCfg().ativo && !a.catracaId) return '';
+  const r = regraCatraca(a);
+  let h = '<dt>Catraca</dt><dd>' + (a.catracaId ? 'ligado ao rosto ID ' + esc(a.catracaId) + ' · ' : '<small>rosto ainda não ligado</small> · ') + pill(r.ok ? 'ok' : 'bad', r.ok ? 'Entra' : 'Barrado') + '<br><small>' + esc(r.motivo) + '</small>';
+  if (r.pass) h += '<br>' + (a.passLiberadoEm === HOJE ? '<button class="btn peq" data-act="cat-pass" data-id="' + a.id + '" data-v="0">Desfazer liberação de hoje</button>' : '<button class="btn peq pri" data-act="cat-pass" data-id="' + a.id + '" data-v="1">Liberar entrada de hoje</button>');
+  h += '<br><button class="btn link peq" style="padding:0" data-act="cat-id" data-id="' + a.id + '">' + (a.catracaId ? 'Trocar ou desligar o rosto' : 'Ligar rosto pelo ID do aparelho') + '</button>';
+  return h + '</dd>';
+}
+function modalCatracaId(a) {
+  abrirModal('Rosto na catraca', '<form data-form="cat-id"><input type="hidden" name="id" value="' + a.id + '">' +
+    '<p class="vazio" style="padding:0">O ID é o número da pessoa no iDFace (aparece em Últimas passagens e no cadastro do aparelho). Deixe vazio para desligar.</p>' +
+    campo('ID no aparelho', inp('ci-id', 'catracaId', a.catracaId || '', 'inputmode="numeric" placeholder="Ex.: 12"')) + rodape('Salvar') + '</form>');
+}
 
 /* ---------- Ficha de matrícula ---------- */
 function linkFicha() { return FICHA_URL; }
@@ -2008,6 +2075,19 @@ const FORMS = {
     }
     fecharModal(); await salvarVarios('lancamentos', lista); toast(n > 1 ? n + ' lançamentos criados.' : 'Lançamento salvo.');
   },
+  async 'cat-cfg'(d) {
+    const c = { ...catracaCfg(), acao: d.acao, bloquearSemVinculo: !!d.bloquearSemVinculo };
+    if (d.acao === 'door') c.porta = Number(d.param) || 1; else c.secboxId = String(d.param || '65793').trim();
+    await salvarConfig({ ...(S.config || {}), catraca: c }); toast('Configuração da catraca salva.');
+  },
+  async 'cat-id'(d) {
+    const a = alunoPorId(d.id); if (!a) return;
+    const id = String(d.catracaId || '').trim();
+    if (id && !/^\d+$/.test(id)) { toast('O ID do aparelho é só número.'); return; }
+    const outro = id && S.alunos.find((x) => x.id !== a.id && String(x.catracaId) === id);
+    if (outro) { toast('Esse rosto já está ligado a ' + outro.nome + '.'); return; }
+    fecharModal(); await salvar('alunos', { ...a, catracaId: id ? Number(id) : '' }); toast(id ? 'Rosto ligado.' : 'Rosto desligado.');
+  },
   async prof(d, f) {
     const mods = [...f.querySelectorAll('[name="mod"]:checked')].map((x) => x.value);
     if (!mods.length) { toast('Marque pelo menos uma modalidade.'); return; }
@@ -2133,6 +2213,34 @@ const ACOES = {
     });
   },
   promover(ds) { modalGraduar(alunoPorId(ds.id), Number(ds.i), false); },
+  async 'cat-ativar'() {
+    const tok = [...crypto.getRandomValues(new Uint8Array(18))].map((x) => x.toString(16).padStart(2, '0')).join('');
+    await salvarConfig({ ...(S.config || {}), catraca: { acao: 'sec_box', secboxId: '65793', ...catracaCfg(), ativo: true, token: catracaCfg().token || tok } });
+    toast('Integração ativada. Agora configure o endereço no aparelho.');
+  },
+  'cat-desativar'() {
+    confirmar('Desativar catraca', 'O sistema deixa de responder ao aparelho. Depois de 3 tentativas sem resposta, o iDFace passa a decidir sozinho (todos os rostos cadastrados entram).', 'Desativar', async () => { await salvarConfig({ ...(S.config || {}), catraca: { ...catracaCfg(), ativo: false } }); toast('Integração desativada.'); });
+  },
+  'cat-token'() {
+    confirmar('Gerar novo endereço', 'O endereço atual para de funcionar. Você vai precisar colocar o novo endereço no aparelho.', 'Gerar novo', async () => {
+      const tok = [...crypto.getRandomValues(new Uint8Array(18))].map((x) => x.toString(16).padStart(2, '0')).join('');
+      await salvarConfig({ ...(S.config || {}), catraca: { ...catracaCfg(), token: tok } }); toast('Novo endereço gerado.');
+    });
+  },
+  async 'cat-ligar'(ds) {
+    const s = document.getElementById('cv-' + ds.uid); const a = s && alunoPorId(s.value);
+    if (!a) { toast('Escolha o aluno.'); return; }
+    const est = catracaEstado(); const desc = { ...(est.desconhecidos || {}) }; delete desc[ds.uid];
+    await salvar('alunos', { ...a, catracaId: Number(ds.uid) });
+    await salvar('catraca', { ...est, id: 'estado', desconhecidos: desc });
+    toast(a.nome.split(' ')[0] + ' ligado ao rosto do aparelho.');
+  },
+  async 'cat-pass'(ds) {
+    const a = alunoPorId(ds.id); if (!a) return;
+    await salvar('alunos', { ...a, passLiberadoEm: ds.v === '1' ? HOJE : '' });
+    toast(ds.v === '1' ? 'Entrada de hoje liberada para ' + a.nome.split(' ')[0] + '.' : 'Liberação de hoje desfeita.');
+  },
+  'cat-id'(ds) { const a = alunoPorId(ds.id); if (a) modalCatracaId(a); },
   'novo-prof'() { modalProf(); },
   'editar-prof'(ds) { modalProf(profPorId(ds.id)); },
   'atribuir-alunos'(ds) { const p = profPorId(ds.id); if (p) modalAtribuir(p); },

@@ -14,13 +14,17 @@ const tipos = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname.startsWith('/api/')) {
-    const nome = url.pathname.slice(5).replace(/[^a-z0-9-]/gi, '');
+    // Mesma reescrita do vercel.json: /api/catraca/<token>/<ação> → /api/catraca?token=&acao=
+    const rc = url.pathname.match(/^\/api\/catraca\/([^/]+)\/([^/]+)$/);
+    if (rc) { url.searchParams.set('token', rc[1]); url.searchParams.set('acao', rc[2]); }
+    const nome = rc ? 'catraca' : url.pathname.slice(5).replace(/[^a-z0-9-]/gi, '');
     const arq = path.join(raiz, 'api', nome + '.js');
     if (!fs.existsSync(arq)) { res.writeHead(404); return res.end('{}'); }
     let bruto = '';
     for await (const c of req) bruto += c;
     req.query = Object.fromEntries(url.searchParams);
-    try { req.body = bruto && /json/.test(req.headers['content-type'] || '') ? JSON.parse(bruto) : bruto; } catch (_) { req.body = bruto; }
+    const tipo = req.headers['content-type'] || '';
+    try { req.body = bruto && /json/.test(tipo) ? JSON.parse(bruto) : bruto && /urlencoded/.test(tipo) ? Object.fromEntries(new URLSearchParams(bruto)) : bruto; } catch (_) { req.body = bruto; }
     res.status = (s) => { res.statusCode = s; return res; };
     res.json = (o) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); return res; };
     const mod = await import(pathToFileURL(arq).href);
