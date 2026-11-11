@@ -82,6 +82,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .termo input { width: 22px; height: 22px; margin-top: 1px; flex: none; accent-color: var(--fg); }
 .termo.forte { border: 1px solid var(--fg); padding: 14px; }
 .termo.forte:has(input:checked) { background: var(--surface-2); }
+.bio { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.bio p { margin: 0; font-size: .86rem; color: var(--muted); }
 .erro { font-weight: 700; font-size: .9rem; border-left: 1px solid var(--fg); padding-left: 12px; }
 input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { outline: 2px solid var(--fg); outline-offset: 1px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--fg); background: transparent; padding: 16px 20px; cursor: pointer; text-decoration: none; color: var(--fg); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .74rem; }
@@ -258,6 +260,12 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
         </div>
         <label class="termo forte"><input type="checkbox" id="rc" name="rc"><span id="rc-txt"><b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.</span></label>
         <label class="termo forte"><input type="checkbox" id="ok" name="ok"><span id="ok-txt">Declaro que as informações desta ficha são verdadeiras e que estou apto(a) a praticar atividade física. Autorizo o CT NORD a guardar estes dados para matrícula, contato e cobrança.</span></label>
+        <div class="bio">
+          <b>Reconhecimento facial na catraca (opcional)</b>
+          <p>A entrada no CT é feita pelo reconhecimento do rosto na catraca. Para isso, o CT NORD cadastra uma foto do rosto no leitor facial e no sistema de gestão. A imagem do rosto é um dado pessoal sensível (LGPD, Lei 13.709/2018) e é usada <b>somente</b> para identificar a entrada no CT: não é compartilhada com terceiros nem usada para outra finalidade, e é apagada quando você pedir.</p>
+          <p>Você pode não autorizar: nesse caso a entrada é liberada pela recepção. Você também pode retirar a autorização a qualquer momento, falando com a recepção.</p>
+          <label class="termo forte"><input type="checkbox" id="bio" name="bio"><span id="bio-txt"><b>Autorizo o uso da imagem do meu rosto</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.</span></label>
+        </div>
         <div class="erro" id="erro" role="alert" hidden></div>
         <button type="submit" class="btn pri largo" id="btn-concluir" disabled>Concluir matrícula</button>
         <small style="color:var(--muted);text-align:center" id="dica-concluir">Marque as duas caixas acima para concluir.</small>
@@ -349,6 +357,9 @@ function atualizar() {
   $('rc-txt').innerHTML = ehMenor()
     ? '<b>Como responsável, li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a fazer o aluno respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.'
     : '<b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.';
+  $('bio-txt').innerHTML = ehMenor()
+    ? '<b>Como responsável, autorizo o uso da imagem do rosto do aluno</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.'
+    : '<b>Autorizo o uso da imagem do meu rosto</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.';
   $('bloco-faixa').hidden = exp !== 'Já treinei';
   montarHorarios(mod);
   const atual = $('fx').value;
@@ -422,7 +433,7 @@ $('ficha').addEventListener('submit', (e) => {
   const d = {
     v: 2, n: v('n'), nas: v('nas'), cpf: v('cpf'), tel: v('tel'), em: v('em'), end: v('end'),
     mod, exp, fx: exp === 'Já treinei' ? $('fx').value : '', gr: exp === 'Já treinei' && mod !== 'Muay Thai' ? Number($('gr').value) : 0,
-    sau: v('sau'), ctn: v('ctn'), ctt: v('ctt'), ori: v('ori'), ok: agora, rc: agora, rcv: REGIMENTO_VERSAO,
+    sau: v('sau'), ctn: v('ctn'), ctt: v('ctt'), ori: v('ori'), ok: agora, rc: agora, rcv: REGIMENTO_VERSAO, bio: $('bio').checked ? agora : 'nao',
   };
   const hts = [...document.querySelectorAll('[name="ht"]:checked')].map((x) => x.value);
   if (hts.length) Object.assign(d, { ht: hts.join(','), hor: hts.map((id) => horTxt(GRADE.find((t) => t.i === id) || {})).join('; ') });

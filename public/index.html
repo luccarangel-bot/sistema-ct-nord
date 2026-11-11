@@ -1027,6 +1027,7 @@ VIEWS.aluno = function () {
     '<dt>Aluno desde</dt><dd>' + fData((a.criadoEm || '').slice(0, 10)) + '</dd>' +
     (a.origem ? '<dt>Conheceu por</dt><dd>' + esc(a.origem) + '</dd>' : '') +
     (a.termoAceitoEm ? '<dt>Ficha online</dt><dd>declaração aceita em ' + fData(a.termoAceitoEm.slice(0, 10)) + '</dd>' : '') +
+    '<dt>Uso do rosto</dt><dd>' + txtBiometria(a) + '</dd>' +
     '<dt>Regimento</dt><dd>' + (a.regimento ? pill('ok', 'Aceito') + ' v' + esc(a.regimento.versao) + ' em ' + fData(String(a.regimento.aceitoEm).slice(0, 10)) + (a.regimento.porResponsavel ? ' pelo responsável' : '') : pill('warn', 'Não aceito') + ' <small style="display:inline">envie a ficha online para o aluno aceitar</small>') + '</dd>' +
     (a.obs ? '<dt>Observações</dt><dd>' + esc(a.obs) + '</dd>' : '') + '</dl></section>';
 
@@ -1580,7 +1581,23 @@ function prepararFoto(origem, w, h) {
   return url;
 }
 let fotoPronta = '';
+function abrirFotoRosto(a) {
+  if (biometriaOk(a)) return modalFotoRosto(a);
+  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. O aluno (ou o responsável) autorizou?', 'Autorizou, continuar', async () => {
+    const n = { ...alunoPorId(a.id), biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!a.responsavel, origem: 'recepção' } };
+    await salvar('alunos', n); modalFotoRosto(n);
+  });
+}
 
+// Autorização (LGPD) para usar a imagem do rosto no reconhecimento facial da catraca.
+const biometriaOk = (a) => !!(a.biometria && a.biometria.autorizado);
+function txtBiometria(a) {
+  const b = a.biometria;
+  const quando = (x) => fData(String(x.em || '').slice(0, 10));
+  const txt = !b ? pill('warn', 'Não informado') : b.autorizado ? pill('ok', 'Autorizado') + ' em ' + quando(b) + (b.porResponsavel ? ' pelo responsável' : '') : pill('', 'Não autorizado') + (b.em ? ' <small style="display:inline">(' + quando(b) + ')</small>' : '');
+  return txt + ' <button class="btn link peq" style="padding:0" data-act="bio-alterar" data-id="' + a.id + '" data-v="' + (biometriaOk(a) ? '0' : '1') + '">' + (biometriaOk(a) ? 'Retirar autorização' : 'Registrar autorização') + '</button>' +
+    (biometriaOk(a) ? '' : '<br><small>Sem autorização, a entrada é liberada pela recepção.</small>');
+}
 // Linha "Catraca" no perfil do aluno.
 function linhaCatracaAluno(a) {
   if (!catracaCfg().ativo && !a.catracaId) return '';
@@ -1697,6 +1714,7 @@ function modalFicha(d) {
     linha('Modalidade', d.mod + (d.fx ? ' · faixa ' + d.fx + (d.gr ? ', ' + d.gr + 'º grau' : '') : ' · ' + (d.exp || ''))) +
     linha('Prefere treinar', [d.hor, d.hro].filter(Boolean).join(' · ')) + linha('Saúde', d.sau) + linha('Emergência', [d.ctn, d.ctt].filter(Boolean).join(' · ')) + linha('Conheceu por', d.ori) +
     (d.pl ? linha('Plano escolhido', (planoPorId(d.pl) || {}).nome || d.pln) + linha('Pagamento', d.fp + (d.dv ? ' · vencimento dia ' + d.dv : '')) + linha('Família', d.fam ? d.fam.split('\n').map((s) => s.trim()).filter(Boolean).join(', ') : '') : '') +
+    linha('Rosto na catraca (LGPD)', d.bio ? (d.bio === 'nao' ? 'não autorizou' : 'autorizou em ' + fData(String(d.bio).slice(0, 10)) + (d.rn ? ' (pelo responsável)' : '')) : '') +
     linha('Regimento', d.rc ? 'Regimento Interno e Código de Conduta v' + (d.rcv || '1.0') + ' aceito em ' + fData(String(d.rc).slice(0, 10)) + (d.rn ? ' pelo responsável' : '') : 'não aceito (ficha antiga)') +
     linha('Declaração', d.ok ? 'aceita em ' + fData(String(d.ok).slice(0, 10)) : 'não aceita') + '</dl>' +
     (d.pl && !planoPorId(d.pl) ? '<p class="aviso" style="margin:0">O plano "' + esc(d.pln || '') + '" não está mais cadastrado. Escolha outro na hora da venda.</p>' : '') +
@@ -1720,6 +1738,7 @@ async function salvarFicha(modo, idExistente) {
   if (d.hro) a.horarioObs = d.hro;
   else if (!hts.length && d.hor) a.horarioObs = a.horarioObs || d.hor;
   if (d.rc) a.regimento = { versao: d.rcv || '1.0', aceitoEm: d.rc, porResponsavel: !!d.rn };
+  if (d.bio) a.biometria = d.bio === 'nao' ? { autorizado: false, em: d.ok || new Date().toISOString(), origem: 'ficha' } : { autorizado: true, em: d.bio, porResponsavel: !!d.rn, origem: 'ficha' };
   if (d.fam) a.obs = [a.obs, 'Pacote família com: ' + d.fam.split('\n').map((s) => s.trim()).filter(Boolean).join(', ') + '.'].filter(Boolean).join(' ');
   if (!a.modalidades.some((m) => m.mod === d.mod)) {
     const m = { mod: d.mod, faixa, grau: Number(d.gr) || 0, desde: HOJE };
@@ -1915,7 +1934,8 @@ function modalAluno(a) {
     h += '<div class="form-secao"><h3>Plano</h3><small>Escolha o plano para já registrar a venda junto com o cadastro.</small></div>' +
       camposVenda({ planoId: a.planoId }, planosVenda, true);
   }
-  if (!a.id && catracaCfg().ativo) h += '<label class="check"><input type="checkbox" name="fazerRosto" checked><span>Cadastrar o rosto na catraca em seguida (tirar a foto agora)</span></label>';
+  if (!a.id && catracaCfg().ativo) h += '<label class="check"><input type="checkbox" name="bioOk"><span>O aluno (ou o responsável) <b>autorizou o uso da imagem do rosto</b> na catraca (LGPD)</span></label>' +
+    '<label class="check"><input type="checkbox" name="fazerRosto" checked><span>Cadastrar o rosto na catraca em seguida (tirar a foto agora)</span></label>';
   h += rodape(a.id ? 'Salvar alterações' : 'Cadastrar aluno') + '</form>';
   if (a.id) h += '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-aluno" data-id="' + a.id + '" style="align-self:flex-start">Excluir aluno</button></div>';
   abrirModal(a.id ? 'Editar aluno' : 'Novo aluno', h);
@@ -2062,6 +2082,7 @@ const FORMS = {
     Object.assign(a, {
       nome: d.nome.trim(), telefone: d.telefone.trim(), email: d.email.trim(), nascimento: d.nascimento, responsavel: d.responsavel.trim(), obs: d.obs.trim(),
       cpf: d.cpf.trim(), endereco: d.endereco.trim(), respTelefone: d.respTelefone.trim(), emergencia: d.emergencia.trim(), origem: d.origem, saude: d.saude.trim(),
+      ...(!ex && d.bioOk ? { biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!d.responsavel.trim(), origem: 'recepção' } } : {}),
       horarios: f ? [...f.querySelectorAll('[name="hor"]:checked')].map((x) => x.value) : (a.horarios || []), horarioObs: String(d.horarioObs || '').trim(),
     });
     if (!ex) {
@@ -2073,7 +2094,7 @@ const FORMS = {
     if (d.leadId) { const l = leadPorId(d.leadId); if (l) await salvar('leads', { ...l, etapa: 'matriculado', alunoId: a.id }); }
     if (v && (await gravarVenda(v))) toast('Aluno cadastrado e venda registrada: ' + txtCobr(v) + '.');
     else toast(ex ? 'Dados atualizados.' : 'Aluno cadastrado.');
-    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); else if (d.fazerRosto) modalFotoRosto(a); }
+    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); else if (d.fazerRosto) abrirFotoRosto(a); }
   },
   async plano(d, f) {
     const valor = numCampo(d.valor); if (valor <= 0 && d.formaPadrao !== 'app') { toast('Informe um valor maior que zero.'); return; }
@@ -2305,7 +2326,21 @@ const ACOES = {
     toast(ds.v === '1' ? 'Entrada de hoje liberada para ' + a.nome.split(' ')[0] + '.' : 'Liberação de hoje desfeita.');
   },
   'cat-id'(ds) { const a = alunoPorId(ds.id); if (a) modalCatracaId(a); },
-  'cat-rosto'(ds) { const a = alunoPorId(ds.id); if (a) modalFotoRosto(a); },
+  'cat-rosto'(ds) { const a = alunoPorId(ds.id); if (a) abrirFotoRosto(a); },
+  'bio-alterar'(ds) {
+    const a = alunoPorId(ds.id); if (!a) return;
+    if (ds.v === '1') {
+      confirmar('Registrar autorização', 'Confirmar que <b>' + esc(a.nome) + '</b> (ou o responsável) autorizou o uso da imagem do rosto no reconhecimento facial da catraca?', 'Autorizou', async () => {
+        await salvar('alunos', { ...a, biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!a.responsavel, origem: 'recepção' } }); toast('Autorização registrada.');
+      });
+    } else {
+      confirmar('Retirar autorização', 'Retirar a autorização de uso do rosto de <b>' + esc(a.nome) + '</b>?' + (a.catracaId ? ' O rosto também será apagado do leitor; a entrada passa a ser liberada pela recepção.' : ''), 'Retirar', async () => {
+        if (a.catracaId) await salvar('catrafila', { id: novoId('cq'), tipo: 'remover', alunoId: a.id, catracaId: a.catracaId, status: 'pendente', criadoEm: new Date().toISOString() });
+        try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(a.id)); } catch (_) {}
+        await salvar('alunos', { ...a, catracaId: '', biometria: { autorizado: false, em: new Date().toISOString(), origem: 'recepção' } }); toast('Autorização retirada.');
+      });
+    }
+  },
   async 'rosto-camera'() {
     try {
       pararCamera();

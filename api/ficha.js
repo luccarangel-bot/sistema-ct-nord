@@ -4,7 +4,7 @@ import { rota, corpo, ip, limitar, banco, um, chaveCol, parHash, bumpRev, semear
 // Rota pública da ficha de matrícula.
 // GET  → nome do CT e planos à venda (para montar a ficha)
 // POST → recebe a ficha preenchida e coloca na fila "Fichas recebidas" do sistema
-const CAMPOS = { n: 120, nas: 10, cpf: 14, tel: 20, em: 120, end: 200, mod: 30, exp: 30, fx: 40, gr: 2, sau: 600, ctn: 120, ctt: 20, ori: 40, ok: 30, rc: 30, rcv: 10, rn: 120, rcpf: 14, rtel: 20, pl: 80, pln: 120, fp: 40, dv: 2, fam: 600, ht: 400, hor: 600, hro: 120 };
+const CAMPOS = { n: 120, nas: 10, cpf: 14, tel: 20, em: 120, end: 200, mod: 30, exp: 30, fx: 40, gr: 2, sau: 600, ctn: 120, ctt: 20, ori: 40, ok: 30, rc: 30, rcv: 10, rn: 120, rcpf: 14, rtel: 20, pl: 80, pln: 120, fp: 40, dv: 2, fam: 600, ht: 400, hor: 600, hro: 120, bio: 30 };
 const MAX_FILA = 300;
 
 export default rota(['GET', 'POST'], async (req, res) => {
