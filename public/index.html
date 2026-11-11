@@ -828,7 +828,8 @@ VIEWS.inicio = function () {
   const devedores = [...inadAlunos].map((id) => ({ id, v: dividaDo(id) })).sort((a, b) => b.v - a.v);
 
   let h = '<div class="topo"><div><h1>Painel</h1><p>Resumo de ' + nomeMes(mes, true) + '. Hoje é ' + fData(HOJE) + '.</p></div>' +
-    '<div class="acoes"><button class="btn" data-act="checkin">Check-in</button><button class="btn" data-act="novo-aluno">Novo aluno</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
+    '<div class="acoes">' + (catracaCfg().ativo ? '<button class="btn" data-act="cat-liberar">Liberar catraca</button>' : '') + '<button class="btn" data-act="checkin">Check-in</button><button class="btn" data-act="novo-aluno">Novo aluno</button><button class="btn pri" data-act="nova-venda">Vender plano</button></div></div>';
+  h += avisoLiberacao();
   h += painelFichas();
   h += '<div class="grade2 topo-paineis">' + painelVenceHoje() + painelContasPagar() + '</div>';
   h += '<div class="kpis">' +
@@ -1494,6 +1495,15 @@ function sugerirAluno(nome) {
 }
 const quando = (iso) => (iso ? fData(iso.slice(0, 10)).slice(0, 5) + ' ' + new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' }) : '');
 
+// Liberação pela recepção: a próxima pessoa que olhar para o leitor entra (até 1 minuto, uma vez).
+const liberacaoAtiva = () => { const l = S.catraca.find((x) => x.id === 'liberar'); return l && l.ate && l.ate > new Date().toISOString() ? l : null; };
+let timerLiberar = 0;
+function avisoLiberacao() {
+  const l = liberacaoAtiva(); if (!l) return '';
+  clearTimeout(timerLiberar); timerLiberar = setTimeout(render, Math.max(1000, Date.parse(l.ate) - Date.now() + 500));
+  return '<div class="aviso" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span style="flex:1;min-width:220px"><b>Catraca liberada para a próxima pessoa</b> até ' +
+    new Date(l.ate).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + '. Peça para ela olhar para o leitor.</span><button class="btn peq" data-act="cat-liberar-cancelar">Cancelar</button></div>';
+}
 function blocoCatraca() {
   const cfg = catracaCfg();
   let h = '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Catraca (Control iD)</h2>' + (cfg.ativo ? '<small>' + (catracaEstado().ultimoContato ? 'último contato: ' + quando(catracaEstado().ultimoContato) : 'aguardando o aparelho') + '</small>' : '') + '</header>';
@@ -2241,6 +2251,11 @@ const ACOES = {
     toast(ds.v === '1' ? 'Entrada de hoje liberada para ' + a.nome.split(' ')[0] + '.' : 'Liberação de hoje desfeita.');
   },
   'cat-id'(ds) { const a = alunoPorId(ds.id); if (a) modalCatracaId(a); },
+  async 'cat-liberar'() {
+    await salvar('catraca', { id: 'liberar', ate: new Date(Date.now() + 60000).toISOString(), por: (USUARIO && USUARIO.nome) || '' });
+    toast('Catraca liberada por 1 minuto: a próxima pessoa que olhar para o leitor entra.');
+  },
+  async 'cat-liberar-cancelar'() { await salvar('catraca', { id: 'liberar', ate: '' }); toast('Liberação cancelada.'); },
   'novo-prof'() { modalProf(); },
   'editar-prof'(ds) { modalProf(profPorId(ds.id)); },
   'atribuir-alunos'(ds) { const p = profPorId(ds.id); if (p) modalAtribuir(p); },

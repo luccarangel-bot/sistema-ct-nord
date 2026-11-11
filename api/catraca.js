@@ -57,7 +57,7 @@ const acaoAbrir = (cfg, portalId) => {
 export default async function handler(req, res) {
   try {
     const q = req.query || {};
-    const [cfgBruto, estadoBruto] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGET', chaveCol('catraca'), 'estado']]);
+    const [cfgBruto, estadoBruto, liberarBruto] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGET', chaveCol('catraca'), 'estado'], ['HGET', chaveCol('catraca'), 'liberar']]);
     const cfg = ((cfgBruto && JSON.parse(cfgBruto)) || {}).catraca || {};
     if (!cfg.ativo || !cfg.token || String(q.token || '') !== cfg.token) throw new ErroApi(404, 'Não encontrado.');
     const acao = String(q.acao || '');
@@ -81,6 +81,15 @@ export default async function handler(req, res) {
       actions: ok ? acaoAbrir(cfg, portal) : [], message: msg,
     } });
     const registrar = (e) => { estado.entradas = [{ em: new Date(ms).toISOString(), userId, nomeAparelho: String(b.user_name || '').slice(0, 80), ...e }, ...(estado.entradas || [])].slice(0, 60); };
+
+    // Liberação pela recepção (botão "Liberar catraca" no Painel): vale para a próxima passagem, de qualquer pessoa,
+    // por até 1 minuto, e só uma vez.
+    const liberar = liberarBruto ? JSON.parse(liberarBruto) : null;
+    if (liberar && liberar.ate && liberar.ate > new Date().toISOString()) {
+      registrar({ ok: true, motivo: 'liberado pela recepção' + (liberar.por ? ' (' + liberar.por + ')' : '') });
+      await banco([['HSET', chaveCol('catraca'), 'liberar', JSON.stringify({ id: 'liberar', ate: '', usadoEm: new Date().toISOString() })], ['HSET', chaveCol('catraca'), 'estado', JSON.stringify(estado)], ['INCR', 'ct:rev']]);
+      return responder(true, 'Entrada liberada pela recepção.', String(b.user_name || ''));
+    }
 
     if (!userId) {
       registrar({ ok: false, motivo: 'rosto não reconhecido' });
