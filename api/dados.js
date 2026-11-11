@@ -15,12 +15,18 @@ export default rota(['GET', 'POST', 'DELETE'], async (req, res) => {
   }
   const usuario = await exigirLogin(req);
 
+  if (req.method === 'GET' && req.query.foto) {
+    // Foto de rosto de um aluno (as fotos ficam fora da carga geral, que ficaria pesada).
+    const bruto = await um('HGET', chaveCol('fotos'), String(req.query.foto));
+    return res.status(200).json({ foto: bruto ? JSON.parse(bruto) : null });
+  }
   if (req.method === 'GET') {
     await semear();
-    const out = await banco([...COLECOES.map((c) => ['HGETALL', chaveCol(c)]), ['GET', CHAVES.rev]]);
+    const cols = COLECOES.filter((c) => c !== 'fotos');
+    const out = await banco([...cols.map((c) => ['HGETALL', chaveCol(c)]), ['GET', CHAVES.rev]]);
     const dados = {};
-    COLECOES.forEach((c, i) => { dados[c] = Object.values(parHash(out[i])).map((v) => JSON.parse(v)); });
-    return res.status(200).json({ dados, rev: Number(out[COLECOES.length] || 0), usuario: publico(usuario) });
+    cols.forEach((c, i) => { dados[c] = Object.values(parHash(out[i])).map((v) => JSON.parse(v)); });
+    return res.status(200).json({ dados, rev: Number(out[cols.length] || 0), usuario: publico(usuario) });
   }
 
   const col = String((req.method === 'POST' ? corpo(req).col : req.query.col) || '');

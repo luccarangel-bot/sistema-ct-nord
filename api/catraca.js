@@ -1,4 +1,5 @@
 import { banco, chaveCol, parHash, ErroApi } from './_lib.js';
+import { pushGet, pushResult } from './_catraca_push.js';
 
 // Integração com o leitor facial Control iD (iDFace) em Modo Online "Pro":
 // o aparelho reconhece o rosto localmente e, a cada passagem, pergunta aqui se libera a catraca.
@@ -57,10 +58,14 @@ const acaoAbrir = (cfg, portalId) => {
 export default async function handler(req, res) {
   try {
     const q = req.query || {};
-    const [cfgBruto, estadoBruto, liberarBruto] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGET', chaveCol('catraca'), 'estado'], ['HGET', chaveCol('catraca'), 'liberar']]);
+    const acao = String(q.acao || '');
+    const push = acao === 'push' || acao === 'result';
+    const [cfgBruto, estadoBruto, liberarBruto] = await banco([['HGET', chaveCol('config'), 'geral'], ...(push ? [] : [['HGET', chaveCol('catraca'), 'estado'], ['HGET', chaveCol('catraca'), 'liberar']])]);
     const cfg = ((cfgBruto && JSON.parse(cfgBruto)) || {}).catraca || {};
     if (!cfg.ativo || !cfg.token || String(q.token || '') !== cfg.token) throw new ErroApi(404, 'Não encontrado.');
-    const acao = String(q.acao || '');
+    // Modo Push: o leitor busca comandos (cadastro de pessoas e rostos) e devolve o resultado.
+    if (acao === 'push') { const c = await pushGet(q, cfg); if (c) return res.status(200).json(c); res.statusCode = 200; return res.end(); }
+    if (acao === 'result') { await pushResult(q, req.body); res.statusCode = 200; return res.end(); }
     const estado = (estadoBruto && JSON.parse(estadoBruto)) || { id: 'estado', entradas: [], desconhecidos: {} };
     estado.ultimoContato = new Date().toISOString();
 

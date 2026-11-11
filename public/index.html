@@ -284,6 +284,9 @@ td small { color: var(--muted); display: block; font-size: .8rem; }
 .prof-sel { display: flex; flex-direction: column; gap: 2px; }
 .prof-sel small { color: var(--muted); font-size: .72rem; }
 .atribuir li { padding: 8px 0; }
+.rosto-area { background: var(--surface-2); border: 1px solid var(--line); min-height: 220px; display: grid; place-items: center; overflow: hidden; }
+.rosto-area video, .rosto-area img { max-width: 100%; max-height: 420px; display: block; }
+.rosto-area video { transform: scaleX(-1); }
 .seg { display: inline-flex; }
 .seg .btn + .btn { border-left: 0; }
 .seg .btn[aria-pressed="true"] { background: var(--inv-bg); color: var(--inv-fg); border-color: var(--inv-bg); }
@@ -402,7 +405,7 @@ const ETAPAS = [
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'catraca'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'catraca', 'catrafila'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Horários de preferência do aluno: turmas da grade (ids) + observação livre.
@@ -459,7 +462,7 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], catraca: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], catraca: [], catrafila: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos', tabAlunos: 'alunos', filtroProf: '',
@@ -1512,10 +1515,17 @@ function blocoCatraca() {
       '<div class="rodape"><button class="btn pri" data-act="cat-ativar">Ativar integração com a catraca</button></div></section>';
   }
   const est = catracaEstado();
-  const desc = Object.values(est.desconhecidos || {}).sort((a, b) => String(b.ultimo).localeCompare(String(a.ultimo)));
+  const ligados = new Set(S.alunos.map((a) => String(a.catracaId || '')).filter(Boolean));
+  const pe = pushEstado();
+  const doLeitor = ((pe && pe.usuarios) || []).filter((u) => !ligados.has(String(u.id))).map((u) => ({ id: u.id, nome: u.nome, ultimo: '' }));
+  const desc = [...Object.values(est.desconhecidos || {}).filter((u) => !ligados.has(String(u.id))), ...doLeitor.filter((u) => !(est.desconhecidos || {})[u.id])]
+    .sort((a, b) => String(b.ultimo).localeCompare(String(a.ultimo)) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
   const vinculados = S.alunos.filter((a) => a.catracaId).length;
   h += '<div class="campo"><span>Endereço do servidor para colocar no aparelho</span><div style="display:flex;gap:8px"><input id="cat-url" readonly value="' + esc(urlCatraca()) + '"><button class="btn" data-act="copiar" data-alvo="cat-url">Copiar</button></div>' +
     '<small>Use no iDFace em Modo Online (Pro). Quem tiver este endereço consegue falar com a catraca: não divulgue.</small></div>';
+  const filaErro = S.catrafila.filter((i) => i.status === 'erro').length, filaPend = S.catrafila.filter((i) => ['pendente', 'enviado'].includes(i.status)).length;
+  h += '<div class="aviso" style="margin:14px 0 0"><b>Cadastro de rostos pelo sistema:</b> ' + (pushAtivo() ? 'leitor conectado (último contato ' + quando(pe.visto) + ')' + (pe.usuarios ? ' · ' + pe.usuarios.length + ' pessoa(s) no leitor' : '') : pe && pe.visto ? 'leitor sem contato desde ' + quando(pe.visto) : 'ainda não ligado no leitor (modo Push)') +
+    (filaPend ? ' · ' + filaPend + ' envio(s) na fila' : '') + (filaErro ? ' · <b>' + filaErro + ' com erro</b> (veja no perfil do aluno)' : '') + '</div>';
   h += '<form data-form="cat-cfg" style="display:flex;flex-direction:column;gap:14px;margin-top:14px"><div class="linha2">' +
     campo('Como o aparelho abre a catraca', sel('cat-acao', 'acao', opt('sec_box', 'Módulo SecBox', (cfg.acao || 'sec_box') === 'sec_box') + opt('door', 'Relé do próprio aparelho', cfg.acao === 'door') + opt('catra', 'Catraca Control iD (iDBlock)', cfg.acao === 'catra'))) +
     campo('ID da SecBox ou nº do relé', inp('cat-sb', 'param', cfg.acao === 'door' ? (cfg.porta || 1) : (cfg.secboxId || '65793')), 'Ajustamos no teste, na academia.') + '</div>' +
@@ -1524,21 +1534,64 @@ function blocoCatraca() {
   h += '<h3 style="margin-top:18px">Rostos do aparelho sem aluno ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s) já ligados</small></h3>' +
     (desc.length ? '<ul class="lista">' + desc.map((p) => {
       const sug = sugerirAluno(p.nome);
-      return '<li><div class="cresce"><b>' + esc(p.nome || 'Sem nome') + '</b><small>ID ' + esc(p.id) + ' no aparelho · passou em ' + quando(p.ultimo) + '</small></div>' +
+      return '<li><div class="cresce"><b>' + esc(p.nome || 'Sem nome') + '</b><small>ID ' + esc(p.id) + ' no aparelho' + (p.ultimo ? ' · passou em ' + quando(p.ultimo) : '') + '</small></div>' +
         sel('cv-' + p.id, 'aluno', '<option value="">Escolha o aluno</option>' + S.alunos.filter((a) => !a.catracaId).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, sug && sug.id === a.id)).join(''), 'style="width:auto" aria-label="Aluno de ' + esc(p.nome) + '"') +
         '<button class="btn peq pri" data-act="cat-ligar" data-uid="' + esc(p.id) + '">Ligar</button></li>';
-    }).join('') + '</ul>' : '<p class="vazio">Os rostos aparecem aqui na primeira vez que passarem na catraca. Aí é só escolher o aluno e ligar (o sistema já sugere pelo nome).</p>');
+    }).join('') + '</ul>' : '<p class="vazio">Nenhum rosto do leitor sem aluno ligado. Com o leitor conectado (modo Push), todos os rostos cadastrados nele aparecem aqui; sem isso, aparecem na primeira vez que a pessoa passar na catraca.</p>');
   const ents = (est.entradas || []).slice(0, 15);
   h += '<h3 style="margin-top:18px">Últimas passagens</h3>' + (ents.length ? '<ul class="lista">' + ents.map((e) => '<li><div class="cresce"><b>' + esc(e.nome || e.nomeAparelho || 'Não reconhecido') + '</b><small>' + quando(e.em) + ' · ' + esc(e.motivo || '') + '</small></div>' + pill(e.ok ? 'ok' : 'bad', e.ok ? 'Liberado' : 'Barrado') + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhuma passagem registrada ainda.</p>');
   return h + '</section>';
 }
+/* ---------- Cadastro do rosto pelo sistema (leitor em modo Push) ---------- */
+const pushEstado = () => S.catraca.find((x) => x.id === 'push') || null;
+const pushAtivo = () => { const p = pushEstado(); return !!(p && p.visto && Date.now() - Date.parse(p.visto) < 15 * 60000); };
+const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
+// Situação do cadastro do rosto, em texto simples.
+function situacaoRosto(a) {
+  const i = filaDoAluno(a.id);
+  if (!i) return a.catracaId ? 'rosto no leitor (ID ' + a.catracaId + ')' : 'rosto ainda não cadastrado';
+  if (i.tipo === 'remover') return i.status === 'ok' ? 'removido do leitor' : i.status === 'erro' ? 'erro ao remover: ' + i.erro : 'removendo do leitor…';
+  if (i.status === 'ok') return 'rosto cadastrado no leitor em ' + fData(String(i.atualizadoEm).slice(0, 10)) + ' (ID ' + (i.catracaId || a.catracaId) + ')';
+  if (i.status === 'erro') return 'erro: ' + i.erro;
+  return 'enviando ao leitor… (' + ({ usuario: 'criando a pessoa', grupo: 'dando acesso', foto: 'cadastrando o rosto' }[i.etapa] || 'na fila') + ')';
+}
+let cameraStream = null;
+function pararCamera() { if (cameraStream) { cameraStream.getTracks().forEach((t) => t.stop()); cameraStream = null; } }
+function modalFotoRosto(a) {
+  abrirModal('Rosto de ' + a.nome.split(' ')[0], '<div class="corpo" id="rosto-corpo">' +
+    '<p class="vazio" style="padding:0">Rosto de frente, sem boné nem óculos escuros, em lugar claro, ocupando boa parte da imagem. Só uma pessoa na foto.</p>' +
+    '<div class="rosto-area"><video id="rosto-video" autoplay playsinline muted hidden></video><img id="rosto-prev" alt="Prévia da foto" hidden><canvas id="rosto-canvas" hidden></canvas>' +
+    '<p class="vazio" id="rosto-msg" style="padding:12px 0">Ligue a câmera ou escolha uma foto.</p></div>' +
+    '<div class="rodape" style="flex-wrap:wrap"><button class="btn" data-act="rosto-camera">Ligar câmera</button><button class="btn" data-act="rosto-capturar" id="rosto-cap" hidden>Tirar foto</button>' +
+    '<label class="btn" style="cursor:pointer">Escolher foto<input type="file" accept="image/*" capture="user" id="rosto-arquivo" hidden></label>' +
+    '<button class="btn pri" data-act="rosto-salvar" data-id="' + a.id + '" id="rosto-ok" disabled>Salvar e enviar ao leitor</button></div></div>');
+}
+// Ajusta a imagem para o leitor: JPG, lado maior até 720 px (mínimo 160 px), até ~150 KB.
+function prepararFoto(origem, w, h) {
+  if (Math.min(w, h) < 160) { toast('Foto muito pequena. Use uma foto maior.'); return null; }
+  const esc = Math.min(1, 720 / Math.max(w, h));
+  const c = document.getElementById('rosto-canvas'); c.width = Math.round(w * esc); c.height = Math.round(h * esc);
+  c.getContext('2d').drawImage(origem, 0, 0, c.width, c.height);
+  let q = 0.88, url = c.toDataURL('image/jpeg', q);
+  while (url.length > 200000 && q > 0.5) { q -= 0.1; url = c.toDataURL('image/jpeg', q); }
+  const img = document.getElementById('rosto-prev'); img.src = url; img.hidden = false;
+  document.getElementById('rosto-video').hidden = true; document.getElementById('rosto-msg').hidden = true;
+  document.getElementById('rosto-ok').disabled = false; pararCamera();
+  return url;
+}
+let fotoPronta = '';
+
 // Linha "Catraca" no perfil do aluno.
 function linhaCatracaAluno(a) {
   if (!catracaCfg().ativo && !a.catracaId) return '';
   const r = regraCatraca(a);
   let h = '<dt>Catraca</dt><dd>' + (a.catracaId ? 'ligado ao rosto ID ' + esc(a.catracaId) + ' · ' : '<small>rosto ainda não ligado</small> · ') + pill(r.ok ? 'ok' : 'bad', r.ok ? 'Entra' : 'Barrado') + '<br><small>' + esc(r.motivo) + '</small>';
   if (r.pass) h += '<br>' + (a.passLiberadoEm === HOJE ? '<button class="btn peq" data-act="cat-pass" data-id="' + a.id + '" data-v="0">Desfazer liberação de hoje</button>' : '<button class="btn peq pri" data-act="cat-pass" data-id="' + a.id + '" data-v="1">Liberar entrada de hoje</button>');
-  h += '<br><button class="btn link peq" style="padding:0" data-act="cat-id" data-id="' + a.id + '">' + (a.catracaId ? 'Trocar ou desligar o rosto' : 'Ligar rosto pelo ID do aparelho') + '</button>';
+  const ir = filaDoAluno(a.id);
+  h += '<br><small' + (ir && ir.status === 'erro' ? ' class="neg"' : '') + '>' + esc(situacaoRosto(a)) + '</small><br>' +
+    '<button class="btn peq pri" data-act="cat-rosto" data-id="' + a.id + '">' + (a.catracaId ? 'Trocar foto do rosto' : 'Cadastrar rosto') + '</button> ' +
+    (a.catracaId ? '<button class="btn peq perigo" data-act="cat-remover-leitor" data-id="' + a.id + '">Remover do leitor</button>' : '') +
+    '<br><button class="btn link peq" style="padding:0" data-act="cat-id" data-id="' + a.id + '">' + (a.catracaId ? 'Trocar ou desligar o rosto (pelo ID)' : 'Ligar a um rosto que já está no leitor (pelo ID)') + '</button>';
   return h + '</dd>';
 }
 function modalCatracaId(a) {
@@ -1819,7 +1872,7 @@ function abrirModal(titulo, corpo) {
   const f = document.querySelector('.modal input:not([type=hidden]), .modal select, .modal textarea');
   if (f) f.focus();
 }
-function fecharModal() { modalAberto = null; document.getElementById('modal-root').innerHTML = ''; }
+function fecharModal() { pararCamera(); modalAberto = null; document.getElementById('modal-root').innerHTML = ''; }
 function confirmar(titulo, texto, rotulo, fn) {
   acaoConfirmar = fn;
   abrirModal(titulo, '<div class="corpo"><p style="margin:0">' + texto + '</p><div class="rodape"><button class="btn" data-act="fechar-modal">Voltar</button><button class="btn pri" data-act="confirmar">' + esc(rotulo) + '</button></div></div>');
@@ -1862,6 +1915,7 @@ function modalAluno(a) {
     h += '<div class="form-secao"><h3>Plano</h3><small>Escolha o plano para já registrar a venda junto com o cadastro.</small></div>' +
       camposVenda({ planoId: a.planoId }, planosVenda, true);
   }
+  if (!a.id && catracaCfg().ativo) h += '<label class="check"><input type="checkbox" name="fazerRosto" checked><span>Cadastrar o rosto na catraca em seguida (tirar a foto agora)</span></label>';
   h += rodape(a.id ? 'Salvar alterações' : 'Cadastrar aluno') + '</form>';
   if (a.id) h += '<div class="corpo" style="padding-top:0"><button class="btn perigo peq" data-act="excluir-aluno" data-id="' + a.id + '" style="align-self:flex-start">Excluir aluno</button></div>';
   abrirModal(a.id ? 'Editar aluno' : 'Novo aluno', h);
@@ -2019,7 +2073,7 @@ const FORMS = {
     if (d.leadId) { const l = leadPorId(d.leadId); if (l) await salvar('leads', { ...l, etapa: 'matriculado', alunoId: a.id }); }
     if (v && (await gravarVenda(v))) toast('Aluno cadastrado e venda registrada: ' + txtCobr(v) + '.');
     else toast(ex ? 'Dados atualizados.' : 'Aluno cadastrado.');
-    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); }
+    if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); else if (d.fazerRosto) modalFotoRosto(a); }
   },
   async plano(d, f) {
     const valor = numCampo(d.valor); if (valor <= 0 && d.formaPadrao !== 'app') { toast('Informe um valor maior que zero.'); return; }
@@ -2251,6 +2305,33 @@ const ACOES = {
     toast(ds.v === '1' ? 'Entrada de hoje liberada para ' + a.nome.split(' ')[0] + '.' : 'Liberação de hoje desfeita.');
   },
   'cat-id'(ds) { const a = alunoPorId(ds.id); if (a) modalCatracaId(a); },
+  'cat-rosto'(ds) { const a = alunoPorId(ds.id); if (a) modalFotoRosto(a); },
+  async 'rosto-camera'() {
+    try {
+      pararCamera();
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+      const v = document.getElementById('rosto-video'); v.srcObject = cameraStream; v.hidden = false;
+      document.getElementById('rosto-prev').hidden = true; document.getElementById('rosto-msg').hidden = true; document.getElementById('rosto-cap').hidden = false;
+    } catch (e) { toast('Não consegui abrir a câmera. Libere a câmera no navegador ou use "Escolher foto".'); }
+  },
+  'rosto-capturar'() { const v = document.getElementById('rosto-video'); if (!v || !v.videoWidth) return; fotoPronta = prepararFoto(v, v.videoWidth, v.videoHeight) || ''; document.getElementById('rosto-cap').hidden = true; },
+  async 'rosto-salvar'(ds) {
+    const a = alunoPorId(ds.id); if (!a || !fotoPronta) return;
+    const jpg = fotoPronta.split(',')[1]; fotoPronta = '';
+    fecharModal();
+    // A foto vai direto ao servidor: as fotos não ficam carregadas na página (seriam pesadas).
+    try { const r = await API.req('POST', '/api/dados', { col: 'fotos', id: a.id, doc: { id: a.id, jpg, em: new Date().toISOString() } }); acompanharRev(r.rev); }
+    catch (e) { tratarErro(e); return; }
+    await salvar('catrafila', { id: novoId('cq'), tipo: 'cadastrar', alunoId: a.id, etapa: 'usuario', status: 'pendente', criadoEm: new Date().toISOString() });
+    toast(pushAtivo() ? 'Foto salva. O leitor recebe em alguns segundos.' : 'Foto salva. Ela vai para o leitor assim que ele estiver conectado ao sistema (modo Push).');
+  },
+  'cat-remover-leitor'(ds) {
+    const a = alunoPorId(ds.id); if (!a || !a.catracaId) return;
+    confirmar('Remover do leitor', 'Apagar <b>' + esc(a.nome) + '</b> e o rosto dele do leitor facial? Ele não vai mais ser reconhecido na catraca. O cadastro no sistema continua.', 'Remover do leitor', async () => {
+      await salvar('catrafila', { id: novoId('cq'), tipo: 'remover', alunoId: a.id, catracaId: a.catracaId, status: 'pendente', criadoEm: new Date().toISOString() });
+      await salvar('alunos', { ...a, catracaId: '' }); toast('Pedido enviado ao leitor.');
+    });
+  },
   async 'cat-liberar'() {
     await salvar('catraca', { id: 'liberar', ate: new Date(Date.now() + 60000).toISOString(), por: (USUARIO && USUARIO.nome) || '' });
     toast('Catraca liberada por 1 minuto: a próxima pessoa que olhar para o leitor entra.');
@@ -2412,6 +2493,12 @@ document.addEventListener('input', (e) => {
 });
 document.addEventListener('change', (e) => {
   const el = e.target;
+  if (el.id === 'rosto-arquivo' && el.files && el.files[0]) {
+    const img = new Image(); const url = URL.createObjectURL(el.files[0]);
+    img.onload = () => { fotoPronta = prepararFoto(img, img.naturalWidth, img.naturalHeight) || ''; URL.revokeObjectURL(url); };
+    img.onerror = () => toast('Não consegui abrir essa imagem. Use uma foto JPG ou PNG.');
+    img.src = url; return;
+  }
   if (el.dataset && el.dataset.addChamada !== undefined && el.value) {
     const a = alunoPorId(el.value); const ul = document.getElementById('ch-lista');
     if (a && ul) { const v = ul.querySelector('li.vazio'); if (v) v.remove(); ul.insertAdjacentHTML('beforeend', linhaChamada(a, el.dataset.addChamada, true)); el.querySelector('option[value="' + a.id + '"]').remove(); el.value = ''; }
