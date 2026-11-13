@@ -36,8 +36,18 @@ export default rota(['GET', 'POST'], async (req, res) => {
   if ((await um('HLEN', chaveCol('fichas'))) >= MAX_FILA) throw new ErroApi(503, 'O CT recebeu muitas fichas e ainda não conferiu. Tente de novo mais tarde ou fale com o CT pelo WhatsApp.');
 
   const id = 'fi_' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
+  // Selfie para o reconhecimento facial: só de quem autorizou o uso do rosto; JPG em base64 de até ~250 KB.
+  // Fica em fotos/<id da ficha> (fora da carga geral) até a recepção conferir e cadastrar o aluno.
+  const cmds = [];
+  const sf = typeof b.sf === 'string' ? b.sf.replace(/^data:image\/jpeg;base64,/, '') : '';
+  if (sf) {
+    if (!d.bio || d.bio === 'nao') throw new ErroApi(400, 'Para mandar a selfie, marque a autorização de uso do rosto.');
+    if (sf.length > 340000 || !/^[A-Za-z0-9+/=]+$/.test(sf) || !sf.startsWith('/9j/')) throw new ErroApi(400, 'A selfie não pôde ser lida. Tire a foto de novo.');
+    d.sf = 1;
+    cmds.push(['HSET', chaveCol('fotos'), id, JSON.stringify({ id, jpg: sf, em: new Date().toISOString(), daFicha: true })]);
+  }
   const ficha = { ...d, id, recebidaEm: new Date().toISOString() };
-  await banco([['HSET', chaveCol('fichas'), id, JSON.stringify(ficha)]]);
+  await banco([...cmds, ['HSET', chaveCol('fichas'), id, JSON.stringify(ficha)]]);
   await bumpRev();
   res.status(200).json({ ok: true });
 });

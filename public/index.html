@@ -1721,6 +1721,25 @@ function modalFicha(d) {
     '<div class="rodape">' + (daFila ? '<button class="btn perigo" data-act="descartar-ficha" data-id="' + esc(d.id) + '">Descartar</button>' : '') + '<button class="btn" data-act="fechar-modal">Agora não</button>' +
     (dup ? '<button class="btn" data-act="ficha-salvar" data-modo="novo">Criar novo cadastro</button><button class="btn pri" data-act="ficha-salvar" data-modo="atualizar" data-id="' + dup.id + '">Atualizar ' + esc(dup.nome.split(' ')[0]) + '</button>'
       : '<button class="btn pri" data-act="ficha-salvar" data-modo="novo">Cadastrar aluno</button>') + '</div></div>');
+  if (d.sf && daFila) {
+    // A selfie fica guardada à parte: busca e mostra para a recepção conferir antes de cadastrar.
+    const linhaSelfie = document.createElement('div'); linhaSelfie.className = 'resumo'; linhaSelfie.innerHTML = '<span><b>Selfie para a catraca</b> · carregando…</span>';
+    const dl = document.querySelector('.modal dl.dados'); if (dl) dl.after(linhaSelfie);
+    API.req('GET', '/api/dados?foto=' + encodeURIComponent(d.id)).then((j) => {
+      linhaSelfie.innerHTML = j.foto ? '<span><b>Selfie para a catraca</b> · vai para o leitor ao cadastrar</span><img src="data:image/jpeg;base64,' + j.foto.jpg + '" alt="Selfie enviada pelo aluno" style="width:140px;height:140px;object-fit:cover;border:1px solid var(--line-strong)">' : '<span>Selfie não encontrada.</span>';
+    }).catch(() => { linhaSelfie.innerHTML = '<span>Não consegui carregar a selfie.</span>'; });
+  }
+}
+// Passa a selfie da ficha para o aluno e pede o cadastro do rosto no leitor (só com autorização registrada).
+async function usarSelfieDaFicha(fichaId, a) {
+  try {
+    const j = await API.req('GET', '/api/dados?foto=' + encodeURIComponent(fichaId));
+    if (j.foto && j.foto.jpg && biometriaOk(a)) {
+      await API.req('POST', '/api/dados', { col: 'fotos', id: a.id, doc: { id: a.id, jpg: j.foto.jpg, em: new Date().toISOString(), daFicha: true } });
+      await salvar('catrafila', { id: novoId('cq'), tipo: 'cadastrar', alunoId: a.id, etapa: 'usuario', status: 'pendente', criadoEm: new Date().toISOString() });
+    }
+    await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(fichaId));
+  } catch (e) { tratarErro(e); }
 }
 async function salvarFicha(modo, idExistente) {
   const d = fichaPendente; if (!d) return;
@@ -1747,7 +1766,10 @@ async function salvarFicha(modo, idExistente) {
   if (!base && d.exp === 'Já treinei') a.obs = ['Já treinava antes da matrícula.', a.obs].filter(Boolean).join(' ');
   fichaPendente = null; fecharModal();
   if (!(await salvar('alunos', a))) return;
-  if (String(d.id || '').startsWith('fi_')) await remover('fichas', d.id);
+  if (String(d.id || '').startsWith('fi_')) {
+    if (d.sf) await usarSelfieDaFicha(d.id, a);
+    await remover('fichas', d.id);
+  }
   const tel = (d.tel || '').replace(/\D/g, '');
   const lead = tel.length >= 10 && S.leads.find((l) => (l.telefone || '').replace(/\D/g, '') === tel && !l.alunoId);
   if (lead) await salvar('leads', { ...lead, etapa: 'matriculado', alunoId: a.id });
@@ -2479,7 +2501,7 @@ const ACOES = {
   'conferir-ficha'(ds) { const f = S.fichas.find((x) => x.id === ds.id); if (f) modalFicha(f); else toast('Esta ficha já foi conferida.'); },
   'descartar-ficha'(ds) {
     const f = S.fichas.find((x) => x.id === ds.id); if (!f) return;
-    confirmar('Descartar ficha', 'Descartar a ficha de <b>' + esc(f.n) + '</b>? Ela sai da lista e os dados não são cadastrados.', 'Descartar', async () => { await remover('fichas', f.id); toast('Ficha descartada.'); });
+    confirmar('Descartar ficha', 'Descartar a ficha de <b>' + esc(f.n) + '</b>? Ela sai da lista e os dados não são cadastrados.', 'Descartar', async () => { if (f.sf) { try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(f.id)); } catch (_) {} } await remover('fichas', f.id); toast('Ficha descartada.'); });
   },
   'fechar-modal'() { fecharModal(); },
   fundo(ds, el, e) { if (e.target === el) fecharModal(); },

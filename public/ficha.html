@@ -84,6 +84,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .termo.forte:has(input:checked) { background: var(--surface-2); }
 .bio { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .bio p { margin: 0; font-size: .86rem; color: var(--muted); }
+.selfie { display: flex; flex-direction: column; gap: 8px; padding: 12px 0 0; }
+.selfie-linha { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.selfie-linha img { width: 96px; height: 96px; object-fit: cover; border: 1px solid var(--fg); }
+.selfie-linha .btn { padding: 12px 16px; cursor: pointer; }
 .erro { font-weight: 700; font-size: .9rem; border-left: 1px solid var(--fg); padding-left: 12px; }
 input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"] { outline: 2px solid var(--fg); outline-offset: 1px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--fg); background: transparent; padding: 16px 20px; cursor: pointer; text-decoration: none; color: var(--fg); font-stretch: 112.5%; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .74rem; }
@@ -265,6 +269,12 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
           <p>A entrada no CT é feita pelo reconhecimento do rosto na catraca. Para isso, o CT NORD cadastra uma foto do rosto no leitor facial e no sistema de gestão. A imagem do rosto é um dado pessoal sensível (LGPD, Lei 13.709/2018) e é usada <b>somente</b> para identificar a entrada no CT: não é compartilhada com terceiros nem usada para outra finalidade, e é apagada quando você pedir.</p>
           <p>Você pode não autorizar: nesse caso a entrada é liberada pela recepção. Você também pode retirar a autorização a qualquer momento, falando com a recepção.</p>
           <label class="termo forte"><input type="checkbox" id="bio" name="bio"><span id="bio-txt"><b>Autorizo o uso da imagem do meu rosto</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.</span></label>
+          <div class="selfie" id="bloco-selfie" hidden>
+            <b id="selfie-titulo">Selfie para a catraca (opcional)</b>
+            <p id="selfie-dica">Com a selfie, seu rosto já fica cadastrado na catraca e você entra direto. De frente, sem boné nem óculos escuros, em lugar claro, só você na foto.</p>
+            <div class="selfie-linha"><img id="selfie-prev" alt="Sua selfie" hidden>
+              <label class="btn" id="selfie-btn">Tirar selfie<input type="file" accept="image/*" capture="user" id="selfie" hidden></label></div>
+          </div>
         </div>
         <div class="erro" id="erro" role="alert" hidden></div>
         <button type="submit" class="btn pri largo" id="btn-concluir" disabled>Concluir matrícula</button>
@@ -305,6 +315,25 @@ const DIAS_F = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const diasTxt = (d) => (d || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map((x) => DIAS_F[x]).join(', ');
 const horTxt = (t) => String(t.h || '').replace(':', 'h') + ' · ' + diasTxt(t.d) + ' · ' + t.n;
 let GRADE = []; let modHor = '';
+// Selfie: reduzida no próprio celular para JPG de até ~720 px e ~180 KB antes de enviar.
+let SELFIE = '';
+$('selfie').addEventListener('change', (e) => {
+  const arq = e.target.files && e.target.files[0]; if (!arq) return;
+  const img = new Image(); const url = URL.createObjectURL(arq);
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (Math.min(w, h) < 160) { alert('Foto muito pequena. Tire outra.'); return; }
+    const k = Math.min(1, 720 / Math.max(w, h)); const c = document.createElement('canvas');
+    c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    let q = 0.88, dados = c.toDataURL('image/jpeg', q);
+    while (dados.length > 240000 && q > 0.5) { q -= 0.1; dados = c.toDataURL('image/jpeg', q); }
+    SELFIE = dados.split(',')[1];
+    $('selfie-prev').src = dados; $('selfie-prev').hidden = false; $('selfie-btn').firstChild.textContent = 'Tirar outra';
+  };
+  img.onerror = () => alert('Não consegui abrir essa foto. Tente de novo.');
+  img.src = url;
+});
 function montarHorarios(mod) {
   if (mod === modHor) return;
   const marcados = new Set([...document.querySelectorAll('[name="ht"]:checked')].map((x) => x.value));
@@ -357,6 +386,8 @@ function atualizar() {
   $('rc-txt').innerHTML = ehMenor()
     ? '<b>Como responsável, li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a fazer o aluno respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.'
     : '<b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.';
+  $('bloco-selfie').hidden = !$('bio').checked;
+  $('selfie-titulo').textContent = ehMenor() ? 'Foto do rosto do aluno para a catraca (opcional)' : 'Selfie para a catraca (opcional)';
   $('bio-txt').innerHTML = ehMenor()
     ? '<b>Como responsável, autorizo o uso da imagem do rosto do aluno</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.'
     : '<b>Autorizo o uso da imagem do meu rosto</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.';
@@ -436,6 +467,7 @@ $('ficha').addEventListener('submit', (e) => {
     sau: v('sau'), ctn: v('ctn'), ctt: v('ctt'), ori: v('ori'), ok: agora, rc: agora, rcv: REGIMENTO_VERSAO, bio: $('bio').checked ? agora : 'nao',
   };
   const hts = [...document.querySelectorAll('[name="ht"]:checked')].map((x) => x.value);
+  if (SELFIE && $('bio').checked) d.sf = SELFIE;
   if (hts.length) Object.assign(d, { ht: hts.join(','), hor: hts.map((id) => horTxt(GRADE.find((t) => t.i === id) || {})).join('; ') });
   if (v('hro')) d.hro = v('hro');
   if (menor) Object.assign(d, { rn: v('rn'), rcpf: v('rcpf'), rtel: v('rtel') });
