@@ -36,7 +36,10 @@ function erroFoto(r) {
 }
 
 export async function pushGet(q, cfg) {
-  const [pushB, filaB, alunosB] = await banco([['HGET', chaveCol('catraca'), 'push'], ['HGETALL', chaveCol('catrafila')], ['HGETALL', chaveCol('alunos')]]);
+  const [pushB, filaB, alunosB, profsB] = await banco([['HGET', chaveCol('catraca'), 'push'], ['HGETALL', chaveCol('catrafila')], ['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('professores')]]);
+  // A pessoa de um pedido da fila pode ser aluno (alunoId) ou professor (profId).
+  const alunosL = lista(alunosB), profsL = lista(profsB);
+  const pessoaDe = (i) => (i.profId ? profsL.find((p) => p.id === i.profId) : alunosL.find((a) => a.id === i.alunoId));
   const st = (pushB && JSON.parse(pushB)) || { id: 'push' };
   const uuid = String(q.uuid || crypto.randomUUID());
   const cmds = [];
@@ -50,33 +53,33 @@ export async function pushGet(q, cfg) {
   const item = fila[0];
   // Antes de criar uma pessoa nova no leitor, a lista de pessoas dele precisa ser recente (até 2 min),
   // para o ID novo não coincidir com alguém cadastrado direto no leitor.
-  const lerAntes = item && item.tipo === 'cadastrar' && (item.etapa || 'usuario') === 'usuario' && !(alunosB && lista(alunosB).find((a) => a.id === item.alunoId && a.catracaId))
+  const lerAntes = item && item.tipo === 'cadastrar' && (item.etapa || 'usuario') === 'usuario' && !((pessoaDe(item) || {}).catracaId)
     && (!st.usuariosEm || Date.now() - Date.parse(st.usuariosEm) > REENVIO_MS);
   if (!st.usuariosEm || lerAntes) {
     st.pendente = { uuid, tipo: 'usuarios' }; salvarSt();
     resp = comando(cfg, 'load_objects', { object: 'users', fields: ['id', 'name', 'image_timestamp'] });
   } else if (item) {
-    const alunos = lista(alunosB); const aluno = alunos.find((a) => a.id === item.alunoId);
+    const aluno = pessoaDe(item); const colPessoa = item.profId ? 'professores' : 'alunos';
     const n = { ...item, status: 'enviado', uuid, atualizadoEm: agora(), tentativas: (item.tentativas || 0) + 1 };
     if (item.tipo === 'remover') {
       if (item.catracaId) resp = comando(cfg, 'destroy_objects', { object: 'users', where: { users: { id: Number(item.catracaId) } } });
       else { n.status = 'ok'; }
     } else if (!aluno) {
-      Object.assign(n, { status: 'erro', erro: 'Aluno não encontrado no sistema.' });
+      Object.assign(n, { status: 'erro', erro: (item.profId ? 'Professor' : 'Aluno') + ' não encontrado no sistema.' });
     } else if (item.etapa === 'usuario' || !item.etapa) {
       let id = Number(aluno.catracaId) || 0;
       if (!id) {
         // Novo ID no leitor: o maior ID conhecido (leitor ou alunos) + 1.
-        const usados = [...(st.usuarios || []).map((u) => Number(u.id) || 0), ...alunos.map((a) => Number(a.catracaId) || 0)];
+        const usados = [...(st.usuarios || []).map((u) => Number(u.id) || 0), ...alunosL.map((a) => Number(a.catracaId) || 0), ...profsL.map((p) => Number(p.catracaId) || 0)];
         id = Math.max(0, ...usados) + 1;
-        cmds.push(['HSET', chaveCol('alunos'), aluno.id, JSON.stringify({ ...aluno, catracaId: id })]);
+        cmds.push(['HSET', chaveCol(colPessoa), aluno.id, JSON.stringify({ ...aluno, catracaId: id })]);
       }
       n.etapa = 'usuario'; n.catracaId = id;
       resp = comando(cfg, 'create_or_modify_objects', { object: 'users', values: [{ id, name: String(aluno.nome).slice(0, 60), registration: '' }] });
     } else if (item.etapa === 'grupo') {
       resp = comando(cfg, 'create_objects', { object: 'user_groups', values: [{ user_id: Number(item.catracaId), group_id: Number(st.grupoPadrao) }] });
     } else if (item.etapa === 'foto') {
-      const [fotoB] = await banco([['HGET', chaveCol('fotos'), aluno.id]]);
+      const [fotoB] = await banco([['HGET', chaveCol('fotos'), aluno.id]]);  // fotos/<id do aluno ou do professor>
       const foto = fotoB && JSON.parse(fotoB);
       if (!foto || !foto.jpg) Object.assign(n, { status: 'erro', erro: 'Foto não encontrada. Tire a foto de novo.' });
       else resp = comando(cfg, 'user_set_image_list', { match: true, user_images: [{ user_id: Number(item.catracaId), timestamp: Math.floor(Date.now() / 1000), image: foto.jpg }] });

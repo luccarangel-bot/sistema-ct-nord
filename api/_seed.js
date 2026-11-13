@@ -152,6 +152,21 @@ export const SEED = {
     "Dinheiro"
    ],
    "valor": 230
+  },
+  {
+   "ativo": true,
+   "condicoes": "Bolsa integral concedida pelo CT. Sem mensalidades; o aluno entra na catraca como os demais. Para bolsa parcial, venda o plano normal com desconto por mês.",
+   "criadoEm": "2026-11-13T12:00:00.000Z",
+   "formaPadrao": "bolsa",
+   "id": "pl_bolsista",
+   "meses": 1,
+   "modalidade": "Livre (todas)",
+   "nome": "Bolsista (100%)",
+   "pagamentos": [
+    "Bolsa"
+   ],
+   "renovaSozinho": true,
+   "valor": 0
   }
  ],
  "turmas": [

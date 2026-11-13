@@ -235,6 +235,7 @@ const MIGRACOES = [
   ['planos-app', ['planos', ['pl_totalpass', 'pl_wellhub']]],
   ['contas-planilha', ['contasfixas', SEED.contasfixas.map((c) => c.id)]],
   ['grade-2026-11', atualizarGrade],
+  ['plano-bolsista', ['planos', ['pl_bolsista']]],
 ];
 // Grade de novembro/2026: turmas da grade nova ficam ativas (as que já existiam mantêm id, professor,
 // vagas e histórico de chamadas); as que não estão na grade (ex.: Jiu-Jitsu Fem) são desativadas, não apagadas.

@@ -102,11 +102,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ result: { event: 3, portal_id: portal, actions: [], message: 'Não reconhecido.' } });
     }
 
-    const [alunosB, contratosB, lancsB, turmasB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')]]);
+    const [alunosB, contratosB, lancsB, turmasB, profsB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')], ['HGETALL', chaveCol('professores')]]);
     const aluno = lista(alunosB).find((a) => Number(a.catracaId) === userId);
+    const prof = !aluno && lista(profsB).find((p) => Number(p.catracaId) === userId);
     const cmds = [];
     let dec;
-    if (!aluno) {
+    if (prof) {
+      // Professor ligado ao rosto: entra sempre, enquanto estiver ativo no sistema.
+      dec = prof.ativo !== false ? { ok: true, motivo: 'professor', msg: 'Bom treino, Prof. ' + primeiroNome(prof.nome) + '!' } : { ok: false, motivo: 'professor inativo', msg: 'Acesso desativado. Procure a recepção.' };
+      registrar({ ok: dec.ok, motivo: dec.motivo, profId: prof.id, nome: 'Prof. ' + prof.nome });
+      if (estado.desconhecidos) delete estado.desconhecidos[userId];
+    } else if (!aluno) {
       // Pessoa cadastrada no aparelho que ainda não foi vinculada a um aluno (pode ser da equipe).
       estado.desconhecidos = estado.desconhecidos || {};
       estado.desconhecidos[userId] = { id: userId, nome: String(b.user_name || '').slice(0, 80), ultimo: new Date(ms).toISOString() };
@@ -129,7 +135,7 @@ export default async function handler(req, res) {
       }
     }
     await banco([...cmds, ['HSET', chaveCol('catraca'), 'estado', JSON.stringify(estado)], ['INCR', 'ct:rev']]);
-    return responder(dec.ok, dec.msg, aluno ? aluno.nome : '');
+    return responder(dec.ok, dec.msg, aluno ? aluno.nome : prof ? prof.nome : '');
   } catch (e) {
     const s = e instanceof ErroApi ? e.status : 500;
     if (s >= 500) console.error('catraca:', e);

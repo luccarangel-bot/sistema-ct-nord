@@ -12,7 +12,7 @@ export default rota(['GET', 'POST'], async (req, res) => {
     await semear();
     const [cfg, planos, turmas] = await banco([['HGET', chaveCol('config'), 'geral'], ['HGETALL', chaveCol('planos')], ['HGETALL', chaveCol('turmas')]]);
     const ct = (cfg && JSON.parse(cfg).ct) || {};
-    const lista = Object.values(parHash(planos)).map((v) => JSON.parse(v)).filter((p) => p.ativo !== false)
+    const lista = Object.values(parHash(planos)).map((v) => JSON.parse(v)).filter((p) => p.ativo !== false && p.formaPadrao !== 'bolsa')
       .sort((a, b) => a.meses - b.meses || b.valor - a.valor)
       .map((p) => ({ i: p.id, n: p.nome, v: p.valor, m: p.meses, f: p.formaPadrao || 'mensal', a: p.pagamentos || [] }));
     // Grade das turmas ativas, para o aluno marcar os horários que prefere.

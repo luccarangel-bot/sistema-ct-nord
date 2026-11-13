@@ -492,7 +492,9 @@ function statusLanc(l) {
   return 'aberto';
 }
 // Planos que renovam sozinhos todo mês (mensais, recorrência, TotalPass/Wellhub): o contrato não tem data para acabar.
-const planoRenovaSozinho = (p) => !!p && (p.renovaSozinho != null ? !!p.renovaSozinho : (Number(p.meses) === 1 || p.formaPadrao === 'app' || /recorr/i.test(p.nome || '')));
+const planoRenovaSozinho = (p) => !!p && (p.renovaSozinho != null ? !!p.renovaSozinho : (Number(p.meses) === 1 || p.formaPadrao === 'app' || p.formaPadrao === 'bolsa' || /recorr/i.test(p.nome || '')));
+// Formas sem mensalidade no CT: pagas pelo app parceiro ou bolsa integral.
+const semCobranca = (forma) => forma === 'app' || forma === 'bolsa';
 const fimDe = (c) => (c.continuo ? '9999-12-31' : c.fim);
 const vigenciaTxt = (c) => (c.continuo ? 'desde ' + fData(c.inicio) + (c.cancelado ? '' : ' · renova todo mês') : fData(c.inicio) + ' a ' + fData(c.fim));
 const txtRenovar = (c) => (Number(c.meses) === 1 ? 'Reativar' : 'Renovar +' + c.meses + ' meses');
@@ -550,7 +552,7 @@ function pagamentosNoMes(mes, tipo) {
 // Mensalidade k do contrato: a primeira vence no início, as seguintes no dia de vencimento de cada mês.
 const vencMensalidade = (c, k) => (k === 0 ? c.inicio : comDia(addMeses(c.inicio, k), c.diaVenc));
 function mensalidadesQueFaltam(c, existentes) {
-  if (!c.continuo || c.cancelado || c.forma === 'app') return [];
+  if (!c.continuo || c.cancelado || semCobranca(c.forma)) return [];
   const ate = addDias(HOJE, 10); const r = [];
   for (let k = 0; k < 600; k++) {
     const venc = vencMensalidade(c, k); if (venc > ate) break;
@@ -582,7 +584,7 @@ async function renovacaoAutomatica() {
 }
 /* Gera as cobranças de um contrato */
 function gerarCobrancas(c, opts) {
-  const n = c.forma === 'app' ? 0 : c.forma === 'avista' ? 1 : c.meses;
+  const n = semCobranca(c.forma) ? 0 : c.forma === 'avista' ? 1 : c.meses;
   const r = [];
   for (let i = 0; i < n; i++) {
     let venc;
@@ -641,7 +643,7 @@ async function salvar(col, obj) {
 // Monta o contrato e as cobranças de uma venda a partir dos campos do formulário (null se algo estiver errado).
 function montarVenda(d, alunoId) {
   const p = planoPorId(d.planoId); if (!p || !alunoId) { toast('Escolha o aluno e o plano.'); return null; }
-  const app = d.forma === 'app';
+  const app = semCobranca(d.forma);
   const desconto = app ? 0 : numCampo(d.desconto);
   if (!app && desconto >= p.valor) { toast('O desconto não pode ser igual ou maior que o valor do plano.'); return null; }
   const inicio = d.inicio || HOJE;
@@ -660,7 +662,7 @@ function montarVenda(d, alunoId) {
   } else cobr = gerarCobrancas(c, { retroativo: !!d.retroativo, matricula: numCampo(d.matricula), forma: d.formaPg, primeiraNoInicio: true });
   return { c, cobr };
 }
-const txtCobr = (v) => (v.c.forma === 'app' && !v.cobr.length ? 'sem mensalidades, pago pelo app' : v.cobr.length + ' cobrança(s) criada(s)' + (v.c.continuo ? '. As próximas mensalidades são criadas sozinhas todo mês' : ''));
+const txtCobr = (v) => (semCobranca(v.c.forma) && !v.cobr.length ? (v.c.forma === 'bolsa' ? 'bolsa, sem mensalidades' : 'sem mensalidades, pago pelo app') : v.cobr.length + ' cobrança(s) criada(s)' + (v.c.continuo ? '. As próximas mensalidades são criadas sozinhas todo mês' : ''));
 async function gravarVenda(v) {
   if (!(await salvar('contratos', v.c))) return false;
   return salvarVarios('lancamentos', v.cobr);
@@ -917,6 +919,7 @@ function abaProfessores() {
       (p.telefone ? ' · ' + waA(p.telefone, 'Olá, ' + p.nome.split(' ')[0] + '!', 'WhatsApp') : '') + '</p>' +
       (xs.length ? '<ul class="lista">' + xs.map(({ a, m }) => '<li><div class="cresce"><b><button class="btn link" style="padding:0" data-act="abrir-aluno" data-id="' + a.id + '">' + esc(a.nome) + '</button></b>' +
         '<small>' + esc(m.mod) + ' · ' + esc(m.faixa || '') + (alunoAtivo(a) ? '' : ' · inativo') + '</small></div></li>').join('') + '</ul>' : '<p class="vazio">Nenhum aluno atribuído ainda.</p>') +
+      linhaCatracaProf(p) +
       '<div class="rodape" style="margin-top:8px"><button class="btn peq" data-act="editar-prof" data-id="' + p.id + '">Editar</button><button class="btn peq pri" data-act="atribuir-alunos" data-id="' + p.id + '">Atribuir alunos</button></div></section>';
   }).join('') + '</div>';
   // Alunos ativos que ainda não têm professor em alguma modalidade.
@@ -929,6 +932,17 @@ function abaProfessores() {
         selProf('sp-' + a.id + '-' + i, 'prof', m.mod, '', 'data-prof-aluno="' + a.id + '" data-i="' + i + '" aria-label="Professor de ' + esc(a.nome) + ' em ' + esc(m.mod) + '" style="width:auto"') + '</li>';
     }).join('') + '</ul>' : '<p class="vazio">Todos os alunos ativos já têm professor.</p>') + '</section>';
   return h;
+}
+
+// Catraca no cartão do professor: professor ativo com rosto no leitor entra sempre.
+function linhaCatracaProf(p) {
+  if (!catracaCfg().ativo && !p.catracaId) return '';
+  const ir = filaDoAluno(p.id);
+  const sit = p.ativo === false && p.catracaId ? 'inativo: barrado na catraca' : situacaoRosto(p);
+  return '<p class="prof-cat" style="margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)"><b>Catraca</b> · ' +
+    (p.catracaId ? pill(p.ativo === false ? 'bad' : 'ok', p.ativo === false ? 'Barrado' : 'Entra') + ' ' : '') + '<small' + (ir && ir.status === 'erro' ? ' class="neg"' : '') + '>' + esc(sit) + '</small><br>' +
+    '<button class="btn peq pri" data-act="cat-rosto" data-id="' + p.id + '">' + (p.catracaId ? 'Trocar foto do rosto' : 'Cadastrar rosto') + '</button> ' +
+    (p.catracaId ? '<button class="btn peq perigo" data-act="cat-remover-leitor" data-id="' + p.id + '">Remover do leitor</button>' : '') + '</p>';
 }
 
 function modalProf(p) {
@@ -966,6 +980,7 @@ VIEWS.alunos = function () {
   const filtros = {
     ativos: (a) => alunoAtivo(a),
     inativos: (a) => !alunoAtivo(a),
+    bolsistas: (a) => { const c = contratoVigente(a.id); return !!c && c.forma === 'bolsa'; },
     devendo: (a) => dividaDo(a.id) > 0,
     avencer: (a) => { const c = contratoVigente(a.id); return c && statusContrato(c) === 'avencer'; },
     todos: () => true,
@@ -979,7 +994,7 @@ VIEWS.alunos = function () {
   if (UI.tabAlunos === 'professores') return h + abaProfessores();
   h += '<div class="filtros"><input type="search" id="busca-aluno" data-ui="busca" placeholder="Buscar por nome ou telefone" value="' + esc(UI.busca) + '" aria-label="Buscar aluno">' +
     (S.professores.length ? '<select data-ui="filtroProf" aria-label="Professor" style="width:auto">' + opt('', 'Todos os professores', !UI.filtroProf) + S.professores.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((p) => opt(p.id, 'Prof. ' + p.nome, UI.filtroProf === p.id)).join('') + opt('-', 'Sem professor', UI.filtroProf === '-') + '</select>' : '') +
-    chip('filtroAluno', 'ativos', 'Ativos', cnt('ativos')) + chip('filtroAluno', 'avencer', 'Contrato a vencer', cnt('avencer')) + chip('filtroAluno', 'devendo', 'Em atraso', cnt('devendo')) + chip('filtroAluno', 'inativos', 'Inativos', cnt('inativos')) + chip('filtroAluno', 'todos', 'Todos', base.length) + '</div>';
+    chip('filtroAluno', 'ativos', 'Ativos', cnt('ativos')) + chip('filtroAluno', 'avencer', 'Contrato a vencer', cnt('avencer')) + chip('filtroAluno', 'devendo', 'Em atraso', cnt('devendo')) + chip('filtroAluno', 'bolsistas', 'Bolsistas', cnt('bolsistas')) + chip('filtroAluno', 'inativos', 'Inativos', cnt('inativos')) + chip('filtroAluno', 'todos', 'Todos', base.length) + '</div>';
   if (!lista.length) return h + '<div class="painel"><p class="vazio">Nenhum aluno encontrado com esse filtro.</p></div>';
   h += '<div class="tabela-wrap"><table><thead><tr><th>Aluno</th><th>Graduação</th><th>Plano</th><th>Contrato</th><th>Financeiro</th><th class="esconde-celular">Último treino</th></tr></thead><tbody>';
   for (const a of lista) {
@@ -1063,9 +1078,9 @@ VIEWS.aluno = function () {
     (produtos.length ? '<ul class="lista">' + produtos.map((l) => '<li><div class="cresce"><b>' + esc(l.descricao) + '</b><small>' + fData(l.vencimento) + '</small></div><span class="num">' + fR(devidoDe(l)) + '</span>' + pillLanc(l) + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhum produto registrado.</p>') + '</section>';
   return h;
 };
-const FORMA_TXT = { mensal: 'Mensalidades', avista: 'À vista', cartao: 'Cartão de crédito', app: 'Pelo app (TotalPass / Wellhub)' };
+const FORMA_TXT = { mensal: 'Mensalidades', avista: 'À vista', cartao: 'Cartão de crédito', app: 'Pelo app (TotalPass / Wellhub)', bolsa: 'Bolsa (sem mensalidade)' };
 // Preço do plano para mostrar em listas: planos pagos pelo app não têm mensalidade no CT.
-const precoPlano = (p) => (p.formaPadrao === 'app' ? 'pelo app' : fR(p.valor) + '/mês');
+const precoPlano = (p) => (p.formaPadrao === 'app' ? 'pelo app' : p.formaPadrao === 'bolsa' ? 'bolsa' : fR(p.valor) + '/mês');
 
 function tabelaLancamentos(lista, o) {
   o = o || {};
@@ -1092,7 +1107,7 @@ VIEWS.contratos = function () {
     h += '<div class="tabela-wrap"><table><thead><tr><th>Plano</th><th>Modalidade</th><th class="dir">Valor/mês</th><th class="dir">Duração</th><th class="dir">Total</th><th>Contratos ativos</th><th></th></tr></thead><tbody>';
     for (const p of pl) {
       const ativos = S.contratos.filter((c) => c.planoId === p.id && ['ativo', 'avencer'].includes(statusContrato(c))).length;
-      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + (p.formaPadrao === 'app' ? 'Pelo app' : fR(p.valor)) + '</td><td class="dir num">' + (planoRenovaSozinho(p) ? 'Renova todo mês' : p.meses + (p.meses > 1 ? ' meses' : ' mês')) + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + (p.formaPadrao === 'app' || planoRenovaSozinho(p) ? '—' : fR(p.valor * p.meses)) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
+      h += '<tr><td><b>' + esc(p.nome) + '</b>' + (p.condicoes ? '<small>' + esc(p.condicoes) + '</small>' : '') + '</td><td>' + esc(p.modalidade) + '</td><td class="dir num">' + (p.formaPadrao === 'app' ? 'Pelo app' : p.formaPadrao === 'bolsa' ? 'Bolsa' : fR(p.valor)) + '</td><td class="dir num">' + (planoRenovaSozinho(p) ? 'Renova todo mês' : p.meses + (p.meses > 1 ? ' meses' : ' mês')) + '<small>' + (FORMA_TXT[p.formaPadrao] || 'Mensalidades') + (p.pagamentos ? ' · ' + esc(p.pagamentos.join(', ')) : '') + '</small></td><td class="dir num">' + (p.formaPadrao === 'app' || planoRenovaSozinho(p) ? '—' : fR(p.valor * p.meses)) + '</td><td>' + ativos + (p.ativo ? '' : ' ' + pill('', 'Fora de venda')) + '</td><td class="dir"><button class="btn peq" data-act="editar-plano" data-id="' + p.id + '">Editar</button></td></tr>';
     }
     return h + '</tbody></table></div>';
   }
@@ -1113,7 +1128,7 @@ VIEWS.contratos = function () {
     const dias = c.continuo ? 0 : difDias(HOJE, c.fim);
     h += '<tr><td><button class="btn link" style="padding:0;text-align:left" data-act="abrir-aluno" data-id="' + c.alunoId + '">' + esc(nomeAluno(c.alunoId)) + '</button><small>vendido em ' + fData((c.criadoEm || '').slice(0, 10)) + '</small></td><td>' + esc(c.planoNome) + (c.renovacaoDe ? '<small>renovação</small>' : '') + '</td>' +
       '<td class="num">' + vigenciaTxt(c) + '<small>' + (st === 'cancelado' ? 'encerrado' + (c.canceladoEm ? ' em ' + fData(c.canceladoEm) : '') : c.continuo ? '' : st === 'vencido' ? 'terminou há ' + (-dias) + ' dias' : 'faltam ' + dias + ' dias') + '</small></td>' +
-      '<td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + FORMA_TXT[c.forma] + '<small>' + (c.forma === 'app' ? 'pelo app' : c.continuo ? (c.forma === 'cartao' ? 'cartão, todo mês' : 'vence todo dia ' + c.diaVenc) : c.forma === 'mensal' ? 'vence dia ' + c.diaVenc : c.forma === 'cartao' ? c.meses + 'x no cartão' : '1 pagamento') + '</small></td><td>' + pillContr(c) + '</td>' +
+      '<td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + FORMA_TXT[c.forma] + '<small>' + (c.forma === 'app' ? 'pelo app' : c.forma === 'bolsa' ? 'bolsista' : c.continuo ? (c.forma === 'cartao' ? 'cartão, todo mês' : 'vence todo dia ' + c.diaVenc) : c.forma === 'mensal' ? 'vence dia ' + c.diaVenc : c.forma === 'cartao' ? c.meses + 'x no cartão' : '1 pagamento') + '</small></td><td>' + pillContr(c) + '</td>' +
       '<td class="dir" style="white-space:nowrap">' + (st === 'cancelado' ? '' : c.continuo ? '<button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar</button>' : '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">' + txtRenovar(c) + '</button>') + '</td></tr>';
   }
   return h + '</tbody></table></div>';
@@ -1516,29 +1531,33 @@ function blocoCatraca() {
       '<div class="rodape"><button class="btn pri" data-act="cat-ativar">Ativar integração com a catraca</button></div></section>';
   }
   const est = catracaEstado();
-  const ligados = new Set(S.alunos.map((a) => String(a.catracaId || '')).filter(Boolean));
+  const ligados = new Set(comCatraca().map((a) => String(a.catracaId)));
   const pe = pushEstado();
   const doLeitor = ((pe && pe.usuarios) || []).filter((u) => !ligados.has(String(u.id))).map((u) => ({ id: u.id, nome: u.nome, ultimo: '' }));
   const desc = [...Object.values(est.desconhecidos || {}).filter((u) => !ligados.has(String(u.id))), ...doLeitor.filter((u) => !(est.desconhecidos || {})[u.id])]
     .sort((a, b) => String(b.ultimo).localeCompare(String(a.ultimo)) || String(a.nome).localeCompare(String(b.nome), 'pt-BR'));
-  const vinculados = S.alunos.filter((a) => a.catracaId).length;
+  const vinculados = S.alunos.filter((a) => a.catracaId).length, profsLig = S.professores.filter((p) => p.catracaId).length;
   h += '<div class="campo"><span>Endereço do servidor para colocar no aparelho</span><div style="display:flex;gap:8px"><input id="cat-url" readonly value="' + esc(urlCatraca()) + '"><button class="btn" data-act="copiar" data-alvo="cat-url">Copiar</button></div>' +
     '<small>Use no iDFace em Modo Online (Pro). Quem tiver este endereço consegue falar com a catraca: não divulgue.</small></div>';
   const filaErro = S.catrafila.filter((i) => i.status === 'erro').length, filaPend = S.catrafila.filter((i) => ['pendente', 'enviado'].includes(i.status)).length;
   h += '<div class="aviso" style="margin:14px 0 0"><b>Cadastro de rostos pelo sistema:</b> ' + (pushAtivo() ? 'leitor conectado (último contato ' + quando(pe.visto) + ')' + (pe.usuarios ? ' · ' + pe.usuarios.length + ' pessoa(s) no leitor' : '') : pe && pe.visto ? 'leitor sem contato desde ' + quando(pe.visto) : 'ainda não ligado no leitor (modo Push)') +
-    (filaPend ? ' · ' + filaPend + ' envio(s) na fila' : '') + (filaErro ? ' · <b>' + filaErro + ' com erro</b> (veja no perfil do aluno)' : '') + '</div>';
+    (filaPend ? ' · ' + filaPend + ' envio(s) na fila' : '') + (filaErro ? ' · <b>' + filaErro + ' com erro</b> (veja no perfil do aluno ou no cartão do professor)' : '') + '</div>';
   h += '<form data-form="cat-cfg" style="display:flex;flex-direction:column;gap:14px;margin-top:14px"><div class="linha2">' +
     campo('Como o aparelho abre a catraca', sel('cat-acao', 'acao', opt('sec_box', 'Módulo SecBox', (cfg.acao || 'sec_box') === 'sec_box') + opt('door', 'Relé do próprio aparelho', cfg.acao === 'door') + opt('catra', 'Catraca Control iD (iDBlock)', cfg.acao === 'catra'))) +
     campo('ID da SecBox ou nº do relé', inp('cat-sb', 'param', cfg.acao === 'door' ? (cfg.porta || 1) : (cfg.secboxId || '65793')), 'Ajustamos no teste, na academia.') + '</div>' +
-    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno (deixe desmarcado para não barrar a equipe)</span></label>' +
+    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno ou professor</span></label>' +
     '<div class="rodape"><button class="btn" type="button" data-act="cat-desativar">Desativar</button><button class="btn" type="button" data-act="cat-token">Gerar novo endereço</button><button class="btn pri" type="submit">Salvar</button></div></form>';
-  h += '<h3 style="margin-top:18px">Rostos do aparelho sem aluno ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s) já ligados</small></h3>' +
+  const profsLivres = S.professores.filter((x) => !x.catracaId && x.ativo !== false).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+  h += '<h3 style="margin-top:18px">Rostos do aparelho sem ninguém ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s) e ' + profsLig + ' professor(es) já ligados</small></h3>' +
     (desc.length ? '<ul class="lista">' + desc.map((p) => {
-      const sug = sugerirAluno(p.nome);
+      const sug = sugerirAluno(p.nome); const nP = semAcento(p.nome).replace(/^prof\.?\s*/, '');
+      const sugP = nP && profsLivres.find((x) => semAcento(x.nome) === nP || (/^prof/.test(semAcento(p.nome)) && semAcento(x.nome).split(' ')[0] === nP.split(' ')[0]));
       return '<li><div class="cresce"><b>' + esc(p.nome || 'Sem nome') + '</b><small>ID ' + esc(p.id) + ' no aparelho' + (p.ultimo ? ' · passou em ' + quando(p.ultimo) : '') + '</small></div>' +
-        sel('cv-' + p.id, 'aluno', '<option value="">Escolha o aluno</option>' + S.alunos.filter((a) => !a.catracaId).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, sug && sug.id === a.id)).join(''), 'style="width:auto" aria-label="Aluno de ' + esc(p.nome) + '"') +
+        sel('cv-' + p.id, 'aluno', '<option value="">Escolha a pessoa</option>' +
+          (profsLivres.length ? '<optgroup label="Professores">' + profsLivres.map((x) => opt(x.id, 'Prof. ' + x.nome, sugP && sugP.id === x.id)).join('') + '</optgroup>' : '') +
+          '<optgroup label="Alunos">' + S.alunos.filter((a) => !a.catracaId).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, !sugP && sug && sug.id === a.id)).join('') + '</optgroup>', 'style="width:auto" aria-label="Pessoa de ' + esc(p.nome) + '"') +
         '<button class="btn peq pri" data-act="cat-ligar" data-uid="' + esc(p.id) + '">Ligar</button></li>';
-    }).join('') + '</ul>' : '<p class="vazio">Nenhum rosto do leitor sem aluno ligado. Com o leitor conectado (modo Push), todos os rostos cadastrados nele aparecem aqui; sem isso, aparecem na primeira vez que a pessoa passar na catraca.</p>');
+    }).join('') + '</ul>' : '<p class="vazio">Nenhum rosto do leitor sem pessoa ligada. Com o leitor conectado (modo Push), todos os rostos cadastrados nele aparecem aqui; sem isso, aparecem na primeira vez que a pessoa passar na catraca.</p>');
   const ents = (est.entradas || []).slice(0, 15);
   h += '<h3 style="margin-top:18px">Últimas passagens</h3>' + (ents.length ? '<ul class="lista">' + ents.map((e) => '<li><div class="cresce"><b>' + esc(e.nome || e.nomeAparelho || 'Não reconhecido') + '</b><small>' + quando(e.em) + ' · ' + esc(e.motivo || '') + '</small></div>' + pill(e.ok ? 'ok' : 'bad', e.ok ? 'Liberado' : 'Barrado') + '</li>').join('') + '</ul>' : '<p class="vazio">Nenhuma passagem registrada ainda.</p>');
   return h + '</section>';
@@ -1546,7 +1565,12 @@ function blocoCatraca() {
 /* ---------- Cadastro do rosto pelo sistema (leitor em modo Push) ---------- */
 const pushEstado = () => S.catraca.find((x) => x.id === 'push') || null;
 const pushAtivo = () => { const p = pushEstado(); return !!(p && p.visto && Date.now() - Date.parse(p.visto) < 15 * 60000); };
-const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
+// Pessoa com rosto no leitor: aluno ou professor (mesmo fluxo de foto, fila e autorização).
+const pessoaPorId = (id) => alunoPorId(id) || profPorId(id);
+const colPessoa = (id) => (profPorId(id) ? 'professores' : 'alunos');
+const chaveFila = (id) => (profPorId(id) ? { profId: id } : { alunoId: id });
+const comCatraca = () => [...S.alunos, ...S.professores].filter((x) => x.catracaId);
+const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id || i.profId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
 // Situação do cadastro do rosto, em texto simples.
 function situacaoRosto(a) {
   const i = filaDoAluno(a.id);
@@ -1583,9 +1607,10 @@ function prepararFoto(origem, w, h) {
 let fotoPronta = '';
 function abrirFotoRosto(a) {
   if (biometriaOk(a)) return modalFotoRosto(a);
-  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. O aluno (ou o responsável) autorizou?', 'Autorizou, continuar', async () => {
-    const n = { ...alunoPorId(a.id), biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!a.responsavel, origem: 'recepção' } };
-    await salvar('alunos', n); modalFotoRosto(n);
+  const prof = colPessoa(a.id) === 'professores';
+  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. ' + (prof ? 'O professor autorizou?' : 'O aluno (ou o responsável) autorizou?'), 'Autorizou, continuar', async () => {
+    const n = { ...pessoaPorId(a.id), biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!a.responsavel, origem: 'recepção' } };
+    await salvar(colPessoa(a.id), n); modalFotoRosto(n);
   });
 }
 
@@ -1970,7 +1995,7 @@ function modalPlano(p) {
     '<div class="linha2">' + campo('Modalidade', sel('pl-mod', 'modalidade', [...MODALIDADES, 'Livre (todas)'].map((m) => opt(m, m, m === p.modalidade)).join(''))) +
     campo('Valor por mês (R$) *', inp('pl-valor', 'valor', p.valor, 'required inputmode="decimal" placeholder="150,00"')) +
     campo('Duração', sel('pl-meses', 'meses', [1, 2, 3, 4, 6, 12, 18, 24].map((n) => opt(n, n + (n > 1 ? ' meses' : ' mês'), n === Number(p.meses))).join(''))) + '</div>' +
-    campo('Forma de cobrança padrão', sel('pl-forma', 'formaPadrao', opt('mensal', 'Mensalidades (Pix, débito, dinheiro, débito automático)', p.formaPadrao === 'mensal') + opt('cartao', 'Cartão de crédito', p.formaPadrao === 'cartao') + opt('avista', 'À vista (pagamento único)', p.formaPadrao === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub): sem mensalidade no CT', p.formaPadrao === 'app')), 'Já vem escolhida na hora da venda. Dá para trocar se precisar.') +
+    campo('Forma de cobrança padrão', sel('pl-forma', 'formaPadrao', opt('mensal', 'Mensalidades (Pix, débito, dinheiro, débito automático)', p.formaPadrao === 'mensal') + opt('cartao', 'Cartão de crédito', p.formaPadrao === 'cartao') + opt('avista', 'À vista (pagamento único)', p.formaPadrao === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub): sem mensalidade no CT', p.formaPadrao === 'app') + opt('bolsa', 'Bolsa: sem mensalidade', p.formaPadrao === 'bolsa')), 'Já vem escolhida na hora da venda. Dá para trocar se precisar.') +
     '<div class="campo"><span>Formas de pagamento aceitas</span><div class="dias-sel">' + FORMAS.map((f) => '<label><input type="checkbox" name="aceita" value="' + esc(f) + '"' + ((p.pagamentos || ['Pix', 'Cartão de débito', 'Dinheiro']).includes(f) ? ' checked' : '') + '>' + esc(f) + '</label>').join('') + '</div><small>São as opções que o aluno vê na ficha de matrícula para este plano.</small></div>' +
     campo('Condições comerciais', '<textarea id="pl-cond" name="condicoes" placeholder="Ex.: fidelidade, frequência semanal, brindes">' + esc(p.condicoes || '') + '</textarea>') +
     '<label class="check"><input type="checkbox" name="renovaSozinho" id="pl-renova"' + (planoRenovaSozinho({ meses: 1, ...p }) ? ' checked' : '') + '><span>Renova sozinho todo mês (sem data para acabar). Use nos planos mensais. Semestral e anual: deixe desmarcado.</span></label>' +
@@ -2000,7 +2025,7 @@ function camposVenda(o, planos, opcional) {
     '<div class="venda-detalhes" style="margin-top:16px"' + (opcional && !pl.id ? ' hidden' : '') + '>' +
     '<div class="linha2">' + campo('Início *', inp('vd-inicio', 'inicio', inicio, 'type="date" required'), 'Pode ser uma data passada (venda retroativa).') +
     campo('Desconto por mês (R$)', inp('vd-desc', 'desconto', o.desconto || '', 'inputmode="decimal" placeholder="0,00"')) + '</div>' +
-    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub)', fp === 'app'))(o.forma || ref.formaPadrao || 'mensal'))) +
+    '<div class="linha2">' + campo('Forma de cobrança', sel('vd-forma', 'forma', ((fp) => opt('mensal', 'Mensalidades (Pix, débito, dinheiro)', fp === 'mensal') + opt('cartao', 'Cartão de crédito', fp === 'cartao') + opt('avista', 'À vista (pagamento único)', fp === 'avista') + opt('app', 'Pelo app (TotalPass / Wellhub)', fp === 'app') + opt('bolsa', 'Bolsa (sem mensalidade)', fp === 'bolsa'))(o.forma || ref.formaPadrao || 'mensal'))) +
     campo('Dia de vencimento', inp('vd-dia', 'diaVenc', o.diaVenc || Number(inicio.slice(8, 10)), 'type="number" min="1" max="31"'), 'Para mensalidades.') + '</div>' +
     '<div class="linha2">' + campo('Taxa de matrícula (R$)', inp('vd-mat', 'matricula', '', 'inputmode="decimal" placeholder="0,00"')) + campo('Forma de pagamento prevista', sel('vd-fp', 'formaPg', formasOpts(o.formaPg || (ref.pagamentos || ['Pix'])[0]))) + '</div>' +
     '<label class="check"><input type="checkbox" name="retroativo" id="vd-retro"><span>Marcar como pagas as cobranças com vencimento anterior a hoje (para lançar vendas antigas)</span></label>' +
@@ -2019,13 +2044,13 @@ function atualizarResumoVenda() {
   const n = d.forma === 'avista' ? 1 : p.meses;
   const continuo = planoRenovaSozinho(p) && d.forma !== 'avista';
   const vig = continuo ? 'Começa em <b>' + fData(inicio) + '</b> e <b>renova sozinho todo mês</b>, até você encerrar.' : 'Vigência: <b>' + fData(inicio) + ' a ' + fData(fim) + '</b>';
-  if (continuo && d.forma !== 'app') {
+  if (continuo && !semCobranca(d.forma)) {
     r.innerHTML = '<span>' + vig + '</span><span>Mensalidade de <b>' + fR(mensal) + '</b> ' + (d.forma === 'cartao' ? 'no cartão, todo mês' : 'todo dia ' + (d.diaVenc || '—')) + '.</span>' +
       (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b> · no primeiro dia: <b>' + fR(mensal + mat) + '</b></span>' : '');
     return;
   }
-  if (d.forma === 'app') {
-    r.innerHTML = '<span>' + vig + '</span><span>Sem mensalidades no sistema: o aluno paga pelo app e o CT recebe do parceiro.</span>' +
+  if (semCobranca(d.forma)) {
+    r.innerHTML = '<span>' + vig + '</span><span>' + (d.forma === 'bolsa' ? 'Bolsista: sem mensalidades. Entra na catraca como os outros alunos.' : 'Sem mensalidades no sistema: o aluno paga pelo app e o CT recebe do parceiro.') + '</span>' +
       (mat > 0 ? '<span>Matrícula: <b>' + fR(mat) + '</b></span>' : '');
     return;
   }
@@ -2119,7 +2144,7 @@ const FORMS = {
     if (!ex) { UI.view = 'aluno'; UI.alunoId = a.id; render(); if (d.leadId && !v) modalVenda({ alunoId: a.id }); else if (d.fazerRosto) abrirFotoRosto(a); }
   },
   async plano(d, f) {
-    const valor = numCampo(d.valor); if (valor <= 0 && d.formaPadrao !== 'app') { toast('Informe um valor maior que zero.'); return; }
+    const valor = numCampo(d.valor); if (valor <= 0 && !semCobranca(d.formaPadrao)) { toast('Informe um valor maior que zero.'); return; }
     const pagamentos = [...f.querySelectorAll('[name="aceita"]:checked')].map((x) => x.value);
     if (!pagamentos.length) { toast('Marque pelo menos uma forma de pagamento aceita.'); return; }
     const ex = d.id ? planoPorId(d.id) : null;
@@ -2191,7 +2216,7 @@ const FORMS = {
     const a = alunoPorId(d.id); if (!a) return;
     const id = String(d.catracaId || '').trim();
     if (id && !/^\d+$/.test(id)) { toast('O ID do aparelho é só número.'); return; }
-    const outro = id && S.alunos.find((x) => x.id !== a.id && String(x.catracaId) === id);
+    const outro = id && comCatraca().find((x) => x.id !== a.id && String(x.catracaId) === id);
     if (outro) { toast('Esse rosto já está ligado a ' + outro.nome + '.'); return; }
     fecharModal(); await salvar('alunos', { ...a, catracaId: id ? Number(id) : '' }); toast(id ? 'Rosto ligado.' : 'Rosto desligado.');
   },
@@ -2335,10 +2360,10 @@ const ACOES = {
     });
   },
   async 'cat-ligar'(ds) {
-    const s = document.getElementById('cv-' + ds.uid); const a = s && alunoPorId(s.value);
-    if (!a) { toast('Escolha o aluno.'); return; }
+    const s = document.getElementById('cv-' + ds.uid); const a = s && s.value && pessoaPorId(s.value);
+    if (!a) { toast('Escolha a pessoa.'); return; }
     const est = catracaEstado(); const desc = { ...(est.desconhecidos || {}) }; delete desc[ds.uid];
-    await salvar('alunos', { ...a, catracaId: Number(ds.uid) });
+    await salvar(colPessoa(a.id), { ...a, catracaId: Number(ds.uid) });
     await salvar('catraca', { ...est, id: 'estado', desconhecidos: desc });
     toast(a.nome.split(' ')[0] + ' ligado ao rosto do aparelho.');
   },
@@ -2348,7 +2373,7 @@ const ACOES = {
     toast(ds.v === '1' ? 'Entrada de hoje liberada para ' + a.nome.split(' ')[0] + '.' : 'Liberação de hoje desfeita.');
   },
   'cat-id'(ds) { const a = alunoPorId(ds.id); if (a) modalCatracaId(a); },
-  'cat-rosto'(ds) { const a = alunoPorId(ds.id); if (a) abrirFotoRosto(a); },
+  'cat-rosto'(ds) { const a = pessoaPorId(ds.id); if (a) abrirFotoRosto(a); },
   'bio-alterar'(ds) {
     const a = alunoPorId(ds.id); if (!a) return;
     if (ds.v === '1') {
@@ -2373,20 +2398,20 @@ const ACOES = {
   },
   'rosto-capturar'() { const v = document.getElementById('rosto-video'); if (!v || !v.videoWidth) return; fotoPronta = prepararFoto(v, v.videoWidth, v.videoHeight) || ''; document.getElementById('rosto-cap').hidden = true; },
   async 'rosto-salvar'(ds) {
-    const a = alunoPorId(ds.id); if (!a || !fotoPronta) return;
+    const a = pessoaPorId(ds.id); if (!a || !fotoPronta) return;
     const jpg = fotoPronta.split(',')[1]; fotoPronta = '';
     fecharModal();
     // A foto vai direto ao servidor: as fotos não ficam carregadas na página (seriam pesadas).
     try { const r = await API.req('POST', '/api/dados', { col: 'fotos', id: a.id, doc: { id: a.id, jpg, em: new Date().toISOString() } }); acompanharRev(r.rev); }
     catch (e) { tratarErro(e); return; }
-    await salvar('catrafila', { id: novoId('cq'), tipo: 'cadastrar', alunoId: a.id, etapa: 'usuario', status: 'pendente', criadoEm: new Date().toISOString() });
+    await salvar('catrafila', { id: novoId('cq'), tipo: 'cadastrar', ...chaveFila(a.id), etapa: 'usuario', status: 'pendente', criadoEm: new Date().toISOString() });
     toast(pushAtivo() ? 'Foto salva. O leitor recebe em alguns segundos.' : 'Foto salva. Ela vai para o leitor assim que ele estiver conectado ao sistema (modo Push).');
   },
   'cat-remover-leitor'(ds) {
-    const a = alunoPorId(ds.id); if (!a || !a.catracaId) return;
+    const a = pessoaPorId(ds.id); if (!a || !a.catracaId) return;
     confirmar('Remover do leitor', 'Apagar <b>' + esc(a.nome) + '</b> e o rosto dele do leitor facial? Ele não vai mais ser reconhecido na catraca. O cadastro no sistema continua.', 'Remover do leitor', async () => {
-      await salvar('catrafila', { id: novoId('cq'), tipo: 'remover', alunoId: a.id, catracaId: a.catracaId, status: 'pendente', criadoEm: new Date().toISOString() });
-      await salvar('alunos', { ...a, catracaId: '' }); toast('Pedido enviado ao leitor.');
+      await salvar('catrafila', { id: novoId('cq'), tipo: 'remover', ...chaveFila(a.id), catracaId: a.catracaId, status: 'pendente', criadoEm: new Date().toISOString() });
+      await salvar(colPessoa(a.id), { ...a, catracaId: '' }); toast('Pedido enviado ao leitor.');
     });
   },
   async 'cat-liberar'() {
@@ -2401,6 +2426,8 @@ const ACOES = {
     const p = profPorId(ds.id); if (!p) return; const xs = alunosDoProf(p.id);
     confirmar('Excluir professor', 'Excluir <b>' + esc(p.nome) + '</b>?' + (xs.length ? ' ' + xs.length + ' aluno(s) ficam sem professor.' : '') + ' Se ele só parou de dar aula, desmarque "Professor ativo" em vez de excluir.', 'Excluir', async () => {
       for (const a of [...new Set(xs.map((x) => x.a))]) await salvar('alunos', { ...a, modalidades: a.modalidades.map((m) => (m.prof === p.id ? { ...m, prof: '' } : m)) });
+      if (p.catracaId) await salvar('catrafila', { id: novoId('cq'), tipo: 'remover', profId: p.id, catracaId: p.catracaId, status: 'pendente', criadoEm: new Date().toISOString() });
+      try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(p.id)); } catch (_) {}
       await remover('professores', p.id); toast('Professor excluído.');
     });
   },
