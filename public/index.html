@@ -1502,7 +1502,7 @@ function regraCatraca(a) {
   const vig = contratosDo(a.id).filter((c) => ['ativo', 'avencer'].includes(statusContrato(c)));
   if (!vig.length) return { ok: false, motivo: 'sem plano ativo' };
   if (lancsDo(a.id).some((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado')) return { ok: false, motivo: 'mensalidade em atraso' };
-  if (vig.every((c) => c.forma === 'app')) return a.passLiberadoEm === HOJE ? { ok: true, motivo: 'TotalPass/Wellhub liberado hoje', pass: true } : { ok: false, motivo: 'TotalPass/Wellhub: libere a entrada de hoje depois de conferir o check-in', pass: true };
+  if (vig.every((c) => c.forma === 'app') && catracaCfg().passLivre === false) return a.passLiberadoEm === HOJE ? { ok: true, motivo: 'TotalPass/Wellhub liberado hoje', pass: true } : { ok: false, motivo: 'TotalPass/Wellhub: libere a entrada de hoje depois de conferir o check-in', pass: true };
   return { ok: true, motivo: 'liberado' };
 }
 // Sugere o aluno de um rosto do aparelho pelo nome.
@@ -1527,7 +1527,7 @@ function blocoCatraca() {
   const cfg = catracaCfg();
   let h = '<section class="painel" style="margin-top:16px;max-width:760px"><header><h2>Catraca (Control iD)</h2>' + (cfg.ativo ? '<small>' + (catracaEstado().ultimoContato ? 'último contato: ' + quando(catracaEstado().ultimoContato) : 'aguardando o aparelho') + '</small>' : '') + '</header>';
   if (!cfg.ativo) {
-    return h + '<p style="margin-top:0">Liga o leitor facial à catraca do CT ao sistema. A cada passagem, o aparelho pergunta ao sistema se libera: entra quem tem plano ativo e nenhuma mensalidade vencida. Alunos de TotalPass/Wellhub só entram no dia em que a recepção liberar.</p>' +
+    return h + '<p style="margin-top:0">Liga o leitor facial à catraca do CT ao sistema. A cada passagem, o aparelho pergunta ao sistema se libera: entra quem tem plano ativo e nenhuma mensalidade vencida. Alunos de TotalPass/Wellhub entram direto até a integração com os apps.</p>' +
       '<div class="rodape"><button class="btn pri" data-act="cat-ativar">Ativar integração com a catraca</button></div></section>';
   }
   const est = catracaEstado();
@@ -1546,6 +1546,7 @@ function blocoCatraca() {
     campo('Como o aparelho abre a catraca', sel('cat-acao', 'acao', opt('sec_box', 'Módulo SecBox', (cfg.acao || 'sec_box') === 'sec_box') + opt('door', 'Relé do próprio aparelho', cfg.acao === 'door') + opt('catra', 'Catraca Control iD (iDBlock)', cfg.acao === 'catra'))) +
     campo('ID da SecBox ou nº do relé', inp('cat-sb', 'param', cfg.acao === 'door' ? (cfg.porta || 1) : (cfg.secboxId || '65793')), 'Ajustamos no teste, na academia.') + '</div>' +
     '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno ou professor</span></label>' +
+    '<label class="check"><input type="checkbox" name="passLivre"' + (cfg.passLivre !== false ? ' checked' : '') + '><span>Liberar alunos TotalPass/Wellhub sem conferir o check-in (até a integração com os apps). Desmarcado, eles só entram no dia em que a recepção liberar.</span></label>' +
     '<div class="rodape"><button class="btn" type="button" data-act="cat-desativar">Desativar</button><button class="btn" type="button" data-act="cat-token">Gerar novo endereço</button><button class="btn pri" type="submit">Salvar</button></div></form>';
   const profsLivres = S.professores.filter((x) => !x.catracaId && x.ativo !== false).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
   h += '<h3 style="margin-top:18px">Rostos do aparelho sem ninguém ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s) e ' + profsLig + ' professor(es) já ligados</small></h3>' +
@@ -2208,7 +2209,7 @@ const FORMS = {
     fecharModal(); await salvarVarios('lancamentos', lista); toast(n > 1 ? n + ' lançamentos criados.' : 'Lançamento salvo.');
   },
   async 'cat-cfg'(d) {
-    const c = { ...catracaCfg(), acao: d.acao, bloquearSemVinculo: !!d.bloquearSemVinculo };
+    const c = { ...catracaCfg(), acao: d.acao, bloquearSemVinculo: !!d.bloquearSemVinculo, passLivre: !!d.passLivre };
     if (d.acao === 'door') c.porta = Number(d.param) || 1; else c.secboxId = String(d.param || '65793').trim();
     await salvarConfig({ ...(S.config || {}), catraca: c }); toast('Configuração da catraca salva.');
   },

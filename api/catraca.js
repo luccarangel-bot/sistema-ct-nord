@@ -7,7 +7,8 @@ import { pushGet, pushResult } from './_catraca_push.js';
 // /api/catraca/<token>/<ação> para esta rota com ?token=&acao= (ver vercel.json).
 //
 // Regras do CT: libera quem tem contrato em vigor e nenhuma mensalidade vencida em aberto.
-// Alunos só de TotalPass/Wellhub entram apenas se a recepção liberou a entrada naquele dia.
+// Alunos só de TotalPass/Wellhub entram apenas se a recepção liberou a entrada naquele dia — a não ser que
+// a opção "passLivre" esteja ligada (padrão, até a integração com os apps): aí entram como os outros.
 // Pessoas do aparelho sem vínculo com um aluno (equipe, professores) são liberadas, se assim configurado.
 
 const hojeSP = (ms = Date.now()) => new Date(ms - 3 * 3600000).toISOString().slice(0, 10);
@@ -26,12 +27,12 @@ function statusContrato(c, hoje) {
 const saldoDe = (l) => Math.max(0, Math.round(((Number(l.valor) || 0) - (Number(l.desconto) || 0) - (l.pagamentos || []).reduce((s, p) => s + (Number(p.valor) || 0), 0)) * 100) / 100);
 
 // Decide a entrada de um aluno. Exportada para os testes.
-export function decidirEntrada(aluno, contratos, lancamentos, hoje) {
+export function decidirEntrada(aluno, contratos, lancamentos, hoje, cfg = {}) {
   const vig = contratos.filter((c) => c.alunoId === aluno.id && statusContrato(c, hoje) === 'ativo');
   if (!vig.length) return { ok: false, motivo: 'sem contrato ativo', msg: 'Sem plano ativo. Procure a recepção.' };
   const atrasada = lancamentos.some((l) => l.alunoId === aluno.id && l.tipo === 'receita' && !l.cancelado && l.vencimento < hoje && saldoDe(l) > 0.004);
   if (atrasada) return { ok: false, motivo: 'mensalidade em atraso', msg: 'Mensalidade em aberto. Procure a recepção.' };
-  if (vig.every((c) => c.forma === 'app')) {
+  if (vig.every((c) => c.forma === 'app') && cfg.passLivre === false) {
     if (aluno.passLiberadoEm === hoje) return { ok: true, motivo: 'TotalPass/Wellhub liberado hoje', msg: 'Bom treino, ' + primeiroNome(aluno.nome) + '!' };
     return { ok: false, motivo: 'TotalPass/Wellhub sem check-in', msg: 'Faça o check-in no app e fale com a recepção.' };
   }
@@ -119,7 +120,7 @@ export default async function handler(req, res) {
       dec = cfg.bloquearSemVinculo ? { ok: false, motivo: 'sem vínculo com aluno', msg: 'Cadastro não vinculado. Procure a recepção.' } : { ok: true, motivo: 'sem vínculo com aluno', msg: 'Bem-vindo!' };
       registrar({ ok: dec.ok, motivo: dec.motivo });
     } else {
-      dec = decidirEntrada(aluno, lista(contratosB), lista(lancsB), hoje);
+      dec = decidirEntrada(aluno, lista(contratosB), lista(lancsB), hoje, cfg);
       registrar({ ok: dec.ok, motivo: dec.motivo, alunoId: aluno.id, nome: aluno.nome });
       if (estado.desconhecidos) delete estado.desconhecidos[userId];
       if (dec.ok) {
