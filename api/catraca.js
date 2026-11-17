@@ -15,6 +15,8 @@ const hojeSP = (ms = Date.now()) => new Date(ms - 3 * 3600000).toISOString().sli
 const horaSP = (ms) => new Date(ms - 3 * 3600000).toISOString().slice(11, 16);
 const diaSemanaSP = (ms) => new Date(ms - 3 * 3600000).getUTCDay();
 const lista = (bruto) => Object.values(parHash(bruto)).map((v) => JSON.parse(v));
+// Mensagem que o leitor mostra para quem é barrado (o motivo fica registrado no sistema, em Últimas passagens).
+const MSG_BLOQUEIO = 'Não autorizado';
 const primeiroNome = (n) => String(n || '').trim().split(/\s+/)[0] || '';
 
 function statusContrato(c, hoje) {
@@ -84,7 +86,7 @@ export default async function handler(req, res) {
     const hoje = hojeSP(ms);
     const responder = (ok, msg, nome) => res.status(200).json({ result: {
       event: ok ? 7 : 6, user_id: userId, user_name: nome || String(b.user_name || ''), user_image: false, portal_id: portal,
-      actions: ok ? acaoAbrir(cfg, portal) : [], message: msg,
+      actions: ok ? acaoAbrir(cfg, portal) : [], message: ok ? msg : MSG_BLOQUEIO,
     } });
     const registrar = (e) => { estado.entradas = [{ em: new Date(ms).toISOString(), userId, nomeAparelho: String(b.user_name || '').slice(0, 80), ...e }, ...(estado.entradas || [])].slice(0, 60); };
 
@@ -100,7 +102,7 @@ export default async function handler(req, res) {
     if (!userId) {
       registrar({ ok: false, motivo: 'rosto não reconhecido' });
       await banco([['HSET', chaveCol('catraca'), 'estado', JSON.stringify(estado)], ['INCR', 'ct:rev']]);
-      return res.status(200).json({ result: { event: 3, portal_id: portal, actions: [], message: 'Não reconhecido.' } });
+      return res.status(200).json({ result: { event: 3, portal_id: portal, actions: [], message: MSG_BLOQUEIO } });
     }
 
     const [alunosB, contratosB, lancsB, turmasB, profsB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')], ['HGETALL', chaveCol('professores')]]);
