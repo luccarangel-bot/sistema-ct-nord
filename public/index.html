@@ -2083,15 +2083,29 @@ function modalLanc(o) {
 /* ---------- Mudar o dia de vencimento ---------- */
 // Contrato com mensalidades que ainda podem mudar (não vale para à vista, cartão, app e bolsa).
 const temMensalidades = (c) => statusContrato(c) !== 'cancelado' && c.forma === 'mensal';
-// Mensalidades do contrato que mudam junto: sem nenhum pagamento, não canceladas e que ainda não venceram.
-const mensalidadesAMudar = (c) => S.lancamentos.filter((l) => l.contratoId === c.id && l.categoria === 'Mensalidades' && !l.cancelado && !(l.pagamentos || []).length && l.vencimento >= HOJE);
+// Mensalidades do contrato que podem mudar junto: sem nenhum pagamento, não canceladas, do mês atual em diante
+// (inclusive a deste mês que já está atrasada). Meses anteriores ficam como estão.
+const mensalidadesAMudar = (c) => S.lancamentos.filter((l) => l.contratoId === c.id && l.categoria === 'Mensalidades' && !l.cancelado && !(l.pagamentos || []).length && mesDe(l.vencimento) >= mesDe(HOJE))
+  .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+// Para cada uma, a nova data (mesmo mês, novo dia). Só não muda se isso fizer uma conta que estava em dia ficar atrasada.
+const planoVenc = (c, dia) => mensalidadesAMudar(c).map((l) => {
+  const v = comDia(l.vencimento, dia);
+  return { l, v, muda: v !== l.vencimento && (v >= HOJE || v > l.vencimento) };
+});
+function previaVenc(c, dia) {
+  if (!(dia >= 1 && dia <= 31)) return '';
+  const xs = planoVenc(c, dia);
+  if (!xs.length) return '<p class="vazio" style="padding:0">Nenhuma mensalidade em aberto agora. As próximas já vão ser criadas no dia ' + dia + '.</p>';
+  return '<ul class="lista">' + xs.map(({ l, v, muda }) => '<li><div class="cresce"><b>' + esc(nomeMes(mesDe(l.vencimento))) + '</b><small>' +
+    (muda ? fData(l.vencimento) + ' → <b>' + fData(v) + '</b>' : v === l.vencimento ? 'já vence em ' + fData(v) : 'fica em ' + fData(l.vencimento) + ' (o dia ' + dia + ' deste mês já passou; mude só esta em "Detalhes", se precisar)') +
+    '</small></div></li>').join('') + '</ul><p class="vazio" style="padding:0">As próximas mensalidades já vão ser criadas no dia ' + dia + '.</p>';
+}
 function modalVencContrato(c) {
-  const xs = mensalidadesAMudar(c);
   abrirModal('Mudar dia de vencimento', '<form data-form="venc-contrato"><input type="hidden" name="id" value="' + c.id + '">' +
     '<div class="resumo"><span>' + esc(nomeAluno(c.alunoId)) + ' · ' + esc(c.planoNome) + '</span><span>Hoje vence todo dia <b>' + esc(c.diaVenc || Number(c.inicio.slice(8, 10))) + '</b></span></div>' +
-    campo('Novo dia de vencimento *', inp('vc-dia', 'dia', c.diaVenc || '', 'type="number" min="1" max="31" required'), 'Nos meses mais curtos, o dia 29, 30 ou 31 vira o último dia do mês.') +
-    '<p class="vazio" style="padding:0">' + (xs.length ? 'Muda o dia ' + (c.continuo ? 'das próximas mensalidades' : 'de ' + xs.length + ' mensalidade(s) que ainda não venceram') + '. ' : 'Muda o dia das próximas mensalidades. ') +
-    'Mensalidades já pagas ou já vencidas continuam como estão. Para mudar só uma mensalidade, use "Detalhes" na cobrança.</p>' + rodape('Salvar') + '</form>');
+    campo('Novo dia de vencimento *', inp('vc-dia', 'dia', c.diaVenc || '', 'type="number" min="1" max="31" required data-venc-contrato="' + c.id + '"'), 'Nos meses mais curtos, o dia 29, 30 ou 31 vira o último dia do mês.') +
+    '<h3 style="margin-top:4px">O que vai mudar</h3><div id="vc-prev">' + (previaVenc(c, Number(c.diaVenc)) || '<p class="vazio" style="padding:0">Digite o novo dia.</p>') + '</div>' +
+    '<p class="vazio" style="padding:0">Mensalidades já pagas e as de meses anteriores continuam como estão.</p>' + rodape('Salvar') + '</form>');
 }
 function modalVencLanc(l) {
   abrirModal('Mudar vencimento', '<form data-form="venc-lanc"><input type="hidden" name="id" value="' + l.id + '">' +
@@ -2218,8 +2232,7 @@ const FORMS = {
     const c = S.contratos.find((x) => x.id === d.id); if (!c) return;
     const dia = Math.round(Number(d.dia));
     if (!(dia >= 1 && dia <= 31)) { toast('Escolha um dia de 1 a 31.'); return; }
-    // Cada mensalidade fica no mesmo mês, só troca o dia; se o novo dia já passou neste mês, ela fica como está.
-    const mudam = mensalidadesAMudar(c).map((l) => ({ l, v: comDia(l.vencimento, dia) })).filter((x) => x.v >= HOJE && x.v !== x.l.vencimento);
+    const mudam = planoVenc(c, dia).filter((x) => x.muda);
     fecharModal();
     if (!(await salvar('contratos', { ...c, diaVenc: dia }))) return;
     await salvarVarios('lancamentos', mudam.map(({ l, v }) => ({ ...l, vencimento: v })));
@@ -2605,6 +2618,10 @@ document.addEventListener('input', (e) => {
   const el = e.target;
   if (el.dataset && el.dataset.ui) { UI[el.dataset.ui] = el.value; render(); }
   if (el.closest && el.closest('[data-venda]')) atualizarResumoVenda();
+  if (el.dataset && el.dataset.vencContrato) {
+    const c = S.contratos.find((x) => x.id === el.dataset.vencContrato); const p = document.getElementById('vc-prev');
+    if (c && p) p.innerHTML = previaVenc(c, Math.round(Number(el.value))) || '<p class="vazio" style="padding:0">Digite um dia de 1 a 31.</p>';
+  }
   if (el.dataset && el.dataset.filtroAtribuir !== undefined) {
     const q = el.value.trim().toLowerCase();
     document.querySelectorAll('.atribuir li[data-nome]').forEach((li) => { li.hidden = !!q && !li.dataset.nome.includes(q); });
