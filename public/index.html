@@ -405,7 +405,7 @@ const ETAPAS = [
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'equipe', 'catraca', 'catrafila'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'equipe', 'responsaveis', 'catraca', 'catrafila'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Horários de preferência do aluno: turmas da grade (ids) + observação livre.
@@ -462,7 +462,7 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], equipe: [], catraca: [], catrafila: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], equipe: [], responsaveis: [], catraca: [], catrafila: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos', tabAlunos: 'alunos', filtroProf: '',
@@ -1059,7 +1059,7 @@ VIEWS.aluno = function () {
     '<dt>Nascimento</dt><dd>' + fData(a.nascimento) + (id != null ? ' (' + id + ' anos)' : '') + '</dd>' +
     (a.cpf ? '<dt>CPF</dt><dd>' + esc(a.cpf) + '</dd>' : '') +
     (a.endereco ? '<dt>Endereço</dt><dd>' + esc(a.endereco) + '</dd>' : '') +
-    (a.responsavel ? '<dt>Responsável</dt><dd>' + esc(a.responsavel) + (a.respTelefone ? ' · ' + esc(a.respTelefone) : '') + (a.respCpf ? '<br><small>CPF ' + esc(a.respCpf) + '</small>' : '') + '</dd>' : '') +
+    (a.responsavel ? '<dt>Responsável</dt><dd>' + esc(a.responsavel) + (a.respTelefone ? ' · ' + esc(a.respTelefone) : '') + (a.respCpf ? '<br><small>CPF ' + esc(a.respCpf) + '</small>' : '') + linhaCatracaResp(a) + '</dd>' : '') +
     (a.emergencia ? '<dt>Emergência</dt><dd>' + esc(a.emergencia) + '</dd>' : '') +
     linhaCatracaAluno(a) +
     (horariosDoAluno(a).length || a.horarioObs ? '<dt>Prefere treinar</dt><dd>' + horariosDoAluno(a).map((t) => esc(horarioTurma(t))).join('<br>') + (a.horarioObs ? (horariosDoAluno(a).length ? '<br>' : '') + '<small>' + esc(a.horarioObs) + '</small>' : '') + '</dd>' : '') +
@@ -1570,17 +1570,22 @@ function blocoCatraca() {
   h += '<form data-form="cat-cfg" style="display:flex;flex-direction:column;gap:14px;margin-top:14px"><div class="linha2">' +
     campo('Como o aparelho abre a catraca', sel('cat-acao', 'acao', opt('sec_box', 'Módulo SecBox', (cfg.acao || 'sec_box') === 'sec_box') + opt('door', 'Relé do próprio aparelho', cfg.acao === 'door') + opt('catra', 'Catraca Control iD (iDBlock)', cfg.acao === 'catra'))) +
     campo('ID da SecBox ou nº do relé', inp('cat-sb', 'param', cfg.acao === 'door' ? (cfg.porta || 1) : (cfg.secboxId || '65793')), 'Ajustamos no teste, na academia.') + '</div>' +
-    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno, professor ou pessoa da equipe</span></label>' +
+    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a ninguém do sistema</span></label>' +
     '<label class="check"><input type="checkbox" name="passLivre"' + (cfg.passLivre !== false ? ' checked' : '') + '><span>Liberar alunos TotalPass/Wellhub sem conferir o check-in (até a integração com os apps). Desmarcado, eles só entram no dia em que a recepção liberar.</span></label>' +
     '<div class="rodape"><button class="btn" type="button" data-act="cat-desativar">Desativar</button><button class="btn" type="button" data-act="cat-token">Gerar novo endereço</button><button class="btn pri" type="submit">Salvar</button></div></form>';
   const profsLivres = S.professores.filter((x) => !x.catracaId && x.ativo !== false).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
   const equipeLivre = S.equipe.filter((x) => !x.catracaId && x.ativo !== false).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
-  h += '<h3 style="margin-top:18px">Rostos do aparelho sem ninguém ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s), ' + profsLig + ' professor(es) e ' + S.equipe.filter((x) => x.catracaId).length + ' da equipe já ligados</small></h3>' +
+  // Responsáveis: os já cadastrados e também os nomes de responsável dos alunos que ainda não têm cadastro (valor "ra:<aluno>").
+  const respsLivres = [...S.responsaveis.filter((x) => !x.catracaId).map((x) => ({ v: x.id, nome: x.nome })),
+    ...S.alunos.filter((a) => a.responsavel && !respDoAluno(a) && !acharResp(a.responsavel, a.respCpf)).map((a) => ({ v: 'ra:' + a.id, nome: a.responsavel }))]
+    .sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+  h += '<h3 style="margin-top:18px">Rostos do aparelho sem ninguém ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s), ' + profsLig + ' professor(es), ' + S.equipe.filter((x) => x.catracaId).length + ' da equipe e ' + S.responsaveis.filter((x) => x.catracaId).length + ' responsável(is) já ligados</small></h3>' +
     (desc.length ? '<ul class="lista">' + desc.map((p) => {
       const sug = sugerirAluno(p.nome); const nP = semAcento(p.nome).replace(/^prof\.?\s*/, '');
       const sugP = nP && profsLivres.find((x) => semAcento(x.nome) === nP || (/^prof/.test(semAcento(p.nome)) && semAcento(x.nome).split(' ')[0] === nP.split(' ')[0]));
       return '<li><div class="cresce"><b>' + esc(p.nome || 'Sem nome') + '</b><small>ID ' + esc(p.id) + ' no aparelho' + (p.ultimo ? ' · passou em ' + quando(p.ultimo) : '') + '</small></div>' +
         sel('cv-' + p.id, 'aluno', '<option value="">Escolha a pessoa</option>' +
+          (respsLivres.length ? '<optgroup label="Responsáveis">' + respsLivres.map((x) => opt(x.v, x.nome + ' (responsável)')).join('') + '</optgroup>' : '') +
           (equipeLivre.length ? '<optgroup label="Equipe">' + equipeLivre.map((x) => opt(x.id, x.nome + ' (' + FUNCAO_EQ[x.funcao] + ')', !sugP && semAcento(x.nome) === semAcento(p.nome))).join('') + '</optgroup>' : '') +
           (profsLivres.length ? '<optgroup label="Professores">' + profsLivres.map((x) => opt(x.id, 'Prof. ' + x.nome, sugP && sugP.id === x.id)).join('') + '</optgroup>' : '') +
           '<optgroup label="Alunos">' + S.alunos.filter((a) => !a.catracaId).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, !sugP && sug && sug.id === a.id)).join('') + '</optgroup>', 'style="width:auto" aria-label="Pessoa de ' + esc(p.nome) + '"') +
@@ -1595,11 +1600,12 @@ const pushEstado = () => S.catraca.find((x) => x.id === 'push') || null;
 const pushAtivo = () => { const p = pushEstado(); return !!(p && p.visto && Date.now() - Date.parse(p.visto) < 15 * 60000); };
 // Pessoa com rosto no leitor: aluno ou professor (mesmo fluxo de foto, fila e autorização).
 const membroPorId = (id) => S.equipe.find((p) => p.id === id);
-const pessoaPorId = (id) => alunoPorId(id) || profPorId(id) || membroPorId(id);
-const colPessoa = (id) => (profPorId(id) ? 'professores' : membroPorId(id) ? 'equipe' : 'alunos');
-const chaveFila = (id) => (profPorId(id) ? { profId: id } : membroPorId(id) ? { equipeId: id } : { alunoId: id });
-const comCatraca = () => [...S.alunos, ...S.professores, ...S.equipe].filter((x) => x.catracaId);
-const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id || i.profId === id || i.equipeId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
+const respPorId = (id) => S.responsaveis.find((p) => p.id === id);
+const pessoaPorId = (id) => alunoPorId(id) || profPorId(id) || membroPorId(id) || respPorId(id);
+const colPessoa = (id) => (profPorId(id) ? 'professores' : membroPorId(id) ? 'equipe' : respPorId(id) ? 'responsaveis' : 'alunos');
+const chaveFila = (id) => (profPorId(id) ? { profId: id } : membroPorId(id) ? { equipeId: id } : respPorId(id) ? { respId: id } : { alunoId: id });
+const comCatraca = () => [...S.alunos, ...S.professores, ...S.equipe, ...S.responsaveis].filter((x) => x.catracaId);
+const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id || i.profId === id || i.equipeId === id || i.respId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
 // Situação do cadastro do rosto, em texto simples.
 function situacaoRosto(a) {
   const i = filaDoAluno(a.id);
@@ -1637,8 +1643,8 @@ let fotoPronta = '';
 function abrirFotoRosto(a) {
   if (biometriaOk(a)) return modalFotoRosto(a);
   const prof = colPessoa(a.id) === 'professores';
-  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. ' + (prof || colPessoa(a.id) === 'equipe' ? 'A pessoa autorizou?' : 'O aluno (ou o responsável) autorizou?'), 'Autorizou, continuar', async () => {
-    const n = { ...pessoaPorId(a.id), biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!a.responsavel, origem: 'recepção' } };
+  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. ' + (colPessoa(a.id) === 'responsaveis' ? 'O responsável autorizou o uso do rosto dele?' : prof || colPessoa(a.id) === 'equipe' ? 'A pessoa autorizou?' : 'O aluno (ou o responsável) autorizou?'), 'Autorizou, continuar', async () => {
+    const n = { ...pessoaPorId(a.id), biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: colPessoa(a.id) === 'alunos' && !!a.responsavel, origem: 'recepção' } };
     await salvar(colPessoa(a.id), n); modalFotoRosto(n);
   });
 }
@@ -1651,6 +1657,34 @@ function txtBiometria(a) {
   const txt = !b ? pill('warn', 'Não informado') : b.autorizado ? pill('ok', 'Autorizado') + ' em ' + quando(b) + (b.porResponsavel ? ' pelo responsável' : '') : pill('', 'Não autorizado') + (b.em ? ' <small style="display:inline">(' + quando(b) + ')</small>' : '');
   return txt + ' <button class="btn link peq" style="padding:0" data-act="bio-alterar" data-id="' + a.id + '" data-v="' + (biometriaOk(a) ? '0' : '1') + '">' + (biometriaOk(a) ? 'Retirar autorização' : 'Registrar autorização') + '</button>' +
     (biometriaOk(a) ? '' : '<br><small>Sem autorização, a entrada é liberada pela recepção.</small>');
+}
+/* ---------- Responsáveis de alunos menores (rosto na catraca) ---------- */
+// Um responsável pode ter vários alunos (irmãos): é achado pelo CPF ou, sem CPF, pelo nome.
+const soDigitos = (x) => String(x || '').replace(/\D/g, '');
+const respDoAluno = (a) => S.responsaveis.find((r) => (r.alunos || []).includes(a.id)) || null;
+function acharResp(nome, cpf) {
+  const c = soDigitos(cpf);
+  return (c.length === 11 && S.responsaveis.find((r) => soDigitos(r.cpf) === c)) || (!c && S.responsaveis.find((r) => semAcento(r.nome) === semAcento(nome))) || null;
+}
+// Garante o cadastro do responsável do aluno (com os dados do aluno) e a ligação entre os dois.
+async function garantirResp(a) {
+  const atual = respDoAluno(a); const ex = atual || acharResp(a.responsavel, a.respCpf);
+  const r = { ...(ex || { id: novoId('rp'), criadoEm: new Date().toISOString() }), nome: a.responsavel || (ex && ex.nome) || '', cpf: a.respCpf || (ex && ex.cpf) || '', telefone: a.respTelefone || (ex && ex.telefone) || '' };
+  r.alunos = [...new Set([...((ex && ex.alunos) || []), a.id])];
+  if (!(await salvar('responsaveis', r))) return null;
+  return respPorId(r.id) || r;
+}
+// Mesma regra do servidor: o responsável entra se algum dos alunos dele pode entrar.
+const regraResp = (r) => { const xs = (r.alunos || []).map(alunoPorId).filter(Boolean); const ok = xs.find((a) => regraCatraca(a).ok); return { ok: !!ok, xs }; };
+function linhaCatracaResp(a) {
+  if (!a.responsavel || (!catracaCfg().ativo && !(respDoAluno(a) || {}).catracaId)) return '';
+  const r = respDoAluno(a);
+  if (!r || (!r.catracaId && !filaDoAluno(r.id))) return '<br><button class="btn peq" data-act="resp-rosto" data-id="' + a.id + '">Cadastrar rosto do responsável</button>';
+  const g = regraResp(r); const ir = filaDoAluno(r.id); const outros = g.xs.filter((x) => x.id !== a.id);
+  return '<br><small>Catraca: ' + (r.catracaId ? pill(g.ok ? 'ok' : 'bad', g.ok ? 'Entra' : 'Barrado') + ' ' : '') + '<span' + (ir && ir.status === 'erro' ? ' class="neg"' : '') + '>' + esc(situacaoRosto(r)) + '</span>' +
+    (outros.length ? ' · também responsável por ' + outros.map((x) => esc(x.nome.split(' ')[0])).join(', ') : '') + '</small><br>' +
+    '<button class="btn peq" data-act="resp-rosto" data-id="' + a.id + '">' + (r.catracaId ? 'Trocar foto do responsável' : 'Cadastrar rosto do responsável') + '</button> ' +
+    (r.catracaId ? '<button class="btn peq perigo" data-act="cat-remover-leitor" data-id="' + r.id + '">Remover responsável do leitor</button>' : '');
 }
 // Linha "Catraca" no perfil do aluno.
 function linhaCatracaAluno(a) {
@@ -1769,6 +1803,7 @@ function modalFicha(d) {
     linha('Prefere treinar', [d.hor, d.hro].filter(Boolean).join(' · ')) + linha('Saúde', d.sau) + linha('Emergência', [d.ctn, d.ctt].filter(Boolean).join(' · ')) + linha('Conheceu por', d.ori) +
     (d.pl ? linha('Plano escolhido', (planoPorId(d.pl) || {}).nome || d.pln) + linha('Pagamento', d.fp + (d.dv ? ' · vencimento dia ' + d.dv : '')) + linha('Família', d.fam ? d.fam.split('\n').map((s) => s.trim()).filter(Boolean).join(', ') : '') : '') +
     linha('Rosto na catraca (LGPD)', d.bio ? (d.bio === 'nao' ? 'não autorizou' : 'autorizou em ' + fData(String(d.bio).slice(0, 10)) + (d.rn ? ' (pelo responsável)' : '')) : '') +
+    (d.rn ? linha('Rosto do responsável', d.rsf ? 'enviou selfie e autorizou em ' + fData(String(d.rbio || '').slice(0, 10)) : 'não enviou (pode cadastrar depois no perfil do aluno)') : '') +
     linha('Regimento', d.rc ? 'Regimento Interno e Código de Conduta v' + (d.rcv || '1.0') + ' aceito em ' + fData(String(d.rc).slice(0, 10)) + (d.rn ? ' pelo responsável' : '') : 'não aceito (ficha antiga)') +
     linha('Declaração', d.ok ? 'aceita em ' + fData(String(d.ok).slice(0, 10)) : 'não aceita') + '</dl>' +
     (d.pl && !planoPorId(d.pl) ? '<p class="aviso" style="margin:0">O plano "' + esc(d.pln || '') + '" não está mais cadastrado. Escolha outro na hora da venda.</p>' : '') +
@@ -1783,6 +1818,28 @@ function modalFicha(d) {
       linhaSelfie.innerHTML = j.foto ? '<span><b>Selfie para a catraca</b> · vai para o leitor ao cadastrar</span><img src="data:image/jpeg;base64,' + j.foto.jpg + '" alt="Selfie enviada pelo aluno" style="width:140px;height:140px;object-fit:cover;border:1px solid var(--line-strong)">' : '<span>Selfie não encontrada.</span>';
     }).catch(() => { linhaSelfie.innerHTML = '<span>Não consegui carregar a selfie.</span>'; });
   }
+  if (d.rsf && daFila) {
+    const linhaR = document.createElement('div'); linhaR.className = 'resumo'; linhaR.innerHTML = '<span><b>Selfie do responsável</b> · carregando…</span>';
+    const dl = document.querySelector('.modal dl.dados'); if (dl) dl.after(linhaR);
+    API.req('GET', '/api/dados?foto=' + encodeURIComponent(d.id + '_r')).then((j) => {
+      linhaR.innerHTML = j.foto ? '<span><b>Selfie do responsável</b> (' + esc(d.rn || '') + ') · vai para o leitor ao cadastrar</span><img src="data:image/jpeg;base64,' + j.foto.jpg + '" alt="Selfie do responsável" style="width:140px;height:140px;object-fit:cover;border:1px solid var(--line-strong)">' : '<span>Selfie do responsável não encontrada.</span>';
+    }).catch(() => { linhaR.innerHTML = '<span>Não consegui carregar a selfie do responsável.</span>'; });
+  }
+}
+// Cria/atualiza o responsável do aluno pela ficha e, se veio a selfie dele com autorização, manda o rosto ao leitor.
+async function responsavelDaFicha(d, a) {
+  try {
+    const r = await garantirResp(a); if (!r) return;
+    if (d.rsf && d.rbio) {
+      const j = await API.req('GET', '/api/dados?foto=' + encodeURIComponent(d.id + '_r'));
+      if (j.foto && j.foto.jpg) {
+        await salvar('responsaveis', { ...respPorId(r.id), biometria: { autorizado: true, em: d.rbio, origem: 'ficha' } });
+        await API.req('POST', '/api/dados', { col: 'fotos', id: r.id, doc: { id: r.id, jpg: j.foto.jpg, em: new Date().toISOString(), daFicha: true } });
+        await salvar('catrafila', { id: novoId('cq'), tipo: 'cadastrar', respId: r.id, etapa: 'usuario', status: 'pendente', criadoEm: new Date().toISOString() });
+      }
+    }
+  } catch (e) { tratarErro(e); }
+  if (d.rsf) { try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(d.id + '_r')); } catch (_) {} }
 }
 // Passa a selfie da ficha para o aluno e pede o cadastro do rosto no leitor (só com autorização registrada).
 async function usarSelfieDaFicha(fichaId, a) {
@@ -1822,6 +1879,7 @@ async function salvarFicha(modo, idExistente) {
   if (!(await salvar('alunos', a))) return;
   if (String(d.id || '').startsWith('fi_')) {
     if (d.sf) await usarSelfieDaFicha(d.id, a);
+    if (d.rn) await responsavelDaFicha(d, alunoPorId(a.id) || a);
     await remover('fichas', d.id);
   }
   const tel = (d.tel || '').replace(/\D/g, '');
@@ -2445,7 +2503,8 @@ const ACOES = {
     });
   },
   async 'cat-ligar'(ds) {
-    const s = document.getElementById('cv-' + ds.uid); const a = s && s.value && pessoaPorId(s.value);
+    const s = document.getElementById('cv-' + ds.uid);
+    let a = s && s.value && (s.value.startsWith('ra:') ? await garantirResp(alunoPorId(s.value.slice(3))) : pessoaPorId(s.value));
     if (!a) { toast('Escolha a pessoa.'); return; }
     const est = catracaEstado(); const desc = { ...(est.desconhecidos || {}) }; delete desc[ds.uid];
     await salvar(colPessoa(a.id), { ...a, catracaId: Number(ds.uid) });
@@ -2459,6 +2518,11 @@ const ACOES = {
   },
   'cat-id'(ds) { const a = alunoPorId(ds.id); if (a) modalCatracaId(a); },
   'cat-rosto'(ds) { const a = pessoaPorId(ds.id); if (a) abrirFotoRosto(a); },
+  async 'resp-rosto'(ds) {
+    const a = alunoPorId(ds.id); if (!a) return;
+    if (!a.responsavel) { toast('Preencha o nome do responsável no cadastro do aluno (Editar).'); return; }
+    const r = await garantirResp(a); if (r) abrirFotoRosto(r);
+  },
   'bio-alterar'(ds) {
     const a = alunoPorId(ds.id); if (!a) return;
     if (ds.v === '1') {
@@ -2625,7 +2689,7 @@ const ACOES = {
   'conferir-ficha'(ds) { const f = S.fichas.find((x) => x.id === ds.id); if (f) modalFicha(f); else toast('Esta ficha já foi conferida.'); },
   'descartar-ficha'(ds) {
     const f = S.fichas.find((x) => x.id === ds.id); if (!f) return;
-    confirmar('Descartar ficha', 'Descartar a ficha de <b>' + esc(f.n) + '</b>? Ela sai da lista e os dados não são cadastrados.', 'Descartar', async () => { if (f.sf) { try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(f.id)); } catch (_) {} } await remover('fichas', f.id); toast('Ficha descartada.'); });
+    confirmar('Descartar ficha', 'Descartar a ficha de <b>' + esc(f.n) + '</b>? Ela sai da lista e os dados não são cadastrados.', 'Descartar', async () => { if (f.sf) { try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(f.id)); } catch (_) {} } if (f.rsf) { try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(f.id + '_r')); } catch (_) {} } await remover('fichas', f.id); toast('Ficha descartada.'); });
   },
   'fechar-modal'() { fecharModal(); },
   fundo(ds, el, e) { if (e.target === el) fecharModal(); },

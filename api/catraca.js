@@ -105,10 +105,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ result: { event: 3, portal_id: portal, actions: [], message: MSG_BLOQUEIO } });
     }
 
-    const [alunosB, contratosB, lancsB, turmasB, profsB, equipeB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')], ['HGETALL', chaveCol('professores')], ['HGETALL', chaveCol('equipe')]]);
+    const [alunosB, contratosB, lancsB, turmasB, profsB, equipeB, respsB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')], ['HGETALL', chaveCol('professores')], ['HGETALL', chaveCol('equipe')], ['HGETALL', chaveCol('responsaveis')]]);
     const aluno = lista(alunosB).find((a) => Number(a.catracaId) === userId);
     const prof = !aluno && lista(profsB).find((p) => Number(p.catracaId) === userId);
     const membro = !aluno && !prof && lista(equipeB).find((p) => Number(p.catracaId) === userId);
+    const resp = !aluno && !prof && !membro && lista(respsB).find((p) => Number(p.catracaId) === userId);
     const FUNCAO = { admin: 'Administrador', recepcao: 'Recepcionista' };
     const cmds = [];
     let dec;
@@ -121,6 +122,15 @@ export default async function handler(req, res) {
       // Equipe (administradores e recepcionistas): entra sempre, enquanto estiver ativa no sistema.
       dec = membro.ativo !== false ? { ok: true, motivo: (FUNCAO[membro.funcao] || 'equipe').toLowerCase(), msg: 'Bem-vindo, ' + primeiroNome(membro.nome) + '!' } : { ok: false, motivo: 'equipe inativa', msg: '' };
       registrar({ ok: dec.ok, motivo: dec.motivo, equipeId: membro.id, nome: membro.nome + ' (' + (FUNCAO[membro.funcao] || 'Equipe') + ')' });
+      if (estado.desconhecidos) delete estado.desconhecidos[userId];
+    } else if (resp) {
+      // Responsável de aluno menor: entra quando pelo menos um dos alunos dele pode entrar.
+      const alunosL = lista(alunosB), contratosL = lista(contratosB), lancsL = lista(lancsB);
+      const filhos = (resp.alunos || []).map((id) => alunosL.find((a) => a.id === id)).filter(Boolean);
+      const libera = filhos.find((a) => decidirEntrada(a, contratosL, lancsL, hoje, cfg).ok);
+      dec = libera ? { ok: true, motivo: 'responsável de ' + primeiroNome(libera.nome), msg: 'Bem-vindo, ' + primeiroNome(resp.nome) + '!' }
+        : { ok: false, motivo: filhos.length ? 'responsável: aluno(s) sem acesso' : 'responsável sem aluno ligado', msg: '' };
+      registrar({ ok: dec.ok, motivo: dec.motivo, respId: resp.id, nome: resp.nome + ' (responsável)' });
       if (estado.desconhecidos) delete estado.desconhecidos[userId];
     } else if (!aluno) {
       // Pessoa cadastrada no aparelho que ainda não foi vinculada a um aluno (pode ser da equipe).
@@ -145,7 +155,7 @@ export default async function handler(req, res) {
       }
     }
     await banco([...cmds, ['HSET', chaveCol('catraca'), 'estado', JSON.stringify(estado)], ['INCR', 'ct:rev']]);
-    return responder(dec.ok, dec.msg, aluno ? aluno.nome : prof ? prof.nome : membro ? membro.nome : '');
+    return responder(dec.ok, dec.msg, aluno ? aluno.nome : prof ? prof.nome : membro ? membro.nome : resp ? resp.nome : '');
   } catch (e) {
     const s = e instanceof ErroApi ? e.status : 500;
     if (s >= 500) console.error('catraca:', e);

@@ -4,7 +4,7 @@ import { rota, corpo, ip, limitar, banco, um, chaveCol, parHash, bumpRev, semear
 // Rota pública da ficha de matrícula.
 // GET  → nome do CT e planos à venda (para montar a ficha)
 // POST → recebe a ficha preenchida e coloca na fila "Fichas recebidas" do sistema
-const CAMPOS = { n: 120, nas: 10, cpf: 14, tel: 20, em: 120, end: 200, mod: 30, exp: 30, fx: 40, gr: 2, sau: 600, ctn: 120, ctt: 20, ori: 40, ok: 30, rc: 30, rcv: 10, rn: 120, rcpf: 14, rtel: 20, pl: 80, pln: 120, fp: 40, dv: 2, fam: 600, ht: 400, hor: 600, hro: 120, bio: 30 };
+const CAMPOS = { n: 120, nas: 10, cpf: 14, tel: 20, em: 120, end: 200, mod: 30, exp: 30, fx: 40, gr: 2, sau: 600, ctn: 120, ctt: 20, ori: 40, ok: 30, rc: 30, rcv: 10, rn: 120, rcpf: 14, rtel: 20, pl: 80, pln: 120, fp: 40, dv: 2, fam: 600, ht: 400, hor: 600, hro: 120, bio: 30, rbio: 30 };
 const MAX_FILA = 300;
 
 export default rota(['GET', 'POST'], async (req, res) => {
@@ -48,6 +48,13 @@ export default rota(['GET', 'POST'], async (req, res) => {
     d.sf = 1;
     cmds.push(['HSET', chaveCol('fotos'), id, JSON.stringify({ id, jpg: sf, em: new Date().toISOString(), daFicha: true })]);
   }
+  // Foto do rosto do responsável (opcional, só para menores): para ele também entrar pela catraca.
+  const rsf = typeof b.rsf === 'string' ? b.rsf.replace(/^data:image\/jpeg;base64,/, '') : '';
+  if (rsf && d.rn && d.rbio) {
+    if (rsf.length > 340000 || !/^[A-Za-z0-9+/=]+$/.test(rsf) || !rsf.startsWith('/9j/')) throw new ErroApi(400, 'A foto do responsável não pôde ser lida. Tire a foto de novo.');
+    d.rsf = 1;
+    cmds.push(['HSET', chaveCol('fotos'), id + '_r', JSON.stringify({ id: id + '_r', jpg: rsf, em: new Date().toISOString(), daFicha: true })]);
+  } else delete d.rbio;
   const ficha = { ...d, id, recebidaEm: new Date().toISOString() };
   await banco([...cmds, ['HSET', chaveCol('fichas'), id, JSON.stringify(ficha)]]);
   await bumpRev();

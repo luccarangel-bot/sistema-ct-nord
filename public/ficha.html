@@ -275,6 +275,13 @@ input[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="
             <div class="selfie-linha"><img id="selfie-prev" alt="Sua selfie" hidden>
               <label class="btn" id="selfie-btn">Tirar selfie<input type="file" accept="image/*" capture="user" id="selfie" hidden></label></div>
           </div>
+          <div class="selfie" id="bloco-rselfie" hidden>
+            <b>Rosto do responsável (opcional)</b>
+            <p>Se você, responsável, também vai entrar no CT (para levar ou acompanhar o aluno), envie uma selfie sua: seu rosto fica cadastrado na catraca e você entra enquanto o aluno estiver com a matrícula em dia.</p>
+            <div class="selfie-linha"><img id="rselfie-prev" alt="Selfie do responsável" hidden>
+              <label class="btn" id="rselfie-btn">Tirar selfie do responsável<input type="file" accept="image/*" capture="user" id="rselfie" hidden></label></div>
+            <label class="termo"><input type="checkbox" id="rbio" name="rbio"><span><b>Autorizo o uso da imagem do meu rosto (responsável)</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.</span></label>
+          </div>
         </div>
         <div class="erro" id="erro" role="alert" hidden></div>
         <button type="submit" class="btn pri largo" id="btn-concluir" disabled>Concluir matrícula</button>
@@ -316,7 +323,30 @@ const diasTxt = (d) => (d || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6)
 const horTxt = (t) => String(t.h || '').replace(':', 'h') + ' · ' + diasTxt(t.d) + ' · ' + t.n;
 let GRADE = []; let modHor = '';
 // Selfie: reduzida no próprio celular para JPG de até ~720 px e ~180 KB antes de enviar.
-let SELFIE = '';
+let SELFIE = '', RSELFIE = '';
+// Reduz a foto e devolve o JPG em base64 (para a selfie do aluno e a do responsável).
+function lerFoto(arq, fn) {
+  const img = new Image(); const url = URL.createObjectURL(arq);
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (Math.min(w, h) < 160) { alert('Foto muito pequena. Tire outra.'); return; }
+    const k = Math.min(1, 720 / Math.max(w, h)); const c = document.createElement('canvas');
+    c.width = Math.round(w * k); c.height = Math.round(h * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    let q = 0.88, dados = c.toDataURL('image/jpeg', q);
+    while (dados.length > 240000 && q > 0.5) { q -= 0.1; dados = c.toDataURL('image/jpeg', q); }
+    fn(dados);
+  };
+  img.onerror = () => alert('Não consegui abrir essa foto. Tente de novo.');
+  img.src = url;
+}
+$('rselfie').addEventListener('change', (e) => {
+  const arq = e.target.files && e.target.files[0]; if (!arq) return;
+  lerFoto(arq, (dados) => {
+    RSELFIE = dados.split(',')[1]; $('rbio').checked = true; atualizar();
+    $('rselfie-prev').src = dados; $('rselfie-prev').hidden = false; $('rselfie-btn').firstChild.textContent = 'Tirar outra';
+  });
+});
 $('selfie').addEventListener('change', (e) => {
   const arq = e.target.files && e.target.files[0]; if (!arq) return;
   const img = new Image(); const url = URL.createObjectURL(arq);
@@ -386,6 +416,10 @@ function atualizar() {
   $('rc-txt').innerHTML = ehMenor()
     ? '<b>Como responsável, li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a fazer o aluno respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.'
     : '<b>Li e aceito o Regimento Interno e Código de Conduta do CT NORD</b>, e me comprometo a respeitar as regras de convivência, segurança, profissionalismo e integridade nele estabelecidas.';
+  $('bloco-rselfie').hidden = !ehMenor();
+  $('selfie-dica').textContent = ehMenor()
+    ? 'Com a foto, o rosto do aluno já fica cadastrado na catraca e ele entra direto. De frente, sem boné nem óculos escuros, em lugar claro, só o aluno na foto.'
+    : 'Com a selfie, seu rosto já fica cadastrado na catraca e você entra direto. De frente, sem boné nem óculos escuros, em lugar claro, só você na foto.';
   $('selfie-titulo').innerHTML = (ehMenor() ? 'Foto do rosto do aluno para a catraca' : 'Selfie para a catraca') + ' <em>*</em>';
   $('bio-txt').innerHTML = ehMenor()
     ? '<b>Como responsável, autorizo o uso da imagem do rosto do aluno</b> para reconhecimento facial na catraca do CT NORD, nos termos acima.'
@@ -459,6 +493,8 @@ $('ficha').addEventListener('submit', (e) => {
   if (!$('ok').checked) return erro('Para concluir, marque a declaração dos dados.', $('ok'));
   if (!$('bio').checked) return erro('A entrada é pela catraca com reconhecimento facial: autorize o uso do rosto para concluir.', $('bio'));
   if (!SELFIE) return erro(ehMenor() ? 'Tire a foto do rosto do aluno para concluir.' : 'Tire a selfie para concluir.', $('selfie-btn'));
+  if (menor && RSELFIE && !$('rbio').checked) return erro('Para enviar a selfie do responsável, marque a autorização do rosto do responsável.', $('rbio'));
+  if (menor && !RSELFIE && $('rbio').checked) return erro('Tire a selfie do responsável ou desmarque a autorização dele.', $('rselfie-btn'));
   $('erro').hidden = true;
 
   const mod = f.querySelector('[name="mod"]:checked').value;
@@ -474,6 +510,7 @@ $('ficha').addEventListener('submit', (e) => {
   if (hts.length) Object.assign(d, { ht: hts.join(','), hor: hts.map((id) => horTxt(GRADE.find((t) => t.i === id) || {})).join('; ') });
   if (v('hro')) d.hro = v('hro');
   if (menor) Object.assign(d, { rn: v('rn'), rcpf: v('rcpf'), rtel: v('rtel') });
+  if (menor && RSELFIE && $('rbio').checked) Object.assign(d, { rsf: RSELFIE, rbio: agora });
   if (p) Object.assign(d, { pl: p.id, pln: p.nome, fp: $('fp').value, dv: p.forma === 'avista' || p.forma === 'app' ? 0 : Number($('dv').value), fam: ehFamilia(p) ? v('fam') : '' });
   const btn = $('btn-concluir'); btn.disabled = true; btn.textContent = 'Enviando…';
   fetch('/api/ficha', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) })
