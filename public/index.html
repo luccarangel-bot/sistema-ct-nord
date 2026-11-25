@@ -1065,8 +1065,8 @@ VIEWS.aluno = function () {
   h += '<section class="painel" style="margin-top:16px"><header><h2>Contratos</h2><small>' + contratos.length + ' no histórico</small></header>';
   if (!contratos.length) h += '<p class="vazio">Nenhum contrato vendido ainda.</p>';
   else h += '<div class="tabela-wrap" style="border:0"><table><thead><tr><th>Plano</th><th>Vigência</th><th class="dir">Valor/mês</th><th>Situação</th><th></th></tr></thead><tbody>' + contratos.map((c) =>
-    '<tr><td>' + esc(c.planoNome) + '<small>' + FORMA_TXT[c.forma] + (c.renovacaoDe ? ' · renovação' : '') + '</small></td><td class="num">' + vigenciaTxt(c) + '</td><td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + pillContr(c) + '</td>' +
-    '<td class="dir" style="white-space:nowrap">' + (statusContrato(c) === 'cancelado' ? '' : c.continuo ? '<button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar matrícula</button>'
+    '<tr><td>' + esc(c.planoNome) + '<small>' + FORMA_TXT[c.forma] + (temMensalidades(c) && c.diaVenc ? ' · vence dia ' + c.diaVenc : '') + (c.renovacaoDe ? ' · renovação' : '') + '</small></td><td class="num">' + vigenciaTxt(c) + '</td><td class="dir num">' + fR(c.valorMensal - c.desconto) + '</td><td>' + pillContr(c) + '</td>' +
+    '<td class="dir" style="white-space:nowrap">' + (temMensalidades(c) ? '<button class="btn peq" data-act="venc-contrato" data-id="' + c.id + '">Mudar vencimento</button> ' : '') + (statusContrato(c) === 'cancelado' ? '' : c.continuo ? '<button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar matrícula</button>'
       : '<button class="btn peq" data-act="renovar" data-id="' + c.id + '">' + txtRenovar(c) + '</button> <button class="btn peq perigo" data-act="cancelar-contrato" data-id="' + c.id + '">Encerrar</button>') + '</td></tr>').join('') + '</tbody></table></div>';
   h += '</section>';
 
@@ -2080,12 +2080,30 @@ function modalLanc(o) {
     '<label class="check"><input type="checkbox" name="pago" id="lc-pago"' + (o.pago ? ' checked' : '') + '><span>Já foi ' + (tipo === 'receita' ? 'recebido' : 'pago') + ' (registra a baixa na data de vencimento)</span></label>' +
     rodape('Salvar') + '</form>');
 }
+/* ---------- Mudar o dia de vencimento ---------- */
+// Contrato com mensalidades que ainda podem mudar (não vale para à vista, cartão, app e bolsa).
+const temMensalidades = (c) => statusContrato(c) !== 'cancelado' && c.forma === 'mensal';
+// Mensalidades do contrato que mudam junto: sem nenhum pagamento, não canceladas e que ainda não venceram.
+const mensalidadesAMudar = (c) => S.lancamentos.filter((l) => l.contratoId === c.id && l.categoria === 'Mensalidades' && !l.cancelado && !(l.pagamentos || []).length && l.vencimento >= HOJE);
+function modalVencContrato(c) {
+  const xs = mensalidadesAMudar(c);
+  abrirModal('Mudar dia de vencimento', '<form data-form="venc-contrato"><input type="hidden" name="id" value="' + c.id + '">' +
+    '<div class="resumo"><span>' + esc(nomeAluno(c.alunoId)) + ' · ' + esc(c.planoNome) + '</span><span>Hoje vence todo dia <b>' + esc(c.diaVenc || Number(c.inicio.slice(8, 10))) + '</b></span></div>' +
+    campo('Novo dia de vencimento *', inp('vc-dia', 'dia', c.diaVenc || '', 'type="number" min="1" max="31" required'), 'Nos meses mais curtos, o dia 29, 30 ou 31 vira o último dia do mês.') +
+    '<p class="vazio" style="padding:0">' + (xs.length ? 'Muda o dia ' + (c.continuo ? 'das próximas mensalidades' : 'de ' + xs.length + ' mensalidade(s) que ainda não venceram') + '. ' : 'Muda o dia das próximas mensalidades. ') +
+    'Mensalidades já pagas ou já vencidas continuam como estão. Para mudar só uma mensalidade, use "Detalhes" na cobrança.</p>' + rodape('Salvar') + '</form>');
+}
+function modalVencLanc(l) {
+  abrirModal('Mudar vencimento', '<form data-form="venc-lanc"><input type="hidden" name="id" value="' + l.id + '">' +
+    '<div class="resumo"><span>' + esc(l.descricao) + (l.alunoId ? ' · ' + esc(nomeAluno(l.alunoId)) : '') + '</span><span>Vence hoje em <b>' + fData(l.vencimento) + '</b></span></div>' +
+    campo('Novo vencimento *', inp('vl-venc', 'vencimento', l.vencimento, 'type="date" required'), 'Muda só esta cobrança. As próximas continuam no dia de sempre.') + rodape('Salvar') + '</form>');
+}
 function modalDetalhes(l) {
   const pg = l.pagamentos || [];
   abrirModal('Detalhes da conta', '<div class="corpo"><dl class="dados"><dt>Descrição</dt><dd>' + esc(l.descricao) + '</dd><dt>Tipo</dt><dd>' + (l.tipo === 'receita' ? 'A receber' : 'A pagar') + ' · ' + esc(l.categoria) + '</dd>' +
     (l.alunoId ? '<dt>Aluno</dt><dd>' + esc(nomeAluno(l.alunoId)) + '</dd>' : '') + '<dt>Vencimento</dt><dd>' + fData(l.vencimento) + '</dd><dt>Valor</dt><dd>' + fR(l.valor) + (l.desconto ? ' − desconto ' + fR(l.desconto) + ' = ' + fR(devidoDe(l)) : '') + '</dd><dt>Situação</dt><dd>' + pillLanc(l) + '</dd></dl>' +
     '<h3>Pagamentos</h3>' + (pg.length ? '<ul class="lista">' + pg.map((p, i) => '<li><div class="cresce"><b class="num">' + fR(p.valor) + '</b><small>' + fData(p.data) + ' · ' + esc(p.forma) + '</small></div><button class="btn link peq perigo" data-act="estornar" data-id="' + l.id + '" data-i="' + i + '">Estornar</button></li>').join('') + '</ul>' : '<p class="vazio">Nenhum pagamento registrado.</p>') +
-    '<div class="rodape">' + (!l.cancelado ? '<button class="btn perigo" data-act="cancelar-lanc" data-id="' + l.id + '">Cancelar conta</button>' : '') + (statusLanc(l) !== 'pago' && !l.cancelado ? '<button class="btn pri" data-act="baixar" data-id="' + l.id + '">' + (l.tipo === 'receita' ? 'Receber' : 'Pagar') + '</button>' : '') + '</div></div>');
+    '<div class="rodape">' + (statusLanc(l) !== 'pago' && !l.cancelado ? '<button class="btn" data-act="venc-lanc" data-id="' + l.id + '">Mudar vencimento</button>' : '') + (!l.cancelado ? '<button class="btn perigo" data-act="cancelar-lanc" data-id="' + l.id + '">Cancelar conta</button>' : '') + (statusLanc(l) !== 'pago' && !l.cancelado ? '<button class="btn pri" data-act="baixar" data-id="' + l.id + '">' + (l.tipo === 'receita' ? 'Receber' : 'Pagar') + '</button>' : '') + '</div></div>');
 }
 function modalGraduar(a, i, nova) {
   const m = nova ? { mod: MODALIDADES.find((x) => !(a.modalidades || []).some((y) => y.mod === x)) || 'Jiu-jitsu', faixa: '', grau: 0 } : a.modalidades[i];
@@ -2195,6 +2213,24 @@ const FORMS = {
     fecharModal(); await salvar('lancamentos', n);
     const st = statusLanc(n);
     toast(st === 'pago' ? 'Baixa registrada. Conta quitada.' : 'Pagamento parcial registrado. Falta ' + fR(saldoDe(n)) + '.');
+  },
+  async 'venc-contrato'(d) {
+    const c = S.contratos.find((x) => x.id === d.id); if (!c) return;
+    const dia = Math.round(Number(d.dia));
+    if (!(dia >= 1 && dia <= 31)) { toast('Escolha um dia de 1 a 31.'); return; }
+    // Cada mensalidade fica no mesmo mês, só troca o dia; se o novo dia já passou neste mês, ela fica como está.
+    const mudam = mensalidadesAMudar(c).map((l) => ({ l, v: comDia(l.vencimento, dia) })).filter((x) => x.v >= HOJE && x.v !== x.l.vencimento);
+    fecharModal();
+    if (!(await salvar('contratos', { ...c, diaVenc: dia }))) return;
+    await salvarVarios('lancamentos', mudam.map(({ l, v }) => ({ ...l, vencimento: v })));
+    toast('Vencimento mudado para todo dia ' + dia + (mudam.length ? ' (' + mudam.length + ' mensalidade(s) em aberto ajustada(s)).' : '.'));
+  },
+  async 'venc-lanc'(d) {
+    const l = S.lancamentos.find((x) => x.id === d.id); if (!l || !/^\d{4}-\d{2}-\d{2}$/.test(d.vencimento || '')) return;
+    // Mensalidade de contrato que renova sozinho: não pode sair do mês dela, senão o sistema cria outra para esse mês.
+    const c = l.contratoId && S.contratos.find((x) => x.id === l.contratoId);
+    if (c && c.continuo && l.categoria === 'Mensalidades' && mesDe(d.vencimento) !== mesDe(l.vencimento)) { toast('Escolha uma data dentro de ' + nomeMes(mesDe(l.vencimento)) + '. Para mudar o dia de todo mês, use "Mudar vencimento" no contrato.'); return; }
+    fecharModal(); if (await salvar('lancamentos', { ...l, vencimento: d.vencimento })) toast('Vencimento mudado para ' + fData(d.vencimento) + '.');
   },
   async lanc(d) {
     const valor = numCampo(d.valor); if (valor <= 0) { toast('Informe um valor maior que zero.'); return; }
@@ -2452,6 +2488,8 @@ const ACOES = {
     });
   },
   baixar(ds) { modalBaixa(S.lancamentos.find((l) => l.id === ds.id)); },
+  'venc-contrato'(ds) { const c = S.contratos.find((x) => x.id === ds.id); if (c) modalVencContrato(c); },
+  'venc-lanc'(ds) { const l = S.lancamentos.find((x) => x.id === ds.id); if (l) modalVencLanc(l); },
   'ver-lanc'(ds) { modalDetalhes(S.lancamentos.find((l) => l.id === ds.id)); },
   'novo-lanc'(ds) { modalLanc({ tipo: ds.tipo }); },
   'venda-produto'(ds) { modalLanc({ tipo: 'receita', categoria: 'Produtos', alunoId: ds.id, pago: true, titulo: 'Vender produto' }); },
