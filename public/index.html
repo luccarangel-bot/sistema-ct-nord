@@ -405,7 +405,7 @@ const ETAPAS = [
   ['negociacao', 'Negociação'], ['matriculado', 'Matriculado'], ['perdido', 'Perdido'],
 ];
 const ORIGENS = ['Instagram', 'Indicação', 'Google', 'WhatsApp', 'Passou na frente', 'Wellhub / TotalPass', 'Outro'];
-const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'catraca', 'catrafila'];
+const COLS = ['alunos', 'planos', 'contratos', 'lancamentos', 'leads', 'tarefas', 'turmas', 'aulas', 'contasfixas', 'professores', 'equipe', 'catraca', 'catrafila'];
 const FICHA_URL = location.origin + '/ficha';
 const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // Horários de preferência do aluno: turmas da grade (ids) + observação livre.
@@ -462,7 +462,7 @@ const linkWa = (tel, msg) => {
 };
 
 /* ================= Estado ================= */
-const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], catraca: [], catrafila: [], fichas: [], config: null };
+const S = { alunos: [], planos: [], contratos: [], lancamentos: [], leads: [], tarefas: [], turmas: [], aulas: [], contasfixas: [], professores: [], equipe: [], catraca: [], catrafila: [], fichas: [], config: null };
 const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos', tabAlunos: 'alunos', filtroProf: '',
@@ -938,11 +938,35 @@ function abaProfessores() {
 function linhaCatracaProf(p) {
   if (!catracaCfg().ativo && !p.catracaId) return '';
   const ir = filaDoAluno(p.id);
-  const sit = p.ativo === false && p.catracaId ? 'inativo: barrado na catraca' : situacaoRosto(p);
+  const sit = p.ativo === false && p.catracaId ? 'inativo(a): barrado(a) na catraca' : situacaoRosto(p);
   return '<p class="prof-cat" style="margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)"><b>Catraca</b> · ' +
     (p.catracaId ? pill(p.ativo === false ? 'bad' : 'ok', p.ativo === false ? 'Barrado' : 'Entra') + ' ' : '') + '<small' + (ir && ir.status === 'erro' ? ' class="neg"' : '') + '>' + esc(sit) + '</small><br>' +
     '<button class="btn peq pri" data-act="cat-rosto" data-id="' + p.id + '">' + (p.catracaId ? 'Trocar foto do rosto' : 'Cadastrar rosto') + '</button> ' +
     (p.catracaId ? '<button class="btn peq perigo" data-act="cat-remover-leitor" data-id="' + p.id + '">Remover do leitor</button>' : '') + '</p>';
+}
+
+/* ---------- Equipe: administradores e recepcionistas com acesso pela catraca ---------- */
+const FUNCAO_EQ = { admin: 'Administrador', recepcao: 'Recepcionista' };
+function abaEquipe() {
+  const xs = S.equipe.slice().sort((a, b) => (b.ativo !== false) - (a.ativo !== false) || (a.funcao || '').localeCompare(b.funcao || '') || a.nome.localeCompare(b.nome, 'pt-BR'));
+  let h = '<div class="filtros" style="justify-content:space-between"><p class="vazio" style="padding:0;margin:0">Administradores e recepcionistas. Com o rosto cadastrado, entram sempre pela catraca enquanto estiverem ativos.</p><button class="btn pri" data-act="novo-membro">Cadastrar pessoa</button></div>';
+  if (!xs.length) return h + '<div class="painel"><p class="vazio">Ninguém da equipe cadastrado ainda. Cadastre os administradores e recepcionistas e depois o rosto de cada um.</p><button class="btn pri" data-act="novo-membro">Cadastrar pessoa</button></div>';
+  h += '<div class="grade2">' + xs.map((p) => '<section class="painel"' + (p.ativo === false ? ' style="opacity:.6"' : '') + '><header><h2>' + esc(p.nome) + '</h2><small>' + esc(FUNCAO_EQ[p.funcao] || 'Equipe') + '</small></header>' +
+    '<p class="prof-mods"><span class="pill">' + esc(FUNCAO_EQ[p.funcao] || 'Equipe') + '</span>' + (p.ativo === false ? ' <span class="pill">Inativo</span>' : '') +
+    (p.telefone ? ' · ' + waA(p.telefone, 'Olá, ' + p.nome.split(' ')[0] + '!', 'WhatsApp') : '') + '</p>' +
+    (catracaCfg().ativo || p.catracaId ? linhaCatracaProf(p) : '<p class="vazio" style="padding:0">Ative a catraca em Ajustes para cadastrar o rosto.</p>') +
+    '<div class="rodape" style="margin-top:8px"><button class="btn peq" data-act="editar-membro" data-id="' + p.id + '">Editar</button></div></section>').join('') + '</div>';
+  return h + '<p class="vazio" style="margin-top:12px">Para a pessoa também entrar no sistema (login e senha), cadastre em Ajustes → Equipe.</p>';
+}
+function modalMembro(p) {
+  p = p || { funcao: 'recepcao', ativo: true };
+  abrirModal(p.id ? 'Editar pessoa da equipe' : 'Cadastrar pessoa da equipe', '<form data-form="membro"><input type="hidden" name="id" value="' + esc(p.id || '') + '">' +
+    campo('Nome *', inp('eq-nome', 'nome', p.nome, 'required')) +
+    '<div class="linha2">' + campo('Função *', sel('eq-funcao', 'funcao', opt('admin', 'Administrador', p.funcao === 'admin') + opt('recepcao', 'Recepcionista', p.funcao === 'recepcao'))) +
+    campo('Celular / WhatsApp', inp('eq-tel', 'telefone', p.telefone, 'inputmode="tel" placeholder="(21) 99999-9999"')) + '</div>' +
+    '<label class="check"><input type="checkbox" name="ativo"' + (p.ativo !== false ? ' checked' : '') + '><span>Ativo (desmarcado, a catraca barra a pessoa)</span></label>' +
+    '<div class="rodape">' + (p.id ? '<button class="btn perigo" type="button" data-act="excluir-membro" data-id="' + p.id + '" style="margin-right:auto">Excluir</button>' : '') +
+    '<button class="btn" type="button" data-act="fechar-modal">Cancelar</button><button class="btn pri" type="submit">Salvar</button></div></form>');
 }
 
 function modalProf(p) {
@@ -990,8 +1014,9 @@ VIEWS.alunos = function () {
   const lista = base.filter(filtros[UI.filtroAluno]).filter(doProf).filter((a) => !q || a.nome.toLowerCase().includes(q) || (a.telefone || '').replace(/\D/g, '').includes(q.replace(/\D/g, '') || '§'));
   const cnt = (k) => base.filter(filtros[k]).length;
   let h = '<div class="topo"><div><h1>Alunos</h1><p>' + base.filter(alunoAtivo).length + ' ativos de ' + base.length + ' cadastrados.</p></div><div class="acoes"><button class="btn" data-act="enviar-ficha">Enviar ficha de matrícula</button>' + (S.fichas.length ? '<button class="btn" data-act="fichas-recebidas">Fichas recebidas · ' + S.fichas.length + '</button>' : '') + '<button class="btn pri" data-act="novo-aluno">Novo aluno</button></div></div>';
-  h += '<div class="tabs" role="tablist">' + tab('tabAlunos', 'alunos', 'Alunos') + tab('tabAlunos', 'professores', 'Professores') + '</div>';
+  h += '<div class="tabs" role="tablist">' + tab('tabAlunos', 'alunos', 'Alunos') + tab('tabAlunos', 'professores', 'Professores') + tab('tabAlunos', 'equipe', 'Equipe') + '</div>';
   if (UI.tabAlunos === 'professores') return h + abaProfessores();
+  if (UI.tabAlunos === 'equipe') return h + abaEquipe();
   h += '<div class="filtros"><input type="search" id="busca-aluno" data-ui="busca" placeholder="Buscar por nome ou telefone" value="' + esc(UI.busca) + '" aria-label="Buscar aluno">' +
     (S.professores.length ? '<select data-ui="filtroProf" aria-label="Professor" style="width:auto">' + opt('', 'Todos os professores', !UI.filtroProf) + S.professores.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((p) => opt(p.id, 'Prof. ' + p.nome, UI.filtroProf === p.id)).join('') + opt('-', 'Sem professor', UI.filtroProf === '-') + '</select>' : '') +
     chip('filtroAluno', 'ativos', 'Ativos', cnt('ativos')) + chip('filtroAluno', 'avencer', 'Contrato a vencer', cnt('avencer')) + chip('filtroAluno', 'devendo', 'Em atraso', cnt('devendo')) + chip('filtroAluno', 'bolsistas', 'Bolsistas', cnt('bolsistas')) + chip('filtroAluno', 'inativos', 'Inativos', cnt('inativos')) + chip('filtroAluno', 'todos', 'Todos', base.length) + '</div>';
@@ -1545,16 +1570,18 @@ function blocoCatraca() {
   h += '<form data-form="cat-cfg" style="display:flex;flex-direction:column;gap:14px;margin-top:14px"><div class="linha2">' +
     campo('Como o aparelho abre a catraca', sel('cat-acao', 'acao', opt('sec_box', 'Módulo SecBox', (cfg.acao || 'sec_box') === 'sec_box') + opt('door', 'Relé do próprio aparelho', cfg.acao === 'door') + opt('catra', 'Catraca Control iD (iDBlock)', cfg.acao === 'catra'))) +
     campo('ID da SecBox ou nº do relé', inp('cat-sb', 'param', cfg.acao === 'door' ? (cfg.porta || 1) : (cfg.secboxId || '65793')), 'Ajustamos no teste, na academia.') + '</div>' +
-    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno ou professor</span></label>' +
+    '<label class="check"><input type="checkbox" name="bloquearSemVinculo"' + (cfg.bloquearSemVinculo ? ' checked' : '') + '><span>Barrar rostos que ainda não foram ligados a um aluno, professor ou pessoa da equipe</span></label>' +
     '<label class="check"><input type="checkbox" name="passLivre"' + (cfg.passLivre !== false ? ' checked' : '') + '><span>Liberar alunos TotalPass/Wellhub sem conferir o check-in (até a integração com os apps). Desmarcado, eles só entram no dia em que a recepção liberar.</span></label>' +
     '<div class="rodape"><button class="btn" type="button" data-act="cat-desativar">Desativar</button><button class="btn" type="button" data-act="cat-token">Gerar novo endereço</button><button class="btn pri" type="submit">Salvar</button></div></form>';
   const profsLivres = S.professores.filter((x) => !x.catracaId && x.ativo !== false).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
-  h += '<h3 style="margin-top:18px">Rostos do aparelho sem ninguém ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s) e ' + profsLig + ' professor(es) já ligados</small></h3>' +
+  const equipeLivre = S.equipe.filter((x) => !x.catracaId && x.ativo !== false).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
+  h += '<h3 style="margin-top:18px">Rostos do aparelho sem ninguém ligado <small style="font-weight:400;text-transform:none;letter-spacing:0">' + vinculados + ' aluno(s), ' + profsLig + ' professor(es) e ' + S.equipe.filter((x) => x.catracaId).length + ' da equipe já ligados</small></h3>' +
     (desc.length ? '<ul class="lista">' + desc.map((p) => {
       const sug = sugerirAluno(p.nome); const nP = semAcento(p.nome).replace(/^prof\.?\s*/, '');
       const sugP = nP && profsLivres.find((x) => semAcento(x.nome) === nP || (/^prof/.test(semAcento(p.nome)) && semAcento(x.nome).split(' ')[0] === nP.split(' ')[0]));
       return '<li><div class="cresce"><b>' + esc(p.nome || 'Sem nome') + '</b><small>ID ' + esc(p.id) + ' no aparelho' + (p.ultimo ? ' · passou em ' + quando(p.ultimo) : '') + '</small></div>' +
         sel('cv-' + p.id, 'aluno', '<option value="">Escolha a pessoa</option>' +
+          (equipeLivre.length ? '<optgroup label="Equipe">' + equipeLivre.map((x) => opt(x.id, x.nome + ' (' + FUNCAO_EQ[x.funcao] + ')', !sugP && semAcento(x.nome) === semAcento(p.nome))).join('') + '</optgroup>' : '') +
           (profsLivres.length ? '<optgroup label="Professores">' + profsLivres.map((x) => opt(x.id, 'Prof. ' + x.nome, sugP && sugP.id === x.id)).join('') + '</optgroup>' : '') +
           '<optgroup label="Alunos">' + S.alunos.filter((a) => !a.catracaId).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map((a) => opt(a.id, a.nome, !sugP && sug && sug.id === a.id)).join('') + '</optgroup>', 'style="width:auto" aria-label="Pessoa de ' + esc(p.nome) + '"') +
         '<button class="btn peq pri" data-act="cat-ligar" data-uid="' + esc(p.id) + '">Ligar</button></li>';
@@ -1567,11 +1594,12 @@ function blocoCatraca() {
 const pushEstado = () => S.catraca.find((x) => x.id === 'push') || null;
 const pushAtivo = () => { const p = pushEstado(); return !!(p && p.visto && Date.now() - Date.parse(p.visto) < 15 * 60000); };
 // Pessoa com rosto no leitor: aluno ou professor (mesmo fluxo de foto, fila e autorização).
-const pessoaPorId = (id) => alunoPorId(id) || profPorId(id);
-const colPessoa = (id) => (profPorId(id) ? 'professores' : 'alunos');
-const chaveFila = (id) => (profPorId(id) ? { profId: id } : { alunoId: id });
-const comCatraca = () => [...S.alunos, ...S.professores].filter((x) => x.catracaId);
-const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id || i.profId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
+const membroPorId = (id) => S.equipe.find((p) => p.id === id);
+const pessoaPorId = (id) => alunoPorId(id) || profPorId(id) || membroPorId(id);
+const colPessoa = (id) => (profPorId(id) ? 'professores' : membroPorId(id) ? 'equipe' : 'alunos');
+const chaveFila = (id) => (profPorId(id) ? { profId: id } : membroPorId(id) ? { equipeId: id } : { alunoId: id });
+const comCatraca = () => [...S.alunos, ...S.professores, ...S.equipe].filter((x) => x.catracaId);
+const filaDoAluno = (id) => S.catrafila.filter((i) => i.alunoId === id || i.profId === id || i.equipeId === id).sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))[0] || null;
 // Situação do cadastro do rosto, em texto simples.
 function situacaoRosto(a) {
   const i = filaDoAluno(a.id);
@@ -1609,7 +1637,7 @@ let fotoPronta = '';
 function abrirFotoRosto(a) {
   if (biometriaOk(a)) return modalFotoRosto(a);
   const prof = colPessoa(a.id) === 'professores';
-  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. ' + (prof ? 'O professor autorizou?' : 'O aluno (ou o responsável) autorizou?'), 'Autorizou, continuar', async () => {
+  confirmar('Autorização do rosto (LGPD)', '<b>' + esc(a.nome) + '</b> ainda não tem registrada a autorização para usar a imagem do rosto na catraca. ' + (prof || colPessoa(a.id) === 'equipe' ? 'A pessoa autorizou?' : 'O aluno (ou o responsável) autorizou?'), 'Autorizou, continuar', async () => {
     const n = { ...pessoaPorId(a.id), biometria: { autorizado: true, em: new Date().toISOString(), porResponsavel: !!a.responsavel, origem: 'recepção' } };
     await salvar(colPessoa(a.id), n); modalFotoRosto(n);
   });
@@ -2270,6 +2298,13 @@ const FORMS = {
     if (outro) { toast('Esse rosto já está ligado a ' + outro.nome + '.'); return; }
     fecharModal(); await salvar('alunos', { ...a, catracaId: id ? Number(id) : '' }); toast(id ? 'Rosto ligado.' : 'Rosto desligado.');
   },
+  async membro(d) {
+    const ex = d.id ? membroPorId(d.id) : null;
+    const p = { ...(ex || { id: novoId('eq'), criadoEm: new Date().toISOString() }), nome: d.nome.trim(), telefone: (d.telefone || '').trim(), funcao: d.funcao === 'admin' ? 'admin' : 'recepcao', ativo: !!d.ativo };
+    if (!p.nome) { toast('Informe o nome.'); return; }
+    fecharModal(); await salvar('equipe', p);
+    toast(ex ? 'Cadastro atualizado.' : p.nome.split(' ')[0] + ' cadastrado(a). Agora cadastre o rosto.');
+  },
   async prof(d, f) {
     const mods = [...f.querySelectorAll('[name="mod"]:checked')].map((x) => x.value);
     if (!mods.length) { toast('Marque pelo menos uma modalidade.'); return; }
@@ -2470,6 +2505,16 @@ const ACOES = {
   },
   async 'cat-liberar-cancelar'() { await salvar('catraca', { id: 'liberar', ate: '' }); toast('Liberação cancelada.'); },
   'novo-prof'() { modalProf(); },
+  'novo-membro'() { modalMembro(); },
+  'editar-membro'(ds) { modalMembro(membroPorId(ds.id)); },
+  'excluir-membro'(ds) {
+    const p = membroPorId(ds.id); if (!p) return;
+    confirmar('Excluir pessoa da equipe', 'Excluir <b>' + esc(p.nome) + '</b>?' + (p.catracaId ? ' O rosto também é apagado do leitor.' : '') + ' Se a pessoa só se afastou, desmarque "Ativo" em vez de excluir.', 'Excluir', async () => {
+      if (p.catracaId) await salvar('catrafila', { id: novoId('cq'), tipo: 'remover', equipeId: p.id, catracaId: p.catracaId, status: 'pendente', criadoEm: new Date().toISOString() });
+      try { await API.req('DELETE', '/api/dados?col=fotos&id=' + encodeURIComponent(p.id)); } catch (_) {}
+      await remover('equipe', p.id); toast('Pessoa excluída.');
+    });
+  },
   'editar-prof'(ds) { modalProf(profPorId(ds.id)); },
   'atribuir-alunos'(ds) { const p = profPorId(ds.id); if (p) modalAtribuir(p); },
   'excluir-prof'(ds) {

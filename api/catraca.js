@@ -105,15 +105,22 @@ export default async function handler(req, res) {
       return res.status(200).json({ result: { event: 3, portal_id: portal, actions: [], message: MSG_BLOQUEIO } });
     }
 
-    const [alunosB, contratosB, lancsB, turmasB, profsB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')], ['HGETALL', chaveCol('professores')]]);
+    const [alunosB, contratosB, lancsB, turmasB, profsB, equipeB] = await banco([['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('contratos')], ['HGETALL', chaveCol('lancamentos')], ['HGETALL', chaveCol('turmas')], ['HGETALL', chaveCol('professores')], ['HGETALL', chaveCol('equipe')]]);
     const aluno = lista(alunosB).find((a) => Number(a.catracaId) === userId);
     const prof = !aluno && lista(profsB).find((p) => Number(p.catracaId) === userId);
+    const membro = !aluno && !prof && lista(equipeB).find((p) => Number(p.catracaId) === userId);
+    const FUNCAO = { admin: 'Administrador', recepcao: 'Recepcionista' };
     const cmds = [];
     let dec;
     if (prof) {
       // Professor ligado ao rosto: entra sempre, enquanto estiver ativo no sistema.
       dec = prof.ativo !== false ? { ok: true, motivo: 'professor', msg: 'Bom treino, Prof. ' + primeiroNome(prof.nome) + '!' } : { ok: false, motivo: 'professor inativo', msg: 'Acesso desativado. Procure a recepção.' };
       registrar({ ok: dec.ok, motivo: dec.motivo, profId: prof.id, nome: 'Prof. ' + prof.nome });
+      if (estado.desconhecidos) delete estado.desconhecidos[userId];
+    } else if (membro) {
+      // Equipe (administradores e recepcionistas): entra sempre, enquanto estiver ativa no sistema.
+      dec = membro.ativo !== false ? { ok: true, motivo: (FUNCAO[membro.funcao] || 'equipe').toLowerCase(), msg: 'Bem-vindo, ' + primeiroNome(membro.nome) + '!' } : { ok: false, motivo: 'equipe inativa', msg: '' };
+      registrar({ ok: dec.ok, motivo: dec.motivo, equipeId: membro.id, nome: membro.nome + ' (' + (FUNCAO[membro.funcao] || 'Equipe') + ')' });
       if (estado.desconhecidos) delete estado.desconhecidos[userId];
     } else if (!aluno) {
       // Pessoa cadastrada no aparelho que ainda não foi vinculada a um aluno (pode ser da equipe).
@@ -138,7 +145,7 @@ export default async function handler(req, res) {
       }
     }
     await banco([...cmds, ['HSET', chaveCol('catraca'), 'estado', JSON.stringify(estado)], ['INCR', 'ct:rev']]);
-    return responder(dec.ok, dec.msg, aluno ? aluno.nome : prof ? prof.nome : '');
+    return responder(dec.ok, dec.msg, aluno ? aluno.nome : prof ? prof.nome : membro ? membro.nome : '');
   } catch (e) {
     const s = e instanceof ErroApi ? e.status : 500;
     if (s >= 500) console.error('catraca:', e);

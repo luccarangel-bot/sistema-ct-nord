@@ -36,10 +36,10 @@ function erroFoto(r) {
 }
 
 export async function pushGet(q, cfg) {
-  const [pushB, filaB, alunosB, profsB] = await banco([['HGET', chaveCol('catraca'), 'push'], ['HGETALL', chaveCol('catrafila')], ['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('professores')]]);
-  // A pessoa de um pedido da fila pode ser aluno (alunoId) ou professor (profId).
-  const alunosL = lista(alunosB), profsL = lista(profsB);
-  const pessoaDe = (i) => (i.profId ? profsL.find((p) => p.id === i.profId) : alunosL.find((a) => a.id === i.alunoId));
+  const [pushB, filaB, alunosB, profsB, equipeB] = await banco([['HGET', chaveCol('catraca'), 'push'], ['HGETALL', chaveCol('catrafila')], ['HGETALL', chaveCol('alunos')], ['HGETALL', chaveCol('professores')], ['HGETALL', chaveCol('equipe')]]);
+  // A pessoa de um pedido da fila pode ser aluno (alunoId), professor (profId) ou da equipe (equipeId).
+  const alunosL = lista(alunosB), profsL = lista(profsB), equipeL = lista(equipeB);
+  const pessoaDe = (i) => (i.profId ? profsL.find((p) => p.id === i.profId) : i.equipeId ? equipeL.find((p) => p.id === i.equipeId) : alunosL.find((a) => a.id === i.alunoId));
   const st = (pushB && JSON.parse(pushB)) || { id: 'push' };
   const uuid = String(q.uuid || crypto.randomUUID());
   const cmds = [];
@@ -59,18 +59,18 @@ export async function pushGet(q, cfg) {
     st.pendente = { uuid, tipo: 'usuarios' }; salvarSt();
     resp = comando(cfg, 'load_objects', { object: 'users', fields: ['id', 'name', 'image_timestamp'] });
   } else if (item) {
-    const aluno = pessoaDe(item); const colPessoa = item.profId ? 'professores' : 'alunos';
+    const aluno = pessoaDe(item); const colPessoa = item.profId ? 'professores' : item.equipeId ? 'equipe' : 'alunos';
     const n = { ...item, status: 'enviado', uuid, atualizadoEm: agora(), tentativas: (item.tentativas || 0) + 1 };
     if (item.tipo === 'remover') {
       if (item.catracaId) resp = comando(cfg, 'destroy_objects', { object: 'users', where: { users: { id: Number(item.catracaId) } } });
       else { n.status = 'ok'; }
     } else if (!aluno) {
-      Object.assign(n, { status: 'erro', erro: (item.profId ? 'Professor' : 'Aluno') + ' não encontrado no sistema.' });
+      Object.assign(n, { status: 'erro', erro: (item.profId ? 'Professor' : item.equipeId ? 'Pessoa da equipe' : 'Aluno') + ' não encontrado no sistema.' });
     } else if (item.etapa === 'usuario' || !item.etapa) {
       let id = Number(aluno.catracaId) || 0;
       if (!id) {
         // Novo ID no leitor: o maior ID conhecido (leitor ou alunos) + 1.
-        const usados = [...(st.usuarios || []).map((u) => Number(u.id) || 0), ...alunosL.map((a) => Number(a.catracaId) || 0), ...profsL.map((p) => Number(p.catracaId) || 0)];
+        const usados = [...(st.usuarios || []).map((u) => Number(u.id) || 0), ...alunosL.map((a) => Number(a.catracaId) || 0), ...profsL.map((p) => Number(p.catracaId) || 0), ...equipeL.map((p) => Number(p.catracaId) || 0)];
         id = Math.max(0, ...usados) + 1;
         cmds.push(['HSET', chaveCol(colPessoa), aluno.id, JSON.stringify({ ...aluno, catracaId: id })]);
       }
