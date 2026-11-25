@@ -467,7 +467,7 @@ const UI = {
   view: 'inicio', alunoId: null,
   busca: '', filtroAluno: 'ativos', tabAlunos: 'alunos', filtroProf: '',
   tabContratos: 'contratos', filtroContrato: 'ativos',
-  tabFin: 'lancamentos', pgMes: mesDe(HOJE), pgModo: 'mes', pgAno: HOJE.slice(0, 4), finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE),
+  tabFin: 'lancamentos', pgMes: mesDe(HOJE), pgModo: 'mes', pgAno: HOJE.slice(0, 4), finTipo: 'receita', finMes: mesDe(HOJE), finStatus: 'todos', dreMes: mesDe(HOJE), prevMes: '',
   tabCrm: 'funil', tabAgenda: 'semana', semana: 0,
 };
 let DB = null, MODO = 'carregando', somenteLeitura = false, USUARIO = null, EQUIPE = null, revLocal = 0;
@@ -551,9 +551,9 @@ function pagamentosNoMes(mes, tipo) {
 /* Mensalidades dos contratos que renovam sozinhos */
 // Mensalidade k do contrato: a primeira vence no início, as seguintes no dia de vencimento de cada mês.
 const vencMensalidade = (c, k) => (k === 0 ? c.inicio : comDia(addMeses(c.inicio, k), c.diaVenc));
-function mensalidadesQueFaltam(c, existentes) {
+function mensalidadesQueFaltam(c, existentes, ateData) {
   if (!c.continuo || c.cancelado || semCobranca(c.forma)) return [];
-  const ate = addDias(HOJE, 10); const r = [];
+  const ate = ateData || addDias(HOJE, 10); const r = [];
   for (let k = 0; k < 600; k++) {
     const venc = vencMensalidade(c, k); if (venc > ate) break;
     // Não duplica: se já existe mensalidade deste contrato no mês (mesmo cancelada), pula.
@@ -1162,11 +1162,12 @@ VIEWS.contratos = function () {
 /* ---------- Financeiro ---------- */
 VIEWS.financeiro = function () {
   let h = '<div class="topo"><div><h1>Financeiro</h1><p>Contas a receber e a pagar, caixa, previsão e resultado do mês.</p></div><div class="acoes"><button class="btn" data-act="novo-lanc" data-tipo="despesa">Nova conta a pagar</button><button class="btn pri" data-act="novo-lanc" data-tipo="receita">Nova receita</button></div></div>';
-  h += '<div class="tabs" role="tablist">' + tab('tabFin', 'lancamentos', 'Contas') + tab('tabFin', 'caixa', 'Caixa e fluxo') + tab('tabFin', 'inadimplencia', 'Inadimplência') + tab('tabFin', 'dre', 'DRE do mês') + '</div>';
-  return h + ({ lancamentos: finContas, caixa: finCaixa, inadimplencia: finInad, dre: finDre }[UI.tabFin] || finContas)();
+  h += '<div class="tabs" role="tablist">' + tab('tabFin', 'lancamentos', 'Contas') + tab('tabFin', 'previsao', 'Previsão') + tab('tabFin', 'caixa', 'Caixa e fluxo') + tab('tabFin', 'inadimplencia', 'Inadimplência') + tab('tabFin', 'dre', 'DRE do mês') + '</div>';
+  return h + ({ lancamentos: finContas, previsao: finPrevisao, caixa: finCaixa, inadimplencia: finInad, dre: finDre }[UI.tabFin] || finContas)();
 };
 function mesesDisponiveis() {
   const set = new Set([mesDe(HOJE)]);
+  for (let k = 1; k <= 3; k++) set.add(mesDe(addMeses(HOJE.slice(0, 8) + '01', k)));
   S.lancamentos.forEach((l) => { set.add(mesDe(l.vencimento)); (l.pagamentos || []).forEach((p) => set.add(mesDe(p.data))); });
   return [...set].filter(Boolean).sort().reverse();
 }
@@ -1187,7 +1188,46 @@ function finContas() {
   h += '<div class="kpis"><div class="kpi"><span>Total ' + (UI.finTipo === 'receita' ? 'a receber' : 'a pagar') + '</span><b>' + fR(tot) + '</b><small>' + lista.length + ' conta(s)</small></div>' +
     '<div class="kpi"><span>Já ' + (UI.finTipo === 'receita' ? 'recebido' : 'pago') + '</span><b>' + fR(pg) + '</b></div>' +
     '<div class="kpi"><span>Falta</span><b>' + fR(Math.max(0, tot - pg)) + '</b></div></div>';
+  const naoLancadas = UI.finTipo === 'receita' && UI.finStatus !== 'atrasado' ? previsaoDoMes(UI.finMes).itens.filter((x) => !x.l) : [];
+  if (naoLancadas.length) h += '<p class="aviso" style="margin:0 0 12px">Além destas, <b>' + naoLancadas.length + ' mensalidade(s)</b> (' + fR(naoLancadas.reduce((s, x) => s + x.valor, 0)) + ') vão ser lançadas automaticamente 10 dias antes do vencimento. <button class="btn link" style="padding:0" data-act="ui" data-k="tabFin" data-val="previsao">Ver na Previsão</button></p>';
   return h + tabelaLancamentos(lista, { vazio: 'Nenhuma conta neste filtro.' });
+}
+/* ---------- Previsão de recebimentos ---------- */
+// Tudo o que o CT tem a receber num mês: as cobranças já lançadas (mensalidades, matrículas, produtos...)
+// e as mensalidades dos planos que renovam sozinhos, que o sistema só cria 10 dias antes de vencer.
+const fimDoMes = (m) => comDia(m + '-01', 31);
+function previsaoDoMes(m) {
+  const lanc = S.lancamentos.filter((l) => l.tipo === 'receita' && !l.cancelado && mesDe(l.vencimento) === m)
+    .map((l) => ({ l, alunoId: l.alunoId, desc: l.descricao, venc: l.vencimento, valor: devidoDe(l), pago: pagoDe(l), mensalidade: l.categoria === 'Mensalidades' }));
+  const futuras = m < mesDe(HOJE) ? [] : S.contratos.flatMap((c) => mensalidadesQueFaltam(c, S.lancamentos, fimDoMes(m)))
+    .filter((l) => mesDe(l.vencimento) === m)
+    .map((l) => ({ l: null, alunoId: l.alunoId, desc: l.descricao, venc: l.vencimento, valor: Math.max(0, (Number(l.valor) || 0) - (Number(l.desconto) || 0)), pago: 0, mensalidade: true }));
+  const itens = [...lanc, ...futuras].sort((a, b) => a.venc.localeCompare(b.venc) || nomeAluno(a.alunoId).localeCompare(nomeAluno(b.alunoId), 'pt-BR'));
+  const soma = (xs, f) => xs.reduce((s, x) => s + f(x), 0);
+  const mens = itens.filter((x) => x.mensalidade);
+  return { m, itens, qtdMens: mens.length, previsto: soma(itens, (x) => x.valor), mensalidades: soma(mens, (x) => x.valor), recebido: soma(itens, (x) => x.pago), falta: soma(itens, (x) => Math.max(0, x.valor - x.pago)) };
+}
+function finPrevisao() {
+  const meses = []; for (let k = 0; k < 12; k++) meses.push(mesDe(addMeses(HOJE.slice(0, 8) + '01', k)));
+  const dados = meses.map(previsaoDoMes);
+  const sel = dados.find((d) => d.m === UI.prevMes) || dados[0];
+  const prox3 = dados.slice(1, 4).reduce((s, d) => s + d.previsto, 0);
+  const atrasado = S.lancamentos.filter((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado').reduce((s, l) => s + saldoDe(l), 0);
+  let h = '<div class="kpis"><div class="kpi"><span>Falta receber em ' + nomeMes(dados[0].m) + '</span><b>' + fR(dados[0].falta) + '</b><small>de ' + fR(dados[0].previsto) + ' previstos</small></div>' +
+    '<div class="kpi"><span>Previsto para ' + nomeMes(dados[1].m) + '</span><b>' + fR(dados[1].previsto) + '</b><small>' + dados[1].qtdMens + ' mensalidade(s)</small></div>' +
+    '<div class="kpi"><span>Próximos 3 meses</span><b>' + fR(prox3) + '</b><small>' + nomeMes(dados[1].m) + ' a ' + nomeMes(dados[3].m) + '</small></div>' +
+    '<div class="kpi"><span>Em atraso hoje</span><b>' + fR(atrasado) + '</b><small>de todos os meses · veja em Inadimplência</small></div></div>';
+  h += '<section class="painel" style="margin-top:16px"><header><h2>Previsão de recebimentos</h2><small>próximos 12 meses · clique no mês para ver os alunos</small></header>' +
+    '<div class="tabela-wrap" style="border:0"><table><thead><tr><th>Mês</th><th class="dir">Mensalidades</th><th class="dir">Previsto</th><th class="dir">Já recebido</th><th class="dir">Falta receber</th></tr></thead><tbody>' +
+    dados.map((d) => '<tr' + (d.m === sel.m ? ' style="background:var(--surface-2)"' : '') + '><td><button class="btn link" style="padding:0" data-act="ui" data-k="prevMes" data-val="' + d.m + '">' + nomeMes(d.m, true) + '</button></td>' +
+      '<td class="dir num">' + d.qtdMens + '</td><td class="dir num"><b>' + fR(d.previsto) + '</b></td><td class="dir num">' + fR(d.recebido) + '</td><td class="dir num">' + fR(d.falta) + '</td></tr>').join('') +
+    '</tbody></table></div><p class="vazio">Conta as cobranças já lançadas e as mensalidades dos planos que renovam sozinhos (o sistema lança cada uma 10 dias antes do vencimento). Não entram TotalPass/Wellhub, bolsistas e planos encerrados.</p></section>';
+  h += '<section class="painel" style="margin-top:16px"><header><h2>' + nomeMes(sel.m, true) + '</h2><small>' + sel.itens.length + ' cobrança(s) · ' + fR(sel.previsto) + '</small></header>' +
+    (sel.itens.length ? '<div class="tabela-wrap" style="border:0"><table><thead><tr><th>Vencimento</th><th>Aluno</th><th class="esconde-celular">Descrição</th><th class="dir">Valor</th><th>Situação</th></tr></thead><tbody>' +
+      sel.itens.map((x) => '<tr><td class="num">' + fData(x.venc) + '</td><td>' + (x.alunoId ? '<button class="btn link" style="padding:0;text-align:left" data-act="abrir-aluno" data-id="' + x.alunoId + '">' + esc(nomeAluno(x.alunoId)) + '</button>' : '—') + '</td>' +
+        '<td class="esconde-celular"><small style="display:inline">' + esc(x.desc) + '</small></td><td class="dir num">' + fR(x.valor) + '</td><td>' + (x.l ? pillLanc(x.l) : pill('', 'Prevista')) + '</td></tr>').join('') +
+      '</tbody></table></div>' : '<p class="vazio">Nada previsto para este mês.</p>') + '</section>';
+  return h;
 }
 function finCaixa() {
   const meses = []; for (let k = -3; k <= 2; k++) meses.push(mesDe(addMeses(HOJE.slice(0, 8) + '01', k)));
@@ -1195,7 +1235,9 @@ function finCaixa() {
     const entR = pagamentosNoMes(m, 'receita').reduce((s, x) => s + x.p.valor, 0);
     const saiR = pagamentosNoMes(m, 'despesa').reduce((s, x) => s + x.p.valor, 0);
     const prev = (t) => S.lancamentos.filter((l) => l.tipo === t && !l.cancelado && mesDe(l.vencimento) === m && ['aberto', 'parcial'].includes(statusLanc(l))).reduce((s, l) => s + saldoDe(l), 0);
-    return { m, entR, saiR, entP: prev('receita'), saiP: prev('despesa') };
+    // Entradas previstas: também as mensalidades dos planos que renovam sozinhos e ainda não foram lançadas.
+    const projetadas = m < mesDe(HOJE) ? 0 : previsaoDoMes(m).itens.filter((x) => !x.l).reduce((s, x) => s + x.valor, 0);
+    return { m, entR, saiR, entP: prev('receita') + projetadas, saiP: prev('despesa') };
   });
   const atrasoRec = S.lancamentos.filter((l) => l.tipo === 'receita' && statusLanc(l) === 'atrasado').reduce((s, l) => s + saldoDe(l), 0);
   const atrasoPag = S.lancamentos.filter((l) => l.tipo === 'despesa' && statusLanc(l) === 'atrasado').reduce((s, l) => s + saldoDe(l), 0);
